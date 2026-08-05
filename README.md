@@ -31,6 +31,7 @@ cargo fmt --check
 cargo check
 cargo test
 cargo clippy --all-targets --all-features -- -D warnings
+cargo check --target wasm32-unknown-unknown
 trunk build --release
 ```
 
