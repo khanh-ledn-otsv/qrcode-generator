@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — Establish the offline workspace baseline.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Each supported profile has typed base dimensions, PNG dimensions exactly three times the base dimensions, and an explicit maximum QR version.
 - [ ] Geometry includes four quiet modules per side and chooses the largest positive even integer module scale that fits the canvas.
