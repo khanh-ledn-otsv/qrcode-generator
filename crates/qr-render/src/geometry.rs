@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
+// ISO/IEC 18004:2024, 5.3.8 requires a four-module quiet zone for QR Code.
 const QUIET_ZONE_MODULES_PER_SIDE: u32 = 4;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -75,6 +76,13 @@ pub struct OuterPadding {
     pub right: PixelCount,
     pub top: PixelCount,
     pub bottom: PixelCount,
+    pub content: PaddingContent,
+}
+
+/// The only content permitted in surplus canvas padding outside the symbol.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PaddingContent {
+    BackgroundOnly,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -143,6 +151,7 @@ impl CanvasGeometry {
                 right: horizontal_padding,
                 top: vertical_padding,
                 bottom: vertical_padding,
+                content: PaddingContent::BackgroundOnly,
             },
         })
     }
@@ -194,8 +203,8 @@ pub enum GeometryError {
     NoPositiveEvenScale,
     OuterPaddingIsNotIntegral,
     VersionExceedsProfile {
-        requested: crate::QrVersion,
-        maximum: crate::QrVersion,
+        requested: qr_core::Version,
+        maximum: qr_core::Version,
     },
 }
 

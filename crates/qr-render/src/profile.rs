@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::fmt;
 
+use qr_core::Version;
+
 use crate::{CanvasGeometry, GeometryError, ModuleCount, PixelDimensions};
 
 const PNG_SCALE_FACTOR: u32 = 3;
@@ -14,44 +16,12 @@ pub enum ProfileId {
     Print,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct QrVersion(u8);
-
-impl QrVersion {
-    pub const MIN: u8 = 1;
-    pub const MAX: u8 = 40;
-
-    #[must_use]
-    pub const fn number(self) -> u8 {
-        self.0
-    }
-
-    fn matrix_modules(self) -> Result<ModuleCount, GeometryError> {
-        let side = u32::from(self.0)
-            .checked_mul(4)
-            .and_then(|value| value.checked_add(17))
-            .ok_or(GeometryError::DimensionOverflow)?;
-        ModuleCount::new(side)
-    }
-}
-
-impl TryFrom<u8> for QrVersion {
-    type Error = ProfileError;
-
-    fn try_from(number: u8) -> Result<Self, Self::Error> {
-        if !(Self::MIN..=Self::MAX).contains(&number) {
-            return Err(ProfileError::InvalidQrVersion(number));
-        }
-        Ok(Self(number))
-    }
-}
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct OutputProfile {
     id: ProfileId,
     base_dimensions: PixelDimensions,
     png_dimensions: PixelDimensions,
-    maximum_version: QrVersion,
+    maximum_version: Version,
 }
 
 impl OutputProfile {
@@ -59,7 +29,7 @@ impl OutputProfile {
         id: ProfileId,
         base_dimensions: PixelDimensions,
         png_dimensions: PixelDimensions,
-        maximum_version: QrVersion,
+        maximum_version: Version,
     ) -> Result<Self, ProfileError> {
         if !base_dimensions.is_positive() || !png_dimensions.is_positive() {
             return Err(ProfileError::DimensionsMustBePositive);
@@ -107,7 +77,10 @@ impl OutputProfile {
             id,
             base_dimensions: PixelDimensions::square(base_side),
             png_dimensions: PixelDimensions::square(png_side),
-            maximum_version: QrVersion(maximum_version),
+            maximum_version: match Version::new(maximum_version) {
+                Ok(version) => version,
+                Err(_) => panic!("compiled output profile has an invalid maximum version"),
+            },
         }
     }
 
@@ -127,7 +100,7 @@ impl OutputProfile {
     }
 
     #[must_use]
-    pub const fn maximum_version(self) -> QrVersion {
+    pub const fn maximum_version(self) -> Version {
         self.maximum_version
     }
 
@@ -141,14 +114,22 @@ impl OutputProfile {
         .map(|_| ())
     }
 
-    pub fn geometry(self, version: QrVersion) -> Result<CanvasGeometry, GeometryError> {
+    #[must_use]
+    pub const fn svg_dimensions(self) -> PixelDimensions {
+        self.base_dimensions
+    }
+
+    pub fn geometry(self, version: Version) -> Result<CanvasGeometry, GeometryError> {
         if version > self.maximum_version {
             return Err(GeometryError::VersionExceedsProfile {
                 requested: version,
                 maximum: self.maximum_version,
             });
         }
-        CanvasGeometry::calculate(self.png_dimensions, version.matrix_modules()?)
+        CanvasGeometry::calculate(
+            self.png_dimensions,
+            ModuleCount::new(u32::from(version.symbol_size()))?,
+        )
     }
 }
 
@@ -164,7 +145,6 @@ pub enum ProfileError {
     DimensionsMustBePositive,
     DimensionsMustBeSquare,
     DimensionOverflow,
-    InvalidQrVersion(u8),
     PngDimensionsAreNotTriple {
         base: PixelDimensions,
         png: PixelDimensions,
@@ -183,12 +163,6 @@ impl fmt::Display for ProfileError {
                 formatter.write_str("profile dimensions must be square")
             }
             Self::DimensionOverflow => formatter.write_str("profile dimensions overflowed"),
-            Self::InvalidQrVersion(version) => write!(
-                formatter,
-                "QR version must be between {} and {}, got {version}",
-                QrVersion::MIN,
-                QrVersion::MAX
-            ),
             Self::PngDimensionsAreNotTriple { .. } => formatter
                 .write_str("PNG dimensions must be exactly three times the base dimensions"),
             Self::InvalidGeometry(error) => write!(formatter, "invalid profile geometry: {error}"),

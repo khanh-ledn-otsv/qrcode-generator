@@ -10,3 +10,6 @@ path = "src/lib.rs"
 
 [dependencies]
 qr-core.workspace = true
+
+[dev-dependencies]
+proptest = "=1.11.0"

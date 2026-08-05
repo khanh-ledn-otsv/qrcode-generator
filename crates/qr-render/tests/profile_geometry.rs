@@ -1,6 +1,7 @@
+use proptest::prelude::*;
 use qr_render::{
-    CanvasGeometry, GeometryError, ModuleCount, OutputProfile, PixelDimensions, ProfileError,
-    ProfileId, QrVersion, SUPPORTED_PROFILES,
+    CanvasGeometry, GeometryError, ModuleCount, OutputProfile, PaddingContent, PixelDimensions,
+    ProfileError, ProfileId, SUPPORTED_PROFILES, Version,
 };
 
 #[test]
@@ -19,6 +20,7 @@ fn supported_profiles_match_the_approved_output_contract() {
     {
         assert_eq!(profile.validate(), Ok(()));
         assert_eq!(profile.id(), id);
+        assert_eq!(profile.svg_dimensions(), PixelDimensions::square(base_side));
         assert_eq!(
             profile.base_dimensions(),
             PixelDimensions::square(base_side)
@@ -32,7 +34,7 @@ fn supported_profiles_match_the_approved_output_contract() {
 fn every_supported_version_has_centered_even_integer_geometry() {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
-            let version = QrVersion::try_from(version_number).unwrap();
+            let version = Version::try_from(version_number).unwrap();
             let geometry = profile.geometry(version).unwrap();
 
             assert_eq!(geometry.quiet_zone_modules(), ModuleCount::new(4).unwrap());
@@ -47,6 +49,10 @@ fn every_supported_version_has_centered_even_integer_geometry() {
                 geometry.outer_padding().bottom
             );
             assert_eq!(geometry.canvas_dimensions(), profile.png_dimensions());
+            assert_eq!(
+                geometry.outer_padding().content,
+                PaddingContent::BackgroundOnly
+            );
 
             let next_even_scale = geometry.module_scale().get() + 2;
             let next_width = geometry.symbol_modules().get() * next_even_scale;
@@ -89,7 +95,7 @@ fn scale_transitions_are_exercised_for_each_profile() {
         let actual: Vec<u32> = (1..=profile.maximum_version().number())
             .map(|number| {
                 profile
-                    .geometry(QrVersion::try_from(number).unwrap())
+                    .geometry(Version::try_from(number).unwrap())
                     .unwrap()
                     .module_scale()
                     .get()
@@ -109,7 +115,7 @@ fn invalid_profiles_return_specific_errors() {
             ProfileId::Inline,
             base,
             incorrect_png,
-            QrVersion::try_from(5).unwrap(),
+            Version::try_from(5).unwrap(),
         ),
         Err(ProfileError::PngDimensionsAreNotTriple {
             base,
@@ -122,7 +128,7 @@ fn invalid_profiles_return_specific_errors() {
             ProfileId::Inline,
             PixelDimensions::square(u32::MAX),
             PixelDimensions::square(270),
-            QrVersion::try_from(5).unwrap(),
+            Version::try_from(5).unwrap(),
         ),
         Err(ProfileError::DimensionOverflow)
     );
@@ -151,10 +157,64 @@ fn impossible_asymmetric_and_overflowing_geometry_return_typed_errors() {
 fn a_version_above_the_profile_ceiling_is_rejected() {
     let inline = SUPPORTED_PROFILES[0];
     assert_eq!(
-        inline.geometry(QrVersion::try_from(6).unwrap()),
+        inline.geometry(Version::try_from(6).unwrap()),
         Err(GeometryError::VersionExceedsProfile {
-            requested: QrVersion::try_from(6).unwrap(),
-            maximum: QrVersion::try_from(5).unwrap(),
+            requested: Version::try_from(6).unwrap(),
+            maximum: Version::try_from(5).unwrap(),
         })
     );
+}
+
+fn supported_profile_and_version() -> impl Strategy<Value = (OutputProfile, Version)> {
+    prop::sample::select(SUPPORTED_PROFILES.to_vec()).prop_flat_map(|profile| {
+        let maximum = profile.maximum_version().number();
+        (Just(profile), 1_u8..=maximum).prop_map(|(profile, number)| {
+            (
+                profile,
+                Version::try_from(number).expect("strategy only generates valid versions"),
+            )
+        })
+    })
+}
+
+proptest! {
+    #[test]
+    fn supported_profile_geometry_always_preserves_fixed_canvas_invariants(
+        (profile, version) in supported_profile_and_version()
+    ) {
+        let geometry = profile.geometry(version).unwrap();
+        let scale = geometry.module_scale().get();
+        let symbol_side = geometry.symbol_modules().get();
+
+        prop_assert_eq!(geometry.canvas_dimensions(), profile.png_dimensions());
+        prop_assert!(scale > 0);
+        prop_assert_eq!(scale % 2, 0);
+        prop_assert_eq!(geometry.outer_padding().left, geometry.outer_padding().right);
+        prop_assert_eq!(geometry.outer_padding().top, geometry.outer_padding().bottom);
+        prop_assert_eq!(geometry.outer_padding().content, PaddingContent::BackgroundOnly);
+        prop_assert!(symbol_side * (scale + 2) > profile.png_dimensions().width().get());
+    }
+
+    #[test]
+    fn malformed_png_dimensions_are_rejected_without_panicking(
+        base_side in 1_u32..=1_000_000,
+        maximum_version in 1_u8..=Version::MAX,
+    ) {
+        let base = PixelDimensions::square(base_side);
+        let incorrect_png = PixelDimensions::square(base_side * 3 + 1);
+        let result = OutputProfile::try_new(
+            ProfileId::Inline,
+            base,
+            incorrect_png,
+            Version::try_from(maximum_version).unwrap(),
+        );
+
+        prop_assert_eq!(
+            result,
+            Err(ProfileError::PngDimensionsAreNotTriple {
+                base,
+                png: incorrect_png,
+            })
+        );
+    }
 }
