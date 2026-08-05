@@ -1,6 +1,17 @@
 # QR Code Generator
 
-A client-side Leptos application styled with Tailwind CSS.
+A client-side QR code generator built with Rust, Leptos, WebAssembly, Trunk,
+and Tailwind CSS. Payload processing and artifact generation stay in the
+browser.
+
+## Workspace
+
+- `qr-core` contains browser-independent QR encoding logic.
+- `qr-render` contains browser-independent deterministic artifact rendering.
+- `qr-web` contains the Leptos application and browser integrations.
+
+Dependencies flow from `qr-web` to `qr-render` and `qr-core`, and from
+`qr-render` to `qr-core`.
 
 ## Run locally
 
@@ -10,6 +21,16 @@ trunk serve --open
 ```
 
 Trunk builds the Rust application to WebAssembly and compiles Tailwind CSS automatically.
+
+## Verify
+
+```sh
+cargo fmt --check
+cargo check
+cargo test
+cargo clippy --all-targets --all-features -- -D warnings
+trunk build --release
+```
 
 ## Documentation
 

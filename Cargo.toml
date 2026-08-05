@@ -1,7 +1,23 @@
-[package]
-name = "qrcode-generator"
+[workspace]
+members = [
+    "crates/qr-core",
+    "crates/qr-render",
+    "crates/qr-web",
+]
+default-members = [
+    "crates/qr-core",
+    "crates/qr-render",
+    "crates/qr-web",
+]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.97.1"
+publish = false
 
-[dependencies]
-leptos = { version = "0.8.20", features = ["csr"] }
+[workspace.dependencies]
+leptos = { version = "=0.8.20", features = ["csr"] }
+qr-core = { version = "=0.1.0", path = "crates/qr-core" }
+qr-render = { version = "=0.1.0", path = "crates/qr-render" }

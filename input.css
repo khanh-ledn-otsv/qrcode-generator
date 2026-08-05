@@ -4,7 +4,7 @@
   --color-brand: #bd0f72;
   --color-brand-light: #f472b6;
   --color-brand-dark: #78094a;
-  --font-sans: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {

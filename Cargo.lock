@@ -1005,10 +1005,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "qrcode-generator"
+name = "qr-core"
+version = "0.1.0"
+
+[[package]]
+name = "qr-render"
+version = "0.1.0"
+dependencies = [
+ "qr-core",
+]
+
+[[package]]
+name = "qr-web"
 version = "0.1.0"
 dependencies = [
  "leptos",
+ "qr-core",
+ "qr-render",
 ]
 
 [[package]]

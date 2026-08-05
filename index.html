@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="A hello world application built with Leptos and Tailwind CSS"
+      content="Generate QR codes locally in your browser"
     />
     <meta name="theme-color" content="#f8fafc" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700;800&amp;display=swap"
-      rel="stylesheet"
+      data-trunk
+      rel="rust"
+      href="crates/qr-web/Cargo.toml"
+      data-bin="qr-web"
+      data-wasm-opt="z"
     />
-    <link data-trunk rel="rust" data-wasm-opt="z" />
     <link data-trunk rel="tailwind-css" href="input.css" />
-    <title>Leptos + Tailwind CSS</title>
+    <title>QR Code Generator</title>
   </head>
   <body>
     <aside
