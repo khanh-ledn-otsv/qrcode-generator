@@ -2,7 +2,7 @@
 
 **Based on:** `qr-generator-spec.md`, Draft v3  
 **Repository state reviewed:** 2026-08-05  
-**Plan status:** Ready to start after the two Phase 0 gates below
+**Plan status:** Ready to implement under the recorded oracle policy below
 
 The detailed test architecture, selected libraries, quality gates, fuzz/mutation budgets, and browser matrix are defined in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md). That document is part of this development plan rather than optional follow-up guidance.
 
@@ -16,14 +16,16 @@ Development can proceed with the decisions in this document. Items explicitly ma
 
 ## 2. Decisions resolved by this review
 
-### 2.1 Standards source
+### 2.1 Standards and table provenance
 
-- ISO/IEC 18004:2024 is the normative source for capacity, block, remainder-bit, alignment-pattern, format, version, mask, and penalty rules.
-- The team must obtain a licensed copy and record every transcribed table in code with a clause/table reference.
-- Public implementations may be test oracles, but are not authoritative and must not be copied into production code.
+- ISO/IEC 18004:2024 remains the normative source for QR Code Model 2 behavior, but a licensed complete copy is not a repository or implementation prerequisite.
+- Stable capacity, block, remainder-bit, alignment-pattern, and character-count tables may be implemented from committed development fixtures only after two pinned, independently maintained QR generators agree on every value they expose.
+- Values exposed by only one generator must also satisfy an independently implemented structural invariant (for example, matrix function-module accounting for remainder bits).
+- Public implementations remain development/test oracles. They are not production dependencies, and their implementation code is not copied into production.
+- Production comments identify the applicable standard clauses plus the oracle fixture and pinned versions. Later comparison with a licensed standard is an audit task and must not silently rewrite accepted fixtures.
 - A table-validation test must verify dimensions, totals, and invariants for every version/ECC row before encoder work is accepted.
 
-**Phase 0 gate:** a developer has access to ISO/IEC 18004:2024 and the project owner confirms that development-only QR generators are permitted for fixture creation.
+**Phase 0 gate (accepted by the project owner on 2026-08-05):** development-only QR generators are permitted for fixture creation under the dual-oracle provenance policy above.
 
 ### 2.2 Text, byte mode, and ECI
 
@@ -239,7 +241,7 @@ Every committed fixture gets a manifest entry containing payload bytes (or a non
 
 Use four layers:
 
-1. **Normative vectors:** Values and examples legally usable from ISO/IEC 18004:2024, referenced by clause rather than copying restricted prose.
+1. **Reference vectors:** Values from legally usable standards material or committed dual-oracle fixtures with pinned provenance.
 2. **Golden matrices:** Generate explicit-version, explicit-ECC, explicit-mask matrices with two independent generators. Commit only fixtures on which both agree, or document why representation differs.
 3. **Independent decoding:** Decode production PNG and rasterized SVG with pinned ZXing-C++. Compare decoded Unicode text and, where available, raw bytes/ECI metadata.
 4. **Invariant/property tests:** Verify table totals, block lengths, reserved-cell ownership, full placement, format/version bits, profile geometry, deterministic bytes, and random round trips.
@@ -260,7 +262,7 @@ Estimates are engineering effort for one experienced Rust developer and include 
 
 ### M0 — Standards and repository foundation (2–4 days, risk: medium)
 
-- Complete both Phase 0 gates.
+- Complete the Phase 0 oracle-policy gate.
 - Convert the scaffold to the three-crate workspace.
 - Pin toolchain and dependency versions; document local formatting, Clippy, native test, WASM check, and production-build commands.
 - Remove remote font/network assets and scaffold local approved assets.

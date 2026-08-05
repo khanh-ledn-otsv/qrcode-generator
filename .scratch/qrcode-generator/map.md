@@ -9,6 +9,10 @@
   fixture provenance and hashes are checked by a development-only Rust tool;
   pinned Nayuki and `python-qrcode` generators must agree on explicit matrices;
   and pinned ZXing-C++ independently checks raster payload bytes and metadata.
+- [Ticket 04](issues/04-transcribe-and-validate-qr-tables.md): Complete QR Model
+  2 capacity, block, remainder, alignment, and character-width data is exposed
+  through typed checked lookups and exhaustively validated against a committed
+  160-row fixture from pinned independent development oracles.
 
 ## Notes
 

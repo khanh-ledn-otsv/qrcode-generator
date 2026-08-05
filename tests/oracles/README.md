@@ -52,6 +52,18 @@ uv run --project tests/oracles --locked python tests/support/generate_fixtures.p
 cargo run -p fixture-tool -- diff HEAD
 ```
 
+The QR capacity/version table fixture has its own explicit verifier. It checks
+all 160 version/ECC rows against both pinned generators before comparing the
+result with the committed CSV:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_qr_tables.py --check
+```
+
+Use `--write` only when intentionally refreshing the table fixture, then review
+the complete CSV diff before accepting it.
+
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,
 date, notes, and `accepted` state. `fixture-tool verify` rejects pending fixture
 changes.

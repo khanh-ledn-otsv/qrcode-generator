@@ -113,7 +113,7 @@ benches/
 └── encode_render.rs
 ```
 
-Test support code must be reusable but must not contain a second hand-written copy of production QR rules. Expected results come from normative constants, committed fixtures, independent tools, or simple invariants.
+Test support code must be reusable but must not contain a second hand-written copy of production QR rules. Expected results come from committed provenance fixtures, independent tools, legally usable standards material, or simple invariants.
 
 ## 4. Fixture provenance
 
@@ -148,7 +148,7 @@ Rules:
 - Explicit mask and version are used for matrix comparison; automatic mask-selection tests are separate.
 - Fixture regeneration is an explicit command and never occurs implicitly during a test.
 - A golden change requires a human-readable matrix diff, metadata diff, oracle versions, and reviewer approval.
-- ISO-derived fixture material is committed only when redistribution is permitted; otherwise tests encode the assertion and cite the licensed clause/table internally.
+- Standards-derived fixture material is committed only when redistribution is permitted. Dual-oracle table fixtures record both pinned implementations and are labelled non-normative.
 
 ## 5. `qr-core` test suite
 
@@ -177,7 +177,7 @@ Property examples:
 - emitted data codewords always exactly fill the selected version's data capacity;
 - a successful encode never exceeds the configured maximum version.
 
-### 5.2 Capacity and standard tables
+### 5.2 Capacity and QR tables
 
 For all 40 versions × 4 ECC levels:
 

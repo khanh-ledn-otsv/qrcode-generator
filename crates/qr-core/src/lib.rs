@@ -5,6 +5,8 @@
 use std::error::Error;
 use std::fmt;
 
+pub mod tables;
+
 /// A QR Code Model 2 symbol version.
 ///
 /// ISO/IEC 18004:2024, 5.3.2.1 defines versions 1 through 40 and their
