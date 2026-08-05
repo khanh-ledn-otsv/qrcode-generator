@@ -28,7 +28,7 @@ fn fixture_tree(source_count: usize) -> TempDir {
             "tool": "Nayuki QR Code Generator",
             "implementation": "nayuki-qrcodegen-python",
             "version": "1.8.0",
-            "command": "python3 tests/support/generate_fixtures.py --fixture synthetic-v01-m-mask0-byte-001 --oracle nayuki",
+            "command": "uv run --project tests/oracles --locked python tests/support/generate_fixtures.py --fixture synthetic-v01-m-mask0-byte-001 --oracle nayuki",
             "matrix_sha256": sha256(matrix.as_bytes())
         }),
         serde_json::json!({
@@ -36,7 +36,7 @@ fn fixture_tree(source_count: usize) -> TempDir {
             "tool": "python-qrcode",
             "implementation": "python-qrcode",
             "version": "8.2",
-            "command": "python3 tests/support/generate_fixtures.py --fixture synthetic-v01-m-mask0-byte-001 --oracle python-qrcode",
+            "command": "uv run --project tests/oracles --locked python tests/support/generate_fixtures.py --fixture synthetic-v01-m-mask0-byte-001 --oracle python-qrcode",
             "matrix_sha256": sha256(matrix.as_bytes())
         }),
     ];

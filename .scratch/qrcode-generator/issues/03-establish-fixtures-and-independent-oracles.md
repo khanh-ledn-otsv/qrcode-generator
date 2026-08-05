@@ -26,10 +26,10 @@ state. Two synthetic byte-mode fixtures at explicit versions, ECC levels, and
 masks were generated independently by pinned Nayuki 1.8.0 and
 `python-qrcode` 8.2 and accepted only after byte-identical matrix comparison.
 
-Regeneration is an explicit hashed Python environment action. It produces a
-unified matrix diff on disagreement and marks written fixtures `pending` until
-their readable manifest and matrix changes are reviewed. Ordinary Rust and
-Python tests never regenerate goldens.
+Regeneration is an explicit action in a locked uv-managed Python environment. It
+produces a unified matrix diff on disagreement and marks written fixtures
+`pending` until their readable manifest and matrix changes are reviewed.
+Ordinary Rust and Python tests never regenerate goldens.
 
 The ZXing-C++ 3.0.2 adapter pins the immutable source commit, rejects a different
 or tracked-modified checkout, verifies the decoder binary version, compares

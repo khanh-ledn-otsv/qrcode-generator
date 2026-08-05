@@ -1,0 +1,11 @@
+[project]
+name = "qr-fixture-oracles"
+version = "0.1.0"
+requires-python = ">=3.9,<4"
+dependencies = [
+    "qrcode==8.2",
+    "qrcodegen==1.8.0",
+]
+
+[tool.uv]
+package = false

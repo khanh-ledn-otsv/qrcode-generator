@@ -325,7 +325,7 @@ impl GeneratorProvenance {
         verify_sha256_text(&self.matrix_sha256, "source matrix", fixture_id)?;
         let pinned = self.oracle.provenance();
         let expected_command = format!(
-            "python3 tests/support/generate_fixtures.py --fixture {fixture_id} --oracle {}",
+            "uv run --project tests/oracles --locked python tests/support/generate_fixtures.py --fixture {fixture_id} --oracle {}",
             pinned.cli_name
         );
         if self.tool != pinned.tool

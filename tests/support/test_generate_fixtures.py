@@ -66,7 +66,8 @@ class DualOracleComparisonTests(unittest.TestCase):
         self.assertEqual(source["version"], "8.2")
         self.assertEqual(
             source["command"],
-            "python3 tests/support/generate_fixtures.py "
+            "uv run --project tests/oracles --locked python "
+            "tests/support/generate_fixtures.py "
             "--fixture fixture-01 --oracle python-qrcode",
         )
 

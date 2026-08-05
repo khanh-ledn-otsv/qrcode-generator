@@ -161,7 +161,8 @@ def load_payload(manifest_path: pathlib.Path, fixture: dict) -> bytes:
 
 def canonical_command(fixture_id: str, oracle: str) -> str:
     return (
-        "python3 tests/support/generate_fixtures.py "
+        "uv run --project tests/oracles --locked python "
+        "tests/support/generate_fixtures.py "
         f"--fixture {fixture_id} --oracle {oracle}"
     )
 

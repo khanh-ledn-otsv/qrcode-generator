@@ -1,11 +1,11 @@
 # Development-only QR oracles
 
-These tools never link into a production crate. Install the two generators in an
-isolated virtual environment with hashes enforced:
+These tools never link into a production crate. The uv project and committed
+lockfile pin the two generators and their artifact hashes. Create or synchronize
+the isolated environment without changing the lockfile:
 
 ```sh
-python3 -m venv .scratch/oracle-venv
-.scratch/oracle-venv/bin/pip install --require-hashes -r tests/oracles/requirements.txt
+uv sync --project tests/oracles --locked
 ```
 
 The accepted generator pair is Nayuki QR Code Generator 1.8.0 and
@@ -41,11 +41,11 @@ fixture and refreshes each source's pinned tool version, reproducible command,
 and independently observed matrix hash:
 
 ```sh
-.scratch/oracle-venv/bin/python tests/support/generate_fixtures.py \
+uv run --project tests/oracles --locked python tests/support/generate_fixtures.py \
   --fixture synthetic-v01-m-mask0-byte-001 \
   --fixture synthetic-v02-q-mask3-byte-002 \
   --check
-.scratch/oracle-venv/bin/python tests/support/generate_fixtures.py \
+uv run --project tests/oracles --locked python tests/support/generate_fixtures.py \
   --fixture synthetic-v01-m-mask0-byte-001 \
   --fixture synthetic-v02-q-mask3-byte-002 \
   --write
