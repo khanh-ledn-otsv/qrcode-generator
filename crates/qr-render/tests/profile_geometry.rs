@@ -1,4 +1,5 @@
 use proptest::prelude::*;
+use proptest::test_runner::RngSeed;
 use qr_render::{
     CanvasGeometry, GeometryError, ModuleCount, OutputProfile, PaddingContent, PixelDimensions,
     ProfileError, ProfileId, SUPPORTED_PROFILES, Version,
@@ -178,6 +179,11 @@ fn supported_profile_and_version() -> impl Strategy<Value = (OutputProfile, Vers
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        rng_seed: RngSeed::Fixed(0x5152_5046_4745_4f4d),
+        ..ProptestConfig::default()
+    })]
+
     #[test]
     fn supported_profile_geometry_always_preserves_fixed_canvas_invariants(
         (profile, version) in supported_profile_and_version()
