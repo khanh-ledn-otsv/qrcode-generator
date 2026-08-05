@@ -1,9 +1,0 @@
-[advisories]
-ignore = [
-    # Transitive through pinned Leptos 0.8.20; no safe upgrade is available.
-    # Review on every Leptos pin change and remove when upstream no longer depends on it.
-    "RUSTSEC-2024-0436",
-    # Transitive through pinned Leptos 0.8.20; no safe upgrade is available.
-    # Review on every Leptos pin change and remove when upstream no longer depends on it.
-    "RUSTSEC-2026-0173",
-]

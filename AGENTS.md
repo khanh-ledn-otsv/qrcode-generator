@@ -35,6 +35,7 @@ Treat those documents as authoritative. Update them when an implementation decis
 ## Dependencies
 
 - Add the smallest dependency needed and separate production dependencies from test-only tooling.
+- When adding or updating a dependency or development tool, try the latest stable version compatible with the project's toolchain and other constraints first. Fall back to an older version only after a concrete compatibility, build, or test failure demonstrates that the latest compatible candidate cannot be used; document the failure and selected fallback.
 - Pin versions as required by the development plan; do not use wildcards or floating Git revisions.
 - Do not add production QR encoders, Reed-Solomon libraries, general image stacks, SVG rasterizers, or scene renderers unless the development plan is deliberately revised.
 - Keep browser-only crates and features scoped to `qr-web` after the workspace migration.
@@ -70,3 +71,13 @@ If required tooling is unavailable, report the skipped check and reason.
 ## Handoff
 
 Summarize changed behavior, list verification performed, and identify any checks that could not run.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as local Markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.

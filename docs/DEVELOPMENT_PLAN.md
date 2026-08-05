@@ -4,13 +4,13 @@
 **Repository state reviewed:** 2026-08-05  
 **Plan status:** Ready to start after the two Phase 0 gates below
 
-The detailed test architecture, selected libraries, quality gates, fuzz/mutation budgets, browser matrix, and CI tiers are defined in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md). That document is part of this development plan rather than optional follow-up guidance.
+The detailed test architecture, selected libraries, quality gates, fuzz/mutation budgets, and browser matrix are defined in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md). That document is part of this development plan rather than optional follow-up guidance.
 
 ## 1. Review outcome
 
 The product direction is coherent and the repository is an appropriate Leptos 0.8 CSR scaffold. The implementation should not start by building the UI. Correctness depends first on acquiring the normative standard, freezing encoding behavior, and building independently verified core fixtures.
 
-The current repository contains one Leptos binary and no workspace crates, QR implementation, test suite, CI, approved logo, or deployment configuration. It also loads Google Fonts at runtime, which conflicts with an offline/self-contained internal tool posture and must be removed or replaced with a bundled asset.
+The repository state originally reviewed contained one Leptos binary and no workspace crates, QR implementation, test suite, or approved logo. It also loaded Google Fonts at runtime, which conflicted with an offline/self-contained internal tool posture and had to be removed or replaced with a bundled asset.
 
 Development can proceed with the decisions in this document. Items explicitly marked **Owner gate** require confirmation before their associated phase, but do not block unrelated earlier work.
 
@@ -124,6 +124,8 @@ Convert the repository to a Cargo workspace:
 │   │   ├── src/png.rs
 │   │   └── src/lib.rs
 │   └── qr-web/
+│       ├── index.html
+│       ├── input.css
 │       ├── src/app.rs
 │       ├── src/components/
 │       ├── src/download.rs
@@ -132,8 +134,7 @@ Convert the repository to a Cargo workspace:
 │       └── assets/
 ├── tests/fixtures/            # provenance manifest + redistributable fixtures
 ├── fuzz/
-├── Trunk.toml
-└── index.html
+└── Trunk.toml                 # root command entry point targeting qr-web
 ```
 
 Dependency direction is strictly:
@@ -203,7 +204,7 @@ User errors return to Leptos as validation state. Internal invariant errors disa
 
 ## 5. Recommended dependencies
 
-Keep versions exact in the workspace manifest and update through deliberate dependency PRs.
+Keep versions exact in the workspace manifest and update dependencies deliberately.
 
 ### Production
 
@@ -216,7 +217,7 @@ Keep versions exact in the workspace manifest and update through deliberate depe
 
 Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon crate to production dependencies.
 
-### Development and CI only
+### Development and test only
 
 - `proptest` for fit, geometry, determinism, and matrix invariants.
 - `cargo-fuzz`/libFuzzer for encoder and render entry points.
@@ -230,7 +231,7 @@ Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon cra
 - `quirc` as a second decoder for representative raster cases where its text/ECI behavior is applicable.
 - Nayuki QR Code Generator and a second generator may create development fixtures only after owner approval. Their outputs are compared, not linked into production or copied as implementation source.
 
-CI tooling additionally uses `cargo-nextest`, `cargo-llvm-cov`, `cargo-mutants`, Miri, `cargo-deny`, `cargo-audit`, Playwright Test, and `@axe-core/playwright`. See the testing strategy for the rationale and enforcement thresholds.
+Additional local verification may use `cargo-llvm-cov`, `cargo-mutants`, Miri, `cargo-audit`, Playwright Test, and `@axe-core/playwright`. See the testing strategy for the rationale and enforcement thresholds.
 
 ## 6. Test oracle and fixture strategy
 
@@ -251,7 +252,7 @@ Golden coverage should include:
 - Numeric, alphanumeric, ASCII byte, and UTF-8+ECI payloads.
 - Boundary payloads at exactly-fit and one-unit-over capacity for each character-count version band.
 
-The CI decode gate tests the safe preset exhaustively across all allowed profile versions. Styled combinations use a pairwise matrix plus explicit high-risk cases; the final approved launch combinations are fully enumerated.
+The independent decode suite tests the safe preset exhaustively across all allowed profile versions. Styled combinations use a pairwise matrix plus explicit high-risk cases; the final approved launch combinations are fully enumerated.
 
 ## 7. Delivery milestones
 
@@ -261,11 +262,11 @@ Estimates are engineering effort for one experienced Rust developer and include 
 
 - Complete both Phase 0 gates.
 - Convert the scaffold to the three-crate workspace.
-- Pin toolchain and dependency versions; add formatting, Clippy, native test, WASM check, and dependency audit CI.
+- Pin toolchain and dependency versions; document local formatting, Clippy, native test, WASM check, and production-build commands.
 - Remove remote font/network assets and scaffold local approved assets.
 - Add the fixture provenance format and architecture decision records for ECI, segmentation, and oracle policy.
 
-**Exit:** native and WASM skeletons build in CI; no runtime network request is present.
+**Exit:** native and WASM skeletons build locally; no runtime network request is present.
 
 ### M1 — Standards-conformant encoder core (3–5 weeks, risk: high)
 
@@ -320,51 +321,23 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 - Execute adverse raster transformations with documented thresholds.
 - Complete the named browser/device/scanner/printer/placement matrix.
 - Produce print samples and validate 25 mm and 30 mm placements.
-- Add static internal deployment, CSP, cache policy, release runbook, and user guidance.
+- Complete the release runbook, user guidance, and local production-build privacy inspection.
 
-**Exit:** all acceptance criteria have linked evidence; manual exceptions are signed off; deployment makes no payload/logo request and logs no payload.
+**Exit:** all acceptance criteria have linked evidence; manual exceptions are signed off; the local production build makes no payload/logo request and logs no payload.
 
 **Total expected engineering effort:** roughly 8–13 developer-weeks, with core conformance and logo decode validation carrying most uncertainty. Removing borders saves a UI/configuration branch, a render layer, SVG security cases, and one dimension from the branding test matrix; it does not materially reduce encoder-core risk.
 
-## 8. CI pipeline
+## 8. Local verification
 
-Run fast checks on every change and expensive suites on main/nightly:
+The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, adverse-image, and physical checks performed during release hardening.
 
-The authoritative schedules and thresholds are in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md). In particular, pull requests retain all standard-table, golden-matrix, boundary, safe-render, committed-fuzz-corpus, Chromium download/privacy, and coverage-regression gates. Nightly-only placement is reserved for timed fuzzing, mutation sweeps, adverse transforms, Miri, and expanded browsers—not foundational QR correctness.
-
-### Pull request
-
-- `cargo fmt --check`
-- Clippy with warnings denied for workspace/all targets
-- Native unit/integration tests
-- `cargo check --target wasm32-unknown-unknown`
-- Table and golden tests
-- Safe-preset SVG/PNG geometry and decode smoke tests
-- Determinism snapshots
-- Dependency/license/advisory checks
-
-### Main or nightly
-
-- Full profile/version decode matrix
-- All approved branding combinations
-- Property tests with elevated case count
-- SVG raster/decode tests
-- Adverse-condition transforms
-- Fuzz smoke corpus and sanitizer jobs where supported
-- Optimized Trunk build, compressed WASM size, and performance trend report
-
-### Release candidate
-
-- Browser automation on the supported matrix
-- Manual phone camera, printer, material, and placement checklist
-- Static deployment privacy/network inspection
-- Reproducible artifact/hash record
+Repository-owned automation and publishing are intentionally deferred. The owner will configure them separately later.
 
 ## 9. Development tickets in execution order
 
 The following ticket slices are small enough for review and preserve dependency order:
 
-1. Workspace conversion and CI baseline.
+1. Workspace conversion and offline local-verification baseline.
 2. Profile types, validation, and geometry-only tests.
 3. Bit buffer, mode detection, ECI 26, and character-count widths.
 4. ISO capacity/block/remainder/alignment tables with invariants.
@@ -384,7 +357,7 @@ The following ticket slices are small enough for review and preserve dependency 
 18. Approved color/contrast and transparency previews.
 19. Rounded/finder presets if approved.
 20. Bundled logo, knockout, overlap checks, and decode matrix.
-21. Hardening, performance, manual validation, deployment, and docs.
+21. Hardening, performance, manual validation, release evidence, and docs.
 
 Tickets 3–11 should generally land sequentially because later code relies on earlier invariants. UI shell work may run in parallel after ticket 2, but export controls must not be presented as functional until the core and safe renderer pass their gates.
 
@@ -399,8 +372,6 @@ These choices cannot be inferred safely from the technical specification:
 5. Approve measurable color policy. Recommended starting rule: WCAG relative luminance contrast ratio at least 4.5:1 for selectable opaque presets, with final acceptance determined by decoding tests. Transparency is always a caution because effective contrast is unknowable.
 6. Confirm that transparency is a real launch requirement; otherwise defer it and materially reduce the validation matrix.
 7. Name the supported browser, iOS/Android device, scanner app, printer, stock/material, and placement environments.
-8. Confirm the internal static host and its CSP/deployment requirements.
-
 Work through M2 can begin after approvals 1–2. M3 can use the safe preset. M4 cannot finish until approvals 3–7 are resolved.
 
 ## 11. Definition of done

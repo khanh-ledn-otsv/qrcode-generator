@@ -20,6 +20,8 @@ rustup target add wasm32-unknown-unknown
 trunk serve --open
 ```
 
+The root `Trunk.toml` targets `crates/qr-web/index.html`, so Trunk commands run
+from the workspace root while the Leptos HTML and styles remain inside `qr-web`.
 Trunk builds the Rust application to WebAssembly and compiles Tailwind CSS automatically.
 
 ## Verify

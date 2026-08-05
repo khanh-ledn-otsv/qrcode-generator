@@ -1,8 +1,0 @@
-nextest-version = "0.9.140"
-
-[profile.default]
-retries = 0
-
-[profile.ci]
-fail-fast = false
-retries = 0

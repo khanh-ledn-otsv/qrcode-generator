@@ -19,7 +19,7 @@ No single decoder result proves QR conformance. Conversely, an exact unstyled ma
 
 ## 2. Selected testing libraries and tools
 
-All test tools must be pinned in manifests, lockfiles, CI actions, or the CI container. Renovation is deliberate and runs the full suite.
+All test tools must be pinned in manifests, lockfiles, or documented local tool setup. Updates are deliberate and run the full suite.
 
 ### 2.1 Rust development dependencies
 
@@ -42,16 +42,14 @@ Pin `proptest` to the reviewed 1.11.x line initially. Pin all other crate versio
 
 | Tool | Purpose | Policy |
 |---|---|---|
-| `cargo-nextest` | Parallel native test runner, JUnit output, slow-test reporting, retries policy | Use a checked-in `.config/nextest.toml`. CI retries are disabled for correctness tests so flakes cannot be hidden. |
 | `cargo-llvm-cov` | Line and region coverage | Report per crate and per file. Stable branch coverage is not assumed. Generated tables and test support code are excluded transparently. |
 | `cargo-mutants` | Mutation testing | Required for `qr-core` and critical geometry code. Every surviving mutation is triaged; exclusions require a reason in config. |
-| `cargo-fuzz` | Coverage-guided libFuzzer targets | Nightly Linux job. Crashes, panics, hangs, excessive allocation, and invariant failures are defects. Minimized regression inputs are committed. |
-| Miri | Undefined-behavior and strict interpreter checks | Nightly/weekly for native core and render tests that Miri supports. Production code should contain no `unsafe`; dependencies are outside the project gate. |
-| `cargo-deny` | License, bans, duplicate, and source policy | Enforce the production prohibition on QR encoders/RS libraries and deny unknown registries/Git sources. |
-| `cargo-audit` | RustSec advisories | Run on pull requests and scheduled builds with documented temporary advisories only. |
+| `cargo-fuzz` | Coverage-guided libFuzzer targets | Run manually with documented budgets. Crashes, panics, hangs, excessive allocation, and invariant failures are defects. Minimized regression inputs are committed. |
+| Miri | Undefined-behavior and strict interpreter checks | Run manually for supported native core and render tests. Production code should contain no `unsafe`; dependencies are outside the project gate. |
+| `cargo-audit` | RustSec advisories | Run manually before release, with any temporary advisory exception documented. |
 | `cargo-bloat` | WASM/native size attribution | Trend report for release builds; helps validate the provisional bundle target. |
 
-Start with the currently reviewed tool lines (`cargo-nextest` 0.9.x and `cargo-llvm-cov` 0.8.x), then pin exact CI tool versions during M0.
+Start with the currently reviewed `cargo-llvm-cov` 0.8.x line, then pin exact versions when each local tool is introduced.
 
 ### 2.3 Browser and accessibility tools
 
@@ -322,7 +320,7 @@ For each approved tuple of foreground, background/transparency, module style, fi
 - for logo mode, construct payloads selecting every H-level version allowed by each profile and assert either valid decode or intentional geometry rejection;
 - record warning/invalid classification alongside decode results.
 
-CI must fail if a new approved enum variant is not included in the generated matrix.
+The generated coverage test must fail if a new approved enum variant is not included in the matrix.
 
 ### 6.5 Adverse-image tests
 
@@ -364,7 +362,7 @@ Run browser tests for:
 - debounce timers and disposal;
 - repeated generation without leaked object URLs or unbounded retained buffers.
 
-Run these in headless Chromium on pull requests and add Firefox where the harness supports it on scheduled builds.
+Run these locally in headless Chromium, and add Firefox where the harness supports it before release.
 
 ### 7.3 Playwright end-to-end suite
 
@@ -382,7 +380,7 @@ Test through the user-visible UI:
 - reload and back/forward behavior if state persistence is added;
 - responsive layouts at supported desktop and mobile viewports.
 
-Run Chromium on every pull request. Run Chromium, Firefox, and WebKit on main/nightly. Playwright projects use pinned browser binaries matching the pinned Playwright version.
+Run Chromium during feature verification. Run Chromium, Firefox, and WebKit during release hardening. Playwright projects use pinned browser binaries matching the pinned Playwright version.
 
 ### 7.4 Accessibility
 
@@ -407,7 +405,7 @@ Playwright intercepts all network requests after initial navigation. Fail if gen
 - no Google Fonts or other third-party runtime asset requests;
 - no payload in URL, history, document title, filename, SVG metadata, console output, or storage;
 - no remote reference in exported SVG;
-- CSP blocks script/style sources outside the approved static policy;
+- browser security policy blocks script/style sources outside the approved local application policy;
 - arbitrary text containing XML/HTML metacharacters cannot alter SVG structure or DOM;
 - large input is rejected before expensive allocation.
 
@@ -435,7 +433,7 @@ Core properties:
 - render output stays within allocation and dimension bounds;
 - profile output always obeys fixed dimensions and integer geometry.
 
-Pull requests use a stable committed RNG seed plus persisted failure cases. Nightly jobs add several recorded rotating seeds. A failing seed and minimized input become a permanent regression test.
+Routine local runs use a stable committed RNG seed plus persisted failure cases. Extended runs add several recorded rotating seeds. A failing seed and minimized input become a permanent regression test.
 
 ## 9. Fuzzing
 
@@ -454,10 +452,10 @@ Fuzz assertions include no panic, abort, hang, unchecked overflow, out-of-bounds
 
 Budgets:
 
-- Pull request: replay the committed corpus; no open-ended fuzzing.
-- Nightly: at least 10 minutes per target, sharded.
-- Weekly: at least 60 minutes per critical target (`encode_utf8`, `reed_solomon`, `matrix_build`, `render_png`).
-- Release candidate: a documented extended run with zero unresolved findings.
+- Routine: replay the committed corpus; no open-ended fuzzing.
+- Extended: at least 10 minutes per target, sharded where useful.
+- Deep: at least 60 minutes per critical target (`encode_utf8`, `reed_solomon`, `matrix_build`, `render_png`).
+- Release: a documented extended run with zero unresolved findings.
 
 Sanitize and minimize crash artifacts before committing them. Fuzz payloads must remain generated and non-sensitive.
 
@@ -475,11 +473,11 @@ Initial gates after M1 stabilizes:
 | Profile/geometry code | ≥98% | ≥95% |
 | Testable plain-Rust `qr-web` state | ≥85% | ≥80% |
 
-Generated constant tables, exhaustive-match boilerplate, and browser-only glue may be excluded only through reviewed configuration. Coverage may not fall on a pull request. Coverage is a missing-test signal, not proof of correctness.
+Generated constant tables, exhaustive-match boilerplate, and browser-only glue may be excluded only through reviewed configuration. Coverage regressions must be investigated before accepting a change. Coverage is a missing-test signal, not proof of correctness.
 
 ### 10.2 Mutation score
 
-Run `cargo-mutants` nightly on changed critical files and weekly on all of `qr-core` plus profile geometry.
+Run `cargo-mutants` on changed critical files during focused verification and on all of `qr-core` plus profile geometry during release hardening.
 
 - Critical arithmetic/placement/mask/BCH code target: at least 90% caught mutations.
 - Whole `qr-core` target: at least 85% caught mutations.
@@ -501,7 +499,7 @@ Use Criterion to benchmark:
 - logo overlap analysis;
 - full request-to-artifact path.
 
-Report median and tail distributions and track them over time. Ordinary CI correctness tests use generous hang/allocation guards, not millisecond assertions. A dedicated stable runner evaluates the product targets and flags regressions for investigation.
+Report median and tail distributions and track them over time. Correctness tests use generous hang/allocation guards, not millisecond assertions. Run performance comparisons in a stable local environment and investigate regressions.
 
 Test defensive resource limits explicitly:
 
@@ -511,59 +509,38 @@ Test defensive resource limits explicitly:
 - repeated preview/download operations do not grow browser heap without bound;
 - SVG path/PNG buffer size stays below a documented bound for every profile.
 
-## 12. CI test tiers
+## 12. Local and release test suites
 
-### Pull request target: under 10 minutes
+### Routine local verification
 
-- formatting, Clippy, dependency policy, advisory scan;
-- `cargo nextest run` for native unit/integration tests;
-- all table, golden, exact-boundary, and safe-render tests;
-- deterministic property suite with moderate cases;
-- committed fuzz corpus replay;
-- WASM build and Chromium `wasm-bindgen-test`;
-- Chromium Playwright critical path, downloads, privacy, and axe smoke tests;
-- changed-code coverage/no-regression gate.
+- formatting and warnings-as-errors Clippy;
+- native unit and integration tests;
+- table, golden, exact-boundary, and safe-render tests;
+- deterministic property tests and committed fuzz-corpus replay;
+- WASM check and optimized Trunk build;
+- browser smoke tests when web behavior changes.
 
-QR goldens and table tests are never moved out of the pull-request tier for speed.
+### Extended local verification
 
-### Main target: under 30 minutes
+- full property case count and approved branding tuples;
+- exhaustive profile/version geometry and independent decoding;
+- Chromium, Firefox, and WebKit browser tests;
+- coverage, mutation, Miri, adverse-image, size, and performance checks as applicable.
 
-- full property case count;
-- all approved branding tuples;
-- exhaustive allowed profile/version render geometry;
-- full independent decode suite;
-- Playwright Chromium, Firefox, and WebKit;
-- merged native coverage report and benchmark smoke run.
-
-### Nightly target: 1–2 hours, sharded
-
-- timed fuzzing across all targets;
-- changed-file mutation testing;
-- adverse-image suite;
-- Miri-compatible tests;
-- expanded browser/device emulation;
-- bundle-size and performance trends.
-
-### Weekly target: up to 4 hours
-
-- full mutation sweep;
-- extended critical fuzz targets;
-- full deterministic adverse transform grid;
-- dependency/toolchain update rehearsal;
-- cross-platform native checks on Linux, macOS, and Windows where oracle tooling permits.
-
-### Release candidate
+### Release validation
 
 - clean rebuild with pinned tools and artifact hashes;
 - complete automated suite with no retry-hidden failures;
-- named real-device/scanner/browser/printer matrix;
+- named real-device, scanner, browser, and printer matrix;
 - print samples at 25 mm and 30 mm;
-- privacy/network/CSP inspection on the deployed host;
-- signed evidence report mapping every acceptance criterion to tests/results.
+- local production-build privacy and network inspection;
+- signed evidence report mapping every acceptance criterion to tests and results.
+
+Repository-owned automation and publishing are intentionally deferred and are not specified here.
 
 ## 13. Flake and failure policy
 
-- Correctness tests get no automatic retry in required CI.
+- Correctness tests get no automatic retry in required verification suites.
 - A flaky test is quarantined only with an owner, linked defect, expiration date, and equivalent release-risk mitigation.
 - Never weaken a matrix/hash assertion because an oracle disagrees; isolate the discrepancy and determine which rule or representation differs.
 - Persist Proptest regressions and fuzz crashes in the repository after sanitization.
@@ -573,7 +550,7 @@ QR goldens and table tests are never moved out of the pull-request tier for spee
 
 ## 14. Test review checklist for each feature
 
-A feature pull request is incomplete unless reviewers can answer yes to the applicable questions:
+A feature change is incomplete unless reviewers can answer yes to the applicable questions:
 
 - Does it add exact success, boundary, and typed-failure tests?
 - Is the expected result independent of production logic?
@@ -591,7 +568,7 @@ A feature pull request is incomplete unless reviewers can answer yes to the appl
 ## 15. Testing implementation order
 
 1. Add `tests/fixtures/manifest.json` schema and oracle provenance rules.
-2. Configure nextest, coverage, dependency policy, and CI artifact reporting.
+2. Document local test commands and add coverage reporting when the implementation is ready for it.
 3. Build dual-oracle explicit-mask fixture generator outside production crates.
 4. Implement table invariant tests before populating all tables.
 5. Add unit/reference/property tests with each `qr-core` module, not afterward.
@@ -600,7 +577,7 @@ A feature pull request is incomplete unless reviewers can answer yes to the appl
 8. Add profile-exhaustive geometry and safe-style decode tests.
 9. Add native web-state tests, WASM browser tests, then Playwright E2E.
 10. Generate the branding tuple matrix from approved configuration.
-11. Add adverse transforms, fuzz schedules, Miri, and performance tracking.
+11. Add adverse transforms, documented fuzz budgets, Miri, and performance tracking.
 12. Produce the release evidence template before manual validation starts.
 
 ## 16. References checked
@@ -608,7 +585,6 @@ A feature pull request is incomplete unless reviewers can answer yes to the appl
 - [Proptest API documentation](https://docs.rs/proptest/latest/proptest/)
 - [Rust Fuzz Book](https://rust-fuzz.github.io/book/)
 - [`wasm-bindgen-test` guide](https://wasm-bindgen.github.io/wasm-bindgen/wasm-bindgen-test/usage.html)
-- [cargo-nextest documentation](https://nexte.st/)
 - [cargo-llvm-cov repository](https://github.com/taiki-e/cargo-llvm-cov)
 - [cargo-mutants documentation](https://mutants.rs/)
 - [Playwright browser documentation](https://playwright.dev/docs/browsers)
