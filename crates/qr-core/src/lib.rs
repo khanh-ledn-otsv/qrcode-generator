@@ -5,6 +5,8 @@
 use std::error::Error;
 use std::fmt;
 
+pub mod bit_buffer;
+pub mod encoding;
 pub mod tables;
 
 /// A QR Code Model 2 symbol version.

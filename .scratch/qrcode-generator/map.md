@@ -13,6 +13,10 @@
   2 capacity, block, remainder, alignment, and character-width data is exposed
   through typed checked lookups and exhaustively validated against a committed
   160-row fixture from pinned independent development oracles.
+- [Ticket 05](issues/05-encode-payloads-into-data-codewords.md): Exact input is
+  encoded as one deterministic Numeric, Alphanumeric, or Byte segment with
+  UTF-8 ECI 26 when required, first-fit version selection, typed failures, and
+  fully padded data codewords.
 
 ## Notes
 
