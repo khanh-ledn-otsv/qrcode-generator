@@ -9,6 +9,8 @@ browser.
 - `qr-core` contains browser-independent QR encoding logic.
 - `qr-render` contains browser-independent deterministic artifact rendering.
 - `qr-web` contains the Leptos application and browser integrations.
+- `fixture-tool` is a development-only manifest, golden-diff, and independent
+  decoder harness. It is not a dependency of any production crate.
 
 Dependencies flow from `qr-web` to `qr-render` and `qr-core`, and from
 `qr-render` to `qr-core`.
@@ -34,6 +36,10 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo check --target wasm32-unknown-unknown
 trunk build --release
 ```
+
+Committed QR fixtures are verified without regeneration during `cargo test`.
+The explicit dual-oracle generation and ZXing-C++ decode workflow is documented
+in [`tests/oracles/README.md`](tests/oracles/README.md).
 
 ## Documentation
 

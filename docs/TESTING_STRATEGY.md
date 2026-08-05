@@ -64,8 +64,8 @@ Use TypeScript only in `e2e/`. Keep business logic and expected QR calculations 
 
 - **ZXing-C++:** primary pinned decode oracle for PNG and rasterized SVG. Compare decoded Unicode text, raw bytes, ECI state, symbol version, and ECC metadata when exposed.
 - **quirc:** secondary, implementation-diverse decoder for representative ASCII raster tests. Do not use it as the sole UTF-8/ECI oracle.
-- **Nayuki QR Code Generator:** development-only generator for explicit-version/mask golden fixtures after owner approval.
-- **A second generator:** generate the same fixed fixtures with a separately maintained implementation. Commit a golden only after agreement or documented reconciliation.
+- **Nayuki QR Code Generator 1.8.0:** development-only generator for explicit-version/mask golden fixtures after owner approval.
+- **`python-qrcode` 8.2:** separately maintained second generator for the same fixed byte-mode fixtures. Commit a golden only after exact agreement. Segno 1.6.6 was evaluated first and rejected after a concrete byte-aligned padding disagreement; the disputed matrix was not accepted.
 
 None of these generators or decoders is linked into the production application.
 

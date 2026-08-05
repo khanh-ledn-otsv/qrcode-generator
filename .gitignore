@@ -1,2 +1,4 @@
 /target
 /dist
+/tests/oracles/zxing-cpp
+__pycache__/

@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "decoder": {
+    "tool": "ZXing-C++ ZXingReader",
+    "version": "3.0.2",
+    "source_url": "https://github.com/zxing-cpp/zxing-cpp.git",
+    "source_commit": "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825",
+    "checkout_command": "git clone https://github.com/zxing-cpp/zxing-cpp.git tests/oracles/zxing-cpp && git -C tests/oracles/zxing-cpp checkout --detach 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825",
+    "build_command": "cmake -S tests/oracles/zxing-cpp -B tests/oracles/zxing-cpp/build -DCMAKE_BUILD_TYPE=Release -DZXING_EXAMPLES=ON && cmake --build tests/oracles/zxing-cpp/build --config Release"
+  },
+  "fixtures": [
+    {
+      "id": "synthetic-v01-m-mask0-byte-001",
+      "synthetic": true,
+      "payload_file": "payloads/ascii-byte-001.bin",
+      "payload_sha256": "e6d717419299faf043d00af78c7405e19defac1c693f92cf602f5618c40e7980",
+      "encoding": "utf-8",
+      "eci_assignment": null,
+      "mode": "byte",
+      "version": 1,
+      "ecc": "M",
+      "mask": 0,
+      "expected_matrix_file": "matrices/synthetic-v01-m-mask0-byte-001.txt",
+      "expected_matrix_sha256": "7c0e57772e4536619159e5da2d957b34d3b3871840a79138171d9a1761b4bbfc",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "implementation": "nayuki-qrcodegen-python",
+          "version": "1.8.0",
+          "command": "python3 tests/support/generate_fixtures.py --fixture synthetic-v01-m-mask0-byte-001 --oracle nayuki",
+          "matrix_sha256": "7c0e57772e4536619159e5da2d957b34d3b3871840a79138171d9a1761b4bbfc"
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "implementation": "python-qrcode",
+          "version": "8.2",
+          "command": "python3 tests/support/generate_fixtures.py --fixture synthetic-v01-m-mask0-byte-001 --oracle python-qrcode",
+          "matrix_sha256": "7c0e57772e4536619159e5da2d957b34d3b3871840a79138171d9a1761b4bbfc"
+        }
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "initial-dual-oracle-bootstrap-review",
+        "verified_at": "2026-08-05",
+        "notes": "Nayuki and python-qrcode matrices and recorded SHA-256 hashes agree byte-for-byte."
+      }
+    },
+    {
+      "id": "synthetic-v02-q-mask3-byte-002",
+      "synthetic": true,
+      "payload_file": "payloads/ascii-byte-002.bin",
+      "payload_sha256": "f81a915f4733743387cc6ec6ea28f9474261234e7e20c8430b372cde9165ec3e",
+      "encoding": "utf-8",
+      "eci_assignment": null,
+      "mode": "byte",
+      "version": 2,
+      "ecc": "Q",
+      "mask": 3,
+      "expected_matrix_file": "matrices/synthetic-v02-q-mask3-byte-002.txt",
+      "expected_matrix_sha256": "046586ca6c9f3d9b3186c772f1b83ae630b9c83351c6d3494ac42da93accb3d0",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "implementation": "nayuki-qrcodegen-python",
+          "version": "1.8.0",
+          "command": "python3 tests/support/generate_fixtures.py --fixture synthetic-v02-q-mask3-byte-002 --oracle nayuki",
+          "matrix_sha256": "046586ca6c9f3d9b3186c772f1b83ae630b9c83351c6d3494ac42da93accb3d0"
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "implementation": "python-qrcode",
+          "version": "8.2",
+          "command": "python3 tests/support/generate_fixtures.py --fixture synthetic-v02-q-mask3-byte-002 --oracle python-qrcode",
+          "matrix_sha256": "046586ca6c9f3d9b3186c772f1b83ae630b9c83351c6d3494ac42da93accb3d0"
+        }
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "initial-dual-oracle-bootstrap-review",
+        "verified_at": "2026-08-05",
+        "notes": "Nayuki and python-qrcode matrices and recorded SHA-256 hashes agree byte-for-byte."
+      }
+    }
+  ]
+}

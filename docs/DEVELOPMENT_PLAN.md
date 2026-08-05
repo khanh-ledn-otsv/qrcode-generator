@@ -229,7 +229,7 @@ Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon cra
 - `criterion` for performance benchmarks without flaky wall-clock unit assertions.
 - ZXing-C++ as the primary independent decode oracle.
 - `quirc` as a second decoder for representative raster cases where its text/ECI behavior is applicable.
-- Nayuki QR Code Generator and a second generator may create development fixtures only after owner approval. Their outputs are compared, not linked into production or copied as implementation source.
+- Nayuki QR Code Generator 1.8.0 and `python-qrcode` 8.2 create development fixtures only after owner approval. Their explicit-version/mask outputs are compared, not linked into production or copied as implementation source. Segno 1.6.6 was evaluated and rejected for this role after its byte-aligned padding output disagreed with Nayuki; the rejected matrix was not committed.
 
 Additional local verification may use `cargo-llvm-cov`, `cargo-mutants`, Miri, `cargo-audit`, Playwright Test, and `@axe-core/playwright`. See the testing strategy for the rationale and enforcement thresholds.
 
