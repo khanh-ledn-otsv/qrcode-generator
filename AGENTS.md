@@ -74,6 +74,20 @@ Summarize changed behavior, list verification performed, and identify any checks
 
 ## Agent skills
 
+### Structural code navigation
+
+- When exploring unfamiliar source or planning a focused edit, consider loading
+  the `ast-grep-outline` skill and running `ast-grep outline` before reading entire
+  files. Use its line-numbered structure to narrow subsequent source reads.
+- Use `rg` for filenames and plain-text searches. When the question depends on
+  syntax or relationships between code constructs, load the `ast-grep` skill
+  and prefer an AST-aware `ast-grep run` or `ast-grep scan` query.
+- Test non-trivial ast-grep rules against a minimal example before scanning the
+  repository. Follow the skill guidance for relational rules, including
+  `stopBy: end`, and use `--debug-query` when the parsed structure is unclear.
+- After modifying several source files, consider `ast-grep outline` on the
+  changed files to review the resulting public surface and module structure.
+
 ### Issue tracker
 
 Issues are tracked as local Markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
