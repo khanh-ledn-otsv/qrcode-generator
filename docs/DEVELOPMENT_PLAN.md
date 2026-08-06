@@ -8,24 +8,26 @@ The detailed test architecture, selected libraries, quality gates, fuzz/mutation
 
 ## 1. Review outcome
 
-The product direction is coherent and the repository is an appropriate Leptos 0.8 CSR scaffold. The implementation should not start by building the UI. Correctness depends first on acquiring the normative standard, freezing encoding behavior, and building independently verified core fixtures.
+The product direction is coherent and the repository is an appropriate Leptos 0.8 CSR scaffold. The implementation should not start by building the UI. Correctness depends first on freezing encoding behavior and building independently verified core fixtures under the provenance policy below; access to the complete normative standard is a valuable later audit input, not an implementation gate.
 
 The repository state originally reviewed contained one Leptos binary and no workspace crates, QR implementation, test suite, or approved logo. It also loaded Google Fonts at runtime, which conflicted with an offline/self-contained internal tool posture and had to be removed or replaced with a bundled asset.
 
-Development can proceed with the decisions in this document. Items explicitly marked **Owner gate** require confirmation before their associated phase, but do not block unrelated earlier work.
+Development can proceed with the decisions in this document. The remaining owner coordination concerns named physical release environments in M5 only.
 
 ## 2. Decisions resolved by this review
 
 ### 2.1 Standards and table provenance
 
 - ISO/IEC 18004:2024 remains the normative source for QR Code Model 2 behavior, but a licensed complete copy is not a repository or implementation prerequisite.
+- When the complete standard text is unavailable, non-table algorithm rules may be implemented under the public-source corroboration procedure in [`research/qr-public-source-provenance.md`](research/qr-public-source-provenance.md). Public sources are evidence and test oracles, never relabelled as normative text.
+- Each such rule must record its intended ISO clause/table topic, agree across two pinned independently maintained encoders where both expose it, have an independently written local invariant or slow reference where practical, and pass independently decoded end-to-end fixtures. A disagreement blocks acceptance; majority vote is not allowed.
 - Stable capacity, block, remainder-bit, alignment-pattern, and character-count tables may be implemented from committed development fixtures only after two pinned, independently maintained QR generators agree on every value they expose.
 - Values exposed by only one generator must also satisfy an independently implemented structural invariant (for example, matrix function-module accounting for remainder bits).
 - Public implementations remain development/test oracles. They are not production dependencies, and their implementation code is not copied into production.
-- Production comments identify the applicable standard clauses plus the oracle fixture and pinned versions. Later comparison with a licensed standard is an audit task and must not silently rewrite accepted fixtures.
+- Production comments identify the applicable standard clause/topic plus the public-source evidence, oracle fixture, and pinned versions. If the exact 2024 clause number has not been verified against a complete copy, mark that citation `2024 clause mapping pending audit` rather than inventing precision. Later comparison with a licensed standard is an audit task and must not silently rewrite accepted fixtures.
 - A table-validation test must verify dimensions, totals, and invariants for every version/ECC row before encoder work is accepted.
 
-**Phase 0 gate (accepted by the project owner on 2026-08-05):** development-only QR generators are permitted for fixture creation under the dual-oracle provenance policy above.
+**Phase 0 gate (accepted by the project owner on 2026-08-05 and expanded on 2026-08-06):** development-only QR generators and public first-party source material are permitted for fixture creation and algorithm corroboration under the policy above.
 
 ### 2.2 Text, byte mode, and ECI
 
@@ -49,7 +51,13 @@ Use one data mode for the complete payload in release 1. ECI is a control segmen
 
 Mixed-mode dynamic programming is deferred. Add it later only if telemetry-free testing of representative internal URLs shows a meaningful reduction in rejected profiles or selected versions. Introducing it later changes output matrices but not decoded payloads, so deterministic golden fixtures must be versioned if it is added.
 
-### 2.4 PNG renderer
+### 2.4 Safe-workflow error-correction policy
+
+Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics but is not user-selectable. Output profiles define only canvas dimensions and a maximum version; they do not silently change ECC. For an exact payload and selected profile, the workflow requests ECC M and chooses the first fitting version up to the profile ceiling.
+
+Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H before version fitting, then recalculates the selected version and all capacity diagnostics. Disabling the logo restores ECC M and refits. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
+
+### 2.5 PNG renderer
 
 Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rust `png` crate. Do not use Canvas, browser SVG screenshots, or a general scene renderer for production PNG export.
 
@@ -60,27 +68,28 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 
 This keeps the pixel geometry testable on native Rust and WASM and avoids browser-dependent rasterization.
 
-### 2.5 Initial branding safety defaults
+### 2.6 Initial branding safety defaults
 
 These defaults make implementation testable while product-specific artwork is pending:
 
 - Safe preset: black foreground, opaque white background, square data modules, square function modules, standard square finders, no border, no logo.
 - Brand preset: `#BD0F72` foreground on opaque white; it must pass the contrast rule and decode suite.
-- Rounded data modules: maximum radius 25% of a module cell. Function modules remain square except for an explicitly tested finder preset.
-- Dot modules: deferred from release 1 unless the owner makes them a launch requirement before Phase 3.
+- Rounded data modules: maximum radius 25% of a module cell. Function modules and finders remain square in release 1.
+- Dot modules: deferred from release 1.
 - Transparent background: supported as a caution, with export evaluated against white, light gray, and the documented dark/patterned previews. It is never the default.
 - Module strokes and decorative borders: excluded from the product. Surplus fixed-canvas padding remains background-only.
-- Finder styling: standard square at launch; any rounded finder becomes a separately named preset and must pass the full decode matrix.
+- Finder styling: standard square at launch. A future rounded finder would be a separately approved and named preset requiring the full decode matrix.
 
-**Owner gate before Phase 3:** approve the launch preset list, contrast thresholds, and bundled logo asset.
+**Launch decisions accepted by the project owner on 2026-08-06:** release 1 includes the safe and brand presets above, the 4.5:1 opaque contrast threshold, optional transparency as a caution, square and rounded data modules, standard finders, no dots, and the repository-owned gray placeholder logo described below.
 
-### 2.6 Logo safety
+### 2.7 Logo safety
 
 - Enabling the logo sets ECC H before version selection, so capacity/version is recalculated first.
 - The logo plus knockout is centered, uses one module of padding initially, and is at most 20% of matrix width.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
-- The renderer uses one bundled, sanitized asset. No upload or arbitrary SVG is accepted in release 1.
+- The renderer uses the repository-owned, sanitized solid-gray placeholder at `assets/logo-placeholder.svg`. The placeholder is deliberately visually neutral and exercises a conservative solid occlusion. No upload or arbitrary SVG is accepted in release 1.
+- Replacing the placeholder is a deliberate product change: record the replacement asset's license/provenance, sanitize it, and rerun every logo structural, deterministic, and independent-decode gate before making it selectable.
 - On a transparent QR background, the knockout remains opaque white.
 - If geometry is unsafe for the selected version, logo mode is disabled with a reason. The encoder must not force a larger version merely to create logo space.
 
@@ -90,7 +99,7 @@ ECC percentages are not used as an occlusion budget. Decode testing is mandatory
 
 These are implementation interpretations until merged back into the product specification.
 
-1. **No border layer:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only, and the SVG viewBox covers only the QR symbol including its quiet zone. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
+1. **No border layer and explicit SVG sizing:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only. SVG `width` and `height` equal the selected profile's base dimensions, while its `viewBox` is the tight logical extent of the QR matrix plus exactly four quiet-zone modules on every side; it contains no fixed-canvas surplus padding. Consumers scale the vector through `width` and `height`. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
 2. **Capacity diagnostics:** Display exact `used data bits / available data bits` and data codewords. “Remaining capacity” means additional characters in the currently selected whole-payload mode, computed by the same fit function; label it as an estimate for edits that could change mode.
 3. **Function-module protection:** Branding and logo knockout never modify function modules. The spec's general “protect function patterns” goal takes precedence over language that only makes finder overlap explicitly invalid.
 4. **Mask evaluation:** Apply each mask only to data/remainder modules, write the corresponding format bits, then score the complete final matrix. Choose the lowest score and lower mask ID on a tie.
@@ -299,7 +308,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 ### M3 — Functional Leptos workflow (1–2 weeks, risk: low)
 
 - Payload input with character and byte counts.
-- Four profile cards and derived ECC/version/capacity state.
+- Four profile cards and derived version/capacity state; diagnostics show the fixed safe ECC M or logo-triggered ECC H.
 - Debounced preview and accessible validation announcements.
 - Diagnostics panel with exact geometry and warnings.
 - SVG and PNG Blob downloads with fixed safe filenames.
@@ -357,24 +366,17 @@ The following ticket slices are small enough for review and preserve dependency 
 16. Leptos state model, payload/profile workflow, and preview.
 17. Diagnostics, validation, accessibility, and downloads.
 18. Approved color/contrast and transparency previews.
-19. Rounded/finder presets if approved.
-20. Bundled logo, knockout, overlap checks, and decode matrix.
+19. Square/rounded data-module presets with standard square finders.
+20. Bundled gray placeholder logo, knockout, overlap checks, and decode matrix.
 21. Hardening, performance, manual validation, release evidence, and docs.
 
 Tickets 3–11 should generally land sequentially because later code relies on earlier invariants. UI shell work may run in parallel after ticket 2, but export controls must not be presented as functional until the core and safe renderer pass their gates.
 
-## 10. Owner approvals still needed
+## 10. Owner coordination still needed
 
-These choices cannot be inferred safely from the technical specification:
+The implementation policy, launch presets, ECC behavior, contrast threshold, transparency behavior, styling set, and temporary logo asset are accepted. Access to a licensed complete ISO/IEC 18004:2024 copy remains useful for a later audit but is not an implementation gate under the public-source corroboration policy in section 2.1.
 
-1. Confirm purchase/access for ISO/IEC 18004:2024.
-2. Confirm development-only generator libraries are permitted to create and cross-check fixtures.
-3. Supply the sanitized, licensed launch logo and approve its white knockout appearance.
-4. Approve the launch style list: recommended release 1 is Square + Rounded data modules, standard finder, and no Dot. Borders and module strokes are excluded.
-5. Approve measurable color policy. Recommended starting rule: WCAG relative luminance contrast ratio at least 4.5:1 for selectable opaque presets, with final acceptance determined by decoding tests. Transparency is always a caution because effective contrast is unknowable.
-6. Confirm that transparency is a real launch requirement; otherwise defer it and materially reduce the validation matrix.
-7. Name the supported browser, iOS/Android device, scanner app, printer, stock/material, and placement environments.
-Work through M2 can begin after approvals 1–2. M3 can use the safe preset. M4 cannot finish until approvals 3–7 are resolved.
+Release validation still requires the owner to name the supported browser, iOS/Android device, scanner app, printer, stock/material, and placement environments and to coordinate the physical checks. This blocks only completion of M5/ticket 21, not implementation through M4/ticket 20.
 
 ## 11. Definition of done
 

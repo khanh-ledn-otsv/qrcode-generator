@@ -8,6 +8,7 @@
 
 - [ ] Data codewords are consumed exactly once across both one-group and two-group block layouts.
 - [ ] Every block receives the table-defined ECC length and short/long blocks interleave in the required order.
+- [ ] Split and interleave fixtures agree between the pinned public encoders where exposed and record the public-source provenance policy label.
 - [ ] Test-only de-interleaving reconstructs the original data and ECC blocks.
 - [ ] A generated test exercises every distinct layout and all 160 version/ECC rows.
 - [ ] Final stream length agrees with total codewords, while the following placement stage receives the correct remainder-bit count.

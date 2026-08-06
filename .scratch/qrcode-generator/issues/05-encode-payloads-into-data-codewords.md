@@ -4,7 +4,7 @@ Type: task
 
 **What to build:** Turn an exact user-provided string into a deterministically selected mode, version, and fully padded data-codeword sequence under the release-one whole-payload policy.
 
-**Blocked by:** 04 — Transcribe and validate normative QR tables.
+**Blocked by:** 04 — Establish and validate QR tables.
 
 **Status:** resolved
 

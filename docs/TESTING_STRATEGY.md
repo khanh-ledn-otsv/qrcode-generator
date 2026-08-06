@@ -69,6 +69,18 @@ Use TypeScript only in `e2e/`. Keep business logic and expected QR calculations 
 
 None of these generators or decoders is linked into the production application.
 
+### 2.5 Public-source corroboration when complete normative text is unavailable
+
+Follow [`research/qr-public-source-provenance.md`](research/qr-public-source-provenance.md) for GF(256), Reed–Solomon, interleaving, function/data placement, BCH, mask predicates, and penalty rules implemented before a licensed ISO/IEC 18004:2024 audit is available.
+
+- Pin every upstream source by immutable release tag and exact file/symbol in fixture or test metadata.
+- Require agreement from Nayuki QR Code Generator and `python-qrcode` for behavior both encoders expose; do not copy either implementation into production.
+- Add a locally written slow reference or structural invariant for arithmetic, ownership, length, and coordinate rules where practical.
+- Compare explicit version/ECC/mask matrices before testing automatic mask selection.
+- Decode completed artifacts with pinned ZXing-C++; a successful decode supplements but never replaces exact matrix and invariant checks.
+- Mark the evidence `public-corroborated, non-normative` until a complete licensed 2024 text is audited.
+- Treat any source, fixture, invariant, or decoder disagreement as a blocked test fixture requiring investigation and recorded resolution.
+
 ## 3. Test repository structure
 
 ```text
@@ -149,6 +161,7 @@ Rules:
 - Fixture regeneration is an explicit command and never occurs implicitly during a test.
 - A golden change requires a human-readable matrix diff, metadata diff, oracle versions, and reviewer approval.
 - Standards-derived fixture material is committed only when redistribution is permitted. Dual-oracle table fixtures record both pinned implementations and are labelled non-normative.
+- Algorithm fixtures produced under the public-source policy record source tags/files, exact generation commands, local-reference or invariant coverage, and the label `public-corroborated, non-normative`.
 
 ## 5. `qr-core` test suite
 
@@ -260,7 +273,8 @@ Then test combined matrices and tie behavior. For each automatic-mask fixture:
 
 Exhaustively iterate every version permitted by each profile:
 
-- SVG dimensions equal base dimensions;
+- SVG `width` and `height` equal the profile base dimensions;
+- SVG `viewBox` is exactly `0 0 N N`, where `N` is the matrix width plus eight modules for the four-module quiet zone on each side; it contains no fixed-canvas surplus padding;
 - PNG dimensions equal exactly 3× base dimensions;
 - complete symbol includes four quiet modules per side;
 - module scale is the largest positive even scale that fits;
@@ -277,14 +291,14 @@ Include explicit expected cases for all four profile ceilings and for transition
 
 Parse every generated SVG and assert:
 
-- exact `width`, `height`, and `viewBox`;
+- exact profile-base `width` and `height` and the tight matrix-plus-quiet-zone `viewBox` defined above;
 - valid XML with no scripts, events, remote URLs, external stylesheets, foreign objects, or payload metadata;
 - background rectangle is present/absent according to opacity;
 - quiet zone remains unpainted by QR modules and branding;
 - no frame, label, stroke, or path exists outside the QR symbol geometry;
 - paths stay inside their cells and within checked bounds;
 - function modules retain their approved conservative geometry;
-- bundled logo is embedded from a known sanitized asset;
+- the bundled solid-gray placeholder logo is embedded from `assets/logo-placeholder.svg` with no external reference;
 - stable element/path ordering and normalized number formatting;
 - identical request produces identical UTF-8 bytes.
 

@@ -11,4 +11,5 @@
 - [ ] Every mask predicate can be applied only to data and remainder modules without changing function modules.
 - [ ] Test-only explicit-mask construction supports all eight masks without exposing mask choice in the product UI.
 - [ ] Ownership tests detect missing, duplicated, transposed, rotated, or mirrored placement.
+- [ ] Explicit version/mask placement fixtures agree with both pinned public encoders, include local ownership/coverage invariants, and record the public-source provenance policy label.
 - [ ] Stream-length or matrix-ownership mismatches return typed invariant errors without partial successful output.

@@ -11,4 +11,5 @@
 - [ ] Candidate scoring includes function patterns and candidate-specific format modules.
 - [ ] The minimum-penalty mask is selected, with the lower mask ID winning ties.
 - [ ] Explicit-mask golden fixtures and combined synthetic matrices catch predicate, coordinate, BCH, and penalty errors.
+- [ ] BCH, mask-predicate, and penalty fixtures cite the exact pinned public source files/symbols, agree between both encoders where exposed, and are labelled `public-corroborated, non-normative` pending a complete 2024 audit.
 - [ ] Repeated selection from identical input produces identical mask and matrix output.

@@ -7,7 +7,9 @@
 **Status:** ready-for-agent
 
 - [ ] Payload entry preserves every character and displays character count separately from UTF-8 byte count.
-- [ ] Four profile choices derive maximum version, selected version, ECC, used/available data bits, data codewords, dimensions, and print guidance.
+- [ ] Every non-logo workflow requests fixed ECC M; ECC is visible in diagnostics but is not user-selectable in release 1.
+- [ ] Four profile choices derive maximum version, selected version, used/available data bits, data codewords, dimensions, and print guidance without changing ECC.
+- [ ] Native state tests prove that profile changes refit at ECC M, while the later logo transition changes to ECC H before fitting and disabling it restores ECC M.
 - [ ] Empty, over-limit, over-capacity, and internal failure states produce associated validation messages and disable export actions.
 - [ ] Control characters produce a deterministic caution without rewriting or rejecting otherwise valid plain text.
 - [ ] Debounced preview work uses latest-value-wins semantics and cannot replace current state with stale results.
