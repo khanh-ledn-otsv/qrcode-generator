@@ -25,10 +25,20 @@ def require_pin(distribution: str, version: str) -> None:
         raise RuntimeError(f"expected {distribution} {version}, got {actual}")
 
 
+def python_ecc(ecc_name: str) -> int:
+    import qrcode.constants
+
+    return {
+        "L": qrcode.constants.ERROR_CORRECT_L,
+        "M": qrcode.constants.ERROR_CORRECT_M,
+        "Q": qrcode.constants.ERROR_CORRECT_Q,
+        "H": qrcode.constants.ERROR_CORRECT_H,
+    }[ecc_name]
+
+
 def oracle_streams(version: int, ecc_name: str, data: bytes) -> tuple[bytes, bytes]:
     from qrcodegen import QrCode
     import qrcode.base
-    import qrcode.constants
     import qrcode.util
 
     nayuki_ecc = {
@@ -37,20 +47,15 @@ def oracle_streams(version: int, ecc_name: str, data: bytes) -> tuple[bytes, byt
         "Q": QrCode.Ecc.QUARTILE,
         "H": QrCode.Ecc.HIGH,
     }[ecc_name]
-    python_ecc = {
-        "L": qrcode.constants.ERROR_CORRECT_L,
-        "M": qrcode.constants.ERROR_CORRECT_M,
-        "Q": qrcode.constants.ERROR_CORRECT_Q,
-        "H": qrcode.constants.ERROR_CORRECT_H,
-    }[ecc_name]
-
-    nayuki = QrCode(version, nayuki_ecc, bytearray(len(data)), 0)
+    nayuki = object.__new__(QrCode)
+    nayuki._version = version
+    nayuki._errcorlvl = nayuki_ecc
     nayuki_stream = bytes(nayuki._add_ecc_and_interleave(bytearray(data)))
     buffer = qrcode.util.BitBuffer()
     buffer.buffer = list(data)
     buffer.length = len(data) * 8
     python_stream = bytes(
-        qrcode.util.create_bytes(buffer, qrcode.base.rs_blocks(version, python_ecc))
+        qrcode.util.create_bytes(buffer, qrcode.base.rs_blocks(version, python_ecc(ecc_name)))
     )
     return nayuki_stream, python_stream
 
@@ -60,22 +65,15 @@ def render_fixture() -> str:
     require_pin("qrcode", "8.2")
     from qrcodegen import QrCode
     import qrcode.base
-    import qrcode.constants
 
     lines = [
         "# public-corroborated, non-normative; ISO/IEC 18004:2024 clause mapping pending audit",
-        "# Nayuki QR Code Generator 1.8.0 _add_ecc_and_interleave; python-qrcode 8.2 create_bytes",
+        "# Interleaved bytes: Nayuki 1.8.0 + python-qrcode 8.2; remainder bits: Nayuki + structural table invariant",
         f"# Command: {COMMAND}",
         "version,ecc,data_hex,interleaved_hex,remainder_bits,case",
     ]
-    python_levels = {
-        "L": qrcode.constants.ERROR_CORRECT_L,
-        "M": qrcode.constants.ERROR_CORRECT_M,
-        "Q": qrcode.constants.ERROR_CORRECT_Q,
-        "H": qrcode.constants.ERROR_CORRECT_H,
-    }
     for version, ecc_name, label in CASES:
-        blocks = qrcode.base.rs_blocks(version, python_levels[ecc_name])
+        blocks = qrcode.base.rs_blocks(version, python_ecc(ecc_name))
         data = bytes(range(sum(block.data_count for block in blocks)))
         nayuki_stream, python_stream = oracle_streams(version, ecc_name, data)
         if nayuki_stream != python_stream:

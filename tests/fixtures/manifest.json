@@ -114,7 +114,10 @@
             "reed_solomon_multiply"
           ],
           "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
-          "observed_artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1"
+          "observed_fields": [
+            "generator_hex",
+            "remainder_hex"
+          ]
         },
         {
           "oracle": "python-qrcode",
@@ -133,7 +136,10 @@
             "glog"
           ],
           "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
-          "observed_artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1"
+          "observed_fields": [
+            "generator_hex",
+            "remainder_hex"
+          ]
         }
       ],
       "local_verification": [
@@ -153,7 +159,7 @@
       "kind": "codeword-interleaving",
       "synthetic": true,
       "artifact_file": "interleaved_codewords.csv",
-      "artifact_sha256": "bd730052643d45b8659674615f82e188bfb9b350dd8db0fe0f636564f5f494a2",
+      "artifact_sha256": "2eeaf8b01953f5a4fb97f966914ac5dac43abe6e0d81a6b8f9abe5cbf731c99d",
       "standard_topic": "ISO/IEC 18004:2024 final-message block construction and interleaving; clause mapping pending audit",
       "scope": "One-group and two-group short/long block layouts with exact final streams and remainder-bit counts",
       "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
@@ -164,14 +170,19 @@
           "version": "1.8.0",
           "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
           "executed_symbols": [
-            "_add_ecc_and_interleave"
+            "_add_ecc_and_interleave",
+            "_get_num_raw_data_modules"
           ],
           "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
           "evidence_symbols": [
-            "add_ecc_and_interleave"
+            "add_ecc_and_interleave",
+            "get_num_raw_data_modules"
           ],
           "command": "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
-          "observed_artifact_sha256": "bd730052643d45b8659674615f82e188bfb9b350dd8db0fe0f636564f5f494a2"
+          "observed_fields": [
+            "interleaved_hex",
+            "remainder_bits"
+          ]
         },
         {
           "oracle": "python-qrcode",
@@ -186,15 +197,20 @@
             "create_bytes"
           ],
           "supporting_source_urls": [
-            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py"
+            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/LUT.py"
           ],
           "supporting_symbols": [
             "rs_blocks",
+            "RS_BLOCK_TABLE",
             "Polynomial",
-            "gexp"
+            "gexp",
+            "rsPoly_LUT"
           ],
           "command": "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
-          "observed_artifact_sha256": "bd730052643d45b8659674615f82e188bfb9b350dd8db0fe0f636564f5f494a2"
+          "observed_fields": [
+            "interleaved_hex"
+          ]
         }
       ],
       "local_verification": [

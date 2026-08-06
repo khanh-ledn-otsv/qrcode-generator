@@ -146,7 +146,7 @@ impl AlgorithmFixture {
         }
         let mut oracles = HashSet::new();
         for source in &self.sources {
-            source.verify(&self.id, &self.artifact_sha256, policy)?;
+            source.verify(&self.id, policy)?;
             if !oracles.insert(source.oracle) {
                 return Err(VerificationError::new(format!(
                     "{} fixture {} does not identify two independent generators",
@@ -181,17 +181,12 @@ struct AlgorithmSource {
     supporting_source_urls: Vec<String>,
     #[serde(default)]
     supporting_symbols: Vec<String>,
+    observed_fields: Vec<String>,
     command: String,
-    observed_artifact_sha256: String,
 }
 
 impl AlgorithmSource {
-    fn verify(
-        &self,
-        fixture_id: &str,
-        artifact_sha256: &str,
-        policy: AlgorithmPolicy,
-    ) -> Result<(), VerificationError> {
+    fn verify(&self, fixture_id: &str, policy: AlgorithmPolicy) -> Result<(), VerificationError> {
         let pinned = self.oracle.provenance();
         let expected = policy.source(self.oracle);
         if self.tool != pinned.tool
@@ -202,6 +197,7 @@ impl AlgorithmSource {
             || self.evidence_symbols != expected.evidence_symbols
             || self.supporting_source_urls != expected.supporting_source_urls
             || self.supporting_symbols != expected.supporting_symbols
+            || self.observed_fields != expected.observed_fields
             || self.command != policy.command
         {
             return Err(VerificationError::new(format!(
@@ -226,17 +222,6 @@ impl AlgorithmSource {
         }
         for symbol in &self.supporting_symbols {
             require_nonempty("algorithm supporting source symbol", symbol)?;
-        }
-        verify_sha256_text(
-            &self.observed_artifact_sha256,
-            "source algorithm artifact",
-            fixture_id,
-        )?;
-        if self.observed_artifact_sha256 != artifact_sha256 {
-            return Err(VerificationError::new(format!(
-                "{} fixture {fixture_id} source {} disagrees with the accepted artifact",
-                policy.label, pinned.cli_name
-            )));
         }
         Ok(())
     }
@@ -269,18 +254,29 @@ impl AlgorithmKind {
                 python_symbols: &["Polynomial", "gexp", "glog"],
                 python_supporting_source_urls: &[],
                 python_supporting_symbols: &[],
+                nayuki_observed_fields: &["generator_hex", "remainder_hex"],
+                python_observed_fields: &["generator_hex", "remainder_hex"],
             },
             Self::CodewordInterleaving => AlgorithmPolicy {
                 label: "codeword-interleaving",
                 command: "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
-                nayuki_executed_symbols: &["_add_ecc_and_interleave"],
-                nayuki_evidence_symbols: &["add_ecc_and_interleave"],
+                nayuki_executed_symbols: &["_add_ecc_and_interleave", "_get_num_raw_data_modules"],
+                nayuki_evidence_symbols: &["add_ecc_and_interleave", "get_num_raw_data_modules"],
                 python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
                 python_symbols: &["create_bytes"],
                 python_supporting_source_urls: &[
                     "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/LUT.py",
                 ],
-                python_supporting_symbols: &["rs_blocks", "Polynomial", "gexp"],
+                python_supporting_symbols: &[
+                    "rs_blocks",
+                    "RS_BLOCK_TABLE",
+                    "Polynomial",
+                    "gexp",
+                    "rsPoly_LUT",
+                ],
+                nayuki_observed_fields: &["interleaved_hex", "remainder_bits"],
+                python_observed_fields: &["interleaved_hex"],
             },
         }
     }
@@ -296,6 +292,8 @@ struct AlgorithmPolicy {
     python_symbols: &'static [&'static str],
     python_supporting_source_urls: &'static [&'static str],
     python_supporting_symbols: &'static [&'static str],
+    nayuki_observed_fields: &'static [&'static str],
+    python_observed_fields: &'static [&'static str],
 }
 
 impl AlgorithmPolicy {
@@ -308,6 +306,7 @@ impl AlgorithmPolicy {
                 evidence_symbols: self.nayuki_evidence_symbols,
                 supporting_source_urls: &[],
                 supporting_symbols: &[],
+                observed_fields: self.nayuki_observed_fields,
             },
             Oracle::PythonQrcode => AlgorithmSourcePolicy {
                 executed_source_url: self.python_source_url,
@@ -316,6 +315,7 @@ impl AlgorithmPolicy {
                 evidence_symbols: self.python_symbols,
                 supporting_source_urls: self.python_supporting_source_urls,
                 supporting_symbols: self.python_supporting_symbols,
+                observed_fields: self.python_observed_fields,
             },
         }
     }
@@ -329,6 +329,7 @@ struct AlgorithmSourcePolicy {
     evidence_symbols: &'static [&'static str],
     supporting_source_urls: &'static [&'static str],
     supporting_symbols: &'static [&'static str],
+    observed_fields: &'static [&'static str],
 }
 
 #[derive(Debug, Deserialize)]

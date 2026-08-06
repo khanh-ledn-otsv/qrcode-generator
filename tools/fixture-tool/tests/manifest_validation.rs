@@ -127,7 +127,7 @@ fn accepts_a_provenance_record_for_a_reed_solomon_fixture() {
                 "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
                 "evidence_symbols": ["reed_solomon_compute_divisor", "reed_solomon_compute_remainder", "reed_solomon_multiply"],
                 "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
-                "observed_artifact_sha256": sha256(artifact)
+                "observed_fields": ["generator_hex", "remainder_hex"]
             },
             {
                 "oracle": "python-qrcode",
@@ -138,7 +138,7 @@ fn accepts_a_provenance_record_for_a_reed_solomon_fixture() {
                 "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
                 "evidence_symbols": ["Polynomial", "gexp", "glog"],
                 "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
-                "observed_artifact_sha256": sha256(artifact)
+                "observed_fields": ["generator_hex", "remainder_hex"]
             }
         ],
         "local_verification": [

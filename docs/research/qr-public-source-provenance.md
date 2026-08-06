@@ -23,7 +23,7 @@ These pages are authoritative high-level product guidance from the QR Code owner
 
 Use the tagged Rust source [`rust/src/lib.rs`](https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs), recording these symbols in fixture metadata:
 
-- `add_ecc_and_interleave`, `reed_solomon_compute_divisor`, `reed_solomon_compute_remainder`, and `reed_solomon_multiply` for GF(256), Reed–Solomon, block splitting, and interleaving;
+- `add_ecc_and_interleave`, `get_num_raw_data_modules`, `reed_solomon_compute_divisor`, `reed_solomon_compute_remainder`, and `reed_solomon_multiply` for GF(256), Reed–Solomon, block splitting, interleaving, and remainder-bit accounting;
 - `draw_function_patterns`, `draw_finder_pattern`, `draw_alignment_pattern`, and `set_function_module` for function regions;
 - `draw_codewords` and `apply_mask` for zig-zag placement, remainder behavior, function protection, and the eight masks;
 - `draw_format_bits` and `draw_version` for BCH construction and placement;
@@ -44,6 +44,7 @@ Both must remain pinned to release 1.8.0.
 Use the tagged sources, recording exact file and symbol:
 
 - [`qrcode/base.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py): `Polynomial`, `rs_blocks`, and `RS_BLOCK_TABLE` for independent Reed–Solomon/block-layout results;
+- [`qrcode/LUT.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/LUT.py): `rsPoly_LUT`, used by `create_bytes` for pinned generator-polynomial lookup;
 - [`qrcode/main.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py): `makeImpl`, the `setup_*` functions, `map_data`, and `best_mask_pattern` for function patterns, BCH placement, data placement, and mask selection;
 - [`qrcode/util.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py): `create_bytes` for block construction/interleaving, plus `BCH_type_info`, `BCH_type_number`, `mask_func`, and `lost_point` for BCH, masks, and the four penalty rules.
 
