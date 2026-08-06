@@ -85,11 +85,12 @@ uv run --project tests/oracles --locked python \
   tests/support/verify_interleaved_codewords.py --check
 ```
 
-Classified function-matrix fixtures cover Versions 1, 2, 7, and 40 with a
-readable one-character-per-module map. The verifier compares all function
-coordinates and stable finder, separator, timing, alignment, and fixed-dark
-values against both pinned encoders. Format and version regions are recorded as
-light reservations because their BCH values are added by ticket 10:
+Classified function-matrix fixtures cover all 40 versions with compact FNV-1a
+fingerprints and Versions 1, 2, 7, and 40 with a readable
+one-character-per-module map. The verifier derives module classifications from
+instrumented calls into both pinned encoders and requires exact agreement.
+Format and version regions are normalized to light reservations because their
+BCH values are added by ticket 10:
 
 ```sh
 uv run --project tests/oracles --locked python \

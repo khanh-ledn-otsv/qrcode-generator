@@ -286,12 +286,18 @@ impl AlgorithmKind {
                     "encode_segments",
                     "_set_function_module",
                     "_get_alignment_pattern_positions",
+                    "_draw_finder_pattern",
+                    "_draw_alignment_pattern",
+                    "_draw_format_bits",
+                    "_draw_version",
                 ],
                 nayuki_evidence_symbols: &[
                     "draw_function_patterns",
                     "draw_finder_pattern",
                     "draw_alignment_pattern",
                     "set_function_module",
+                    "draw_format_bits",
+                    "draw_version",
                 ],
                 python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
                 python_symbols: &[

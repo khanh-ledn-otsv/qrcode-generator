@@ -5,7 +5,8 @@
 //! pinned public encoders recorded by the `qr-classified-function-matrices`
 //! fixture in `tests/fixtures/manifest.json`: Nayuki 1.8.0
 //! `rust/src/lib.rs::{draw_function_patterns,draw_finder_pattern,
-//! draw_alignment_pattern,set_function_module}` and python-qrcode 8.2
+//! draw_alignment_pattern,set_function_module,draw_format_bits,draw_version}`
+//! and python-qrcode 8.2
 //! `qrcode/main.py::{setup_position_probe_pattern,
 //! setup_position_adjust_pattern,setup_timing_pattern,setup_type_info,
 //! setup_type_number}`. This evidence is `public-corroborated, non-normative`

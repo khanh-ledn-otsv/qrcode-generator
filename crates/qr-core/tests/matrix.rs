@@ -205,131 +205,6 @@ fn every_version_is_complete_and_leaves_exactly_the_raw_data_region() {
         );
         assert_eq!(matrix.module(matrix.size(), 0), None);
         assert_eq!(matrix.module(0, matrix.size()), None);
-
-        let size = matrix.size();
-        for (origin_x, origin_y) in [(0, 0), (size - 7, 0), (0, size - 7)] {
-            for offset_y in 0..7 {
-                for offset_x in 0..7 {
-                    let dark = offset_x == 0
-                        || offset_x == 6
-                        || offset_y == 0
-                        || offset_y == 6
-                        || ((2..=4).contains(&offset_x) && (2..=4).contains(&offset_y));
-                    assert_eq!(
-                        matrix.module(origin_x + offset_x, origin_y + offset_y),
-                        Some(Module::new(dark, ModuleKind::Finder))
-                    );
-                }
-            }
-        }
-        for offset in 0..8 {
-            assert_eq!(
-                matrix.module(7, offset),
-                Some(Module::new(false, ModuleKind::Separator))
-            );
-            assert_eq!(
-                matrix.module(size - 8, offset),
-                Some(Module::new(false, ModuleKind::Separator))
-            );
-            assert_eq!(
-                matrix.module(7, size - 1 - offset),
-                Some(Module::new(false, ModuleKind::Separator))
-            );
-        }
-        for offset in 0..7 {
-            assert_eq!(
-                matrix.module(offset, 7),
-                Some(Module::new(false, ModuleKind::Separator))
-            );
-            assert_eq!(
-                matrix.module(size - 1 - offset, 7),
-                Some(Module::new(false, ModuleKind::Separator))
-            );
-            assert_eq!(
-                matrix.module(offset, size - 8),
-                Some(Module::new(false, ModuleKind::Separator))
-            );
-        }
-
-        for (center_x, center_y) in info.alignment_pattern_positions() {
-            for offset_y in 0..5_u16 {
-                for offset_x in 0..5_u16 {
-                    let dark = offset_x == 0
-                        || offset_x == 4
-                        || offset_y == 0
-                        || offset_y == 4
-                        || (offset_x == 2 && offset_y == 2);
-                    assert_eq!(
-                        matrix.module(
-                            u16::from(center_x) - 2 + offset_x,
-                            u16::from(center_y) - 2 + offset_y,
-                        ),
-                        Some(Module::new(dark, ModuleKind::Alignment))
-                    );
-                }
-            }
-        }
-
-        let mut expected_timing_count = 0;
-        for coordinate in 8..size - 8 {
-            for (x, y) in [(coordinate, 6), (6, coordinate)] {
-                let module = matrix.module(x, y).expect("timing coordinate is in bounds");
-                if module.kind() != ModuleKind::Alignment {
-                    assert_eq!(module, Module::new(coordinate % 2 == 0, ModuleKind::Timing));
-                    expected_timing_count += 1;
-                }
-            }
-        }
-        assert_eq!(count(ModuleKind::Timing), expected_timing_count);
-
-        for coordinate in 0..=5 {
-            assert_eq!(
-                matrix.module(8, coordinate),
-                Some(Module::new(false, ModuleKind::Format))
-            );
-            assert_eq!(
-                matrix.module(coordinate, 8),
-                Some(Module::new(false, ModuleKind::Format))
-            );
-        }
-        for (x, y) in [(8, 7), (8, 8), (7, 8)] {
-            assert_eq!(
-                matrix.module(x, y),
-                Some(Module::new(false, ModuleKind::Format))
-            );
-        }
-        for offset in 0..8 {
-            assert_eq!(
-                matrix.module(size - 1 - offset, 8),
-                Some(Module::new(false, ModuleKind::Format))
-            );
-        }
-        for offset in 0..7 {
-            assert_eq!(
-                matrix.module(8, size - 1 - offset),
-                Some(Module::new(false, ModuleKind::Format))
-            );
-        }
-        assert_eq!(
-            matrix.module(8, size - 8),
-            Some(Module::new(true, ModuleKind::Dark))
-        );
-
-        if version_number >= 7 {
-            let start = size - 11;
-            for offset in 0..6 {
-                for band in 0..3 {
-                    assert_eq!(
-                        matrix.module(start + band, offset),
-                        Some(Module::new(false, ModuleKind::Version))
-                    );
-                    assert_eq!(
-                        matrix.module(offset, start + band),
-                        Some(Module::new(false, ModuleKind::Version))
-                    );
-                }
-            }
-        }
     }
 }
 
@@ -350,9 +225,27 @@ fn version_forty_places_all_alignment_centers_without_finder_conflicts() {
 }
 
 #[test]
-fn classified_function_matrices_match_human_reviewable_dual_oracle_fixtures() {
+fn every_version_and_human_review_case_matches_dual_oracle_fixtures() {
     let fixture = include_str!("../../../tests/fixtures/function_matrices.txt");
     let mut lines = fixture.lines().filter(|line| !line.starts_with('#'));
+    assert_eq!(lines.next(), Some("version,size,fnv1a64"));
+    for expected_version in Version::MIN..=Version::MAX {
+        let row = lines.next().expect("fixture contains every version hash");
+        let fields = row.split(',').collect::<Vec<_>>();
+        assert_eq!(fields.len(), 3);
+        let version_number = fields[0].parse::<u8>().expect("hash version is a u8");
+        let size = fields[1].parse::<u16>().expect("hash size is a u16");
+        assert_eq!(version_number, expected_version);
+        let version = Version::new(version_number).expect("hash version is valid");
+        let matrix = build_function_matrix(version).expect("hashed function matrix builds");
+        assert_eq!(matrix.size(), size);
+        assert_eq!(
+            format!("{:016x}", fnv1a64(&fixture_matrix_text(&matrix))),
+            fields[2]
+        );
+    }
+    assert_eq!(lines.next(), Some("endhashes"));
+
     let mut covered_versions = Vec::new();
 
     while let Some(header) = lines.next() {
@@ -390,6 +283,43 @@ fn classified_function_matrices_match_human_reviewable_dual_oracle_fixtures() {
     }
 
     assert_eq!(covered_versions, vec![1, 2, 7, 40]);
+}
+
+fn fixture_matrix_text(matrix: &qr_core::matrix::ModuleMatrix) -> String {
+    let size = matrix.size();
+    let mut text = String::with_capacity(usize::from(size) * usize::from(size + 1));
+    for y in 0..size {
+        for x in 0..size {
+            text.push(fixture_glyph(
+                matrix.module(x, y).expect("matrix coordinate is in bounds"),
+            ));
+        }
+        text.push('\n');
+    }
+    text
+}
+
+fn fnv1a64(text: &str) -> u64 {
+    text.bytes().fold(0xcbf2_9ce4_8422_2325, |value, byte| {
+        (value ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
+}
+
+fn fixture_glyph(module: Module) -> char {
+    match (module.kind(), module.is_dark()) {
+        (ModuleKind::Data, false) => '.',
+        (ModuleKind::Finder, true) => 'F',
+        (ModuleKind::Finder, false) => 'f',
+        (ModuleKind::Separator, false) => 's',
+        (ModuleKind::Timing, true) => 'T',
+        (ModuleKind::Timing, false) => 't',
+        (ModuleKind::Alignment, true) => 'A',
+        (ModuleKind::Alignment, false) => 'a',
+        (ModuleKind::Format, false) => 'r',
+        (ModuleKind::Version, false) => 'v',
+        (ModuleKind::Dark, true) => 'D',
+        unexpected => panic!("unexpected classified module {unexpected:?}"),
+    }
 }
 
 fn fixture_module(glyph: char) -> Module {

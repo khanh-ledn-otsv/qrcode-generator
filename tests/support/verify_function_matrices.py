@@ -16,6 +16,7 @@ COMMAND = (
     "tests/support/verify_function_matrices.py --check"
 )
 VERSIONS = (1, 2, 7, 40)
+ALL_VERSIONS = range(1, 41)
 
 
 def require_pin(distribution: str, version: str) -> None:
@@ -187,6 +188,18 @@ def glyph(cell: tuple[str, bool]) -> str:
     return symbols[kind]
 
 
+def matrix_text(matrix: list[list[tuple[str, bool]]]) -> str:
+    return "".join("".join(glyph(cell) for cell in row) + "\n" for row in matrix)
+
+
+def fnv1a64(text: str) -> str:
+    value = 0xCBF29CE484222325
+    for byte in text.encode("ascii"):
+        value ^= byte
+        value = (value * 0x100000001B3) & 0xFFFFFFFFFFFFFFFF
+    return f"{value:016x}"
+
+
 def render_fixture() -> str:
     require_pin("qrcodegen", "1.8.0")
     require_pin("qrcode", "8.2")
@@ -198,10 +211,15 @@ def render_fixture() -> str:
         "# A/a alignment dark/light, r format reservation, v version reservation,",
         "# D fixed dark, . data placeholder",
     ]
+    matrices = {version: classified_matrix(version) for version in ALL_VERSIONS}
+    lines.append("version,size,fnv1a64")
+    for version, matrix in matrices.items():
+        lines.append(f"{version},{17 + 4 * version},{fnv1a64(matrix_text(matrix))}")
+    lines.append("endhashes")
     for version in VERSIONS:
-        matrix = classified_matrix(version)
+        matrix = matrices[version]
         lines.append(f"version={version} size={17 + 4 * version}")
-        lines.extend("".join(glyph(cell) for cell in row) for row in matrix)
+        lines.extend(matrix_text(matrix).splitlines())
         lines.append("end")
     return "\n".join(lines) + "\n"
 
