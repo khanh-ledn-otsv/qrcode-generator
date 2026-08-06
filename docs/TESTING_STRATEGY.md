@@ -286,6 +286,7 @@ Exhaustively iterate every version permitted by each profile:
 - complete symbol includes four quiet modules per side;
 - module scale is the largest positive even scale that fits;
 - rendered symbol dimensions and outer padding use checked integer arithmetic;
+- direct RGBA allocation lengths above the target-independent 64 MiB ceiling are rejected identically on native and WASM;
 - outer padding is symmetric and integral;
 - maximum profile versions use at least 6 px/module;
 - surplus padding contains only the selected background treatment and no artwork;

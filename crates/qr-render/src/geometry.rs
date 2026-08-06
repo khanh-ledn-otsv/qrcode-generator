@@ -8,6 +8,10 @@ const QUIET_ZONE_MODULES_PER_SIDE: u32 = 4;
 pub struct PixelCount(u32);
 
 impl PixelCount {
+    pub(crate) const fn from_u32(count: u32) -> Self {
+        Self(count)
+    }
+
     #[must_use]
     pub const fn get(self) -> u32 {
         self.0
@@ -85,11 +89,53 @@ pub enum PaddingContent {
     BackgroundOnly,
 }
 
+/// Format-independent QR symbol geometry, including its required quiet zone.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SymbolGeometry {
+    matrix_modules: ModuleCount,
+    quiet_zone_modules_per_side: ModuleCount,
+    extent_modules: ModuleCount,
+}
+
+impl SymbolGeometry {
+    fn calculate(matrix_modules: ModuleCount) -> Result<Self, GeometryError> {
+        let quiet_zone_modules_per_side = ModuleCount::from_nonzero(QUIET_ZONE_MODULES_PER_SIDE);
+        let quiet_zone_total = quiet_zone_modules_per_side
+            .get()
+            .checked_mul(2)
+            .ok_or(GeometryError::DimensionOverflow)?;
+        let extent_modules = matrix_modules
+            .get()
+            .checked_add(quiet_zone_total)
+            .ok_or(GeometryError::DimensionOverflow)?;
+
+        Ok(Self {
+            matrix_modules,
+            quiet_zone_modules_per_side,
+            extent_modules: ModuleCount::from_nonzero(extent_modules),
+        })
+    }
+
+    #[must_use]
+    pub const fn matrix_modules(self) -> ModuleCount {
+        self.matrix_modules
+    }
+
+    #[must_use]
+    pub const fn quiet_zone_modules_per_side(self) -> ModuleCount {
+        self.quiet_zone_modules_per_side
+    }
+
+    #[must_use]
+    pub const fn extent_modules(self) -> ModuleCount {
+        self.extent_modules
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CanvasGeometry {
     canvas_dimensions: PixelDimensions,
-    matrix_modules: ModuleCount,
-    symbol_modules: ModuleCount,
+    symbol: SymbolGeometry,
     module_scale: PixelCount,
     rendered_symbol_dimensions: PixelDimensions,
     outer_padding: OuterPadding,
@@ -104,22 +150,18 @@ impl CanvasGeometry {
             return Err(GeometryError::InvalidCanvasDimensions);
         }
 
-        let quiet_zone_total = QUIET_ZONE_MODULES_PER_SIDE
-            .checked_mul(2)
-            .ok_or(GeometryError::DimensionOverflow)?;
-        let symbol_modules = matrix_modules
-            .0
-            .checked_add(quiet_zone_total)
-            .ok_or(GeometryError::DimensionOverflow)?;
+        let symbol = SymbolGeometry::calculate(matrix_modules)?;
 
         let limiting_side = canvas_dimensions.width.0.min(canvas_dimensions.height.0);
-        let raw_scale = limiting_side / symbol_modules;
+        let raw_scale = limiting_side / symbol.extent_modules().get();
         let module_scale = raw_scale - (raw_scale % 2);
         if module_scale == 0 {
             return Err(GeometryError::NoPositiveEvenScale);
         }
 
-        let rendered_side = symbol_modules
+        let rendered_side = symbol
+            .extent_modules()
+            .get()
             .checked_mul(module_scale)
             .ok_or(GeometryError::DimensionOverflow)?;
         let horizontal_remainder = canvas_dimensions
@@ -142,8 +184,7 @@ impl CanvasGeometry {
 
         Ok(Self {
             canvas_dimensions,
-            matrix_modules,
-            symbol_modules: ModuleCount::from_nonzero(symbol_modules),
+            symbol,
             module_scale: PixelCount(module_scale),
             rendered_symbol_dimensions: PixelDimensions::square(rendered_side),
             outer_padding: OuterPadding {
@@ -163,17 +204,22 @@ impl CanvasGeometry {
 
     #[must_use]
     pub const fn matrix_modules(self) -> ModuleCount {
-        self.matrix_modules
+        self.symbol.matrix_modules()
     }
 
     #[must_use]
     pub const fn quiet_zone_modules(self) -> ModuleCount {
-        ModuleCount::from_nonzero(QUIET_ZONE_MODULES_PER_SIDE)
+        self.symbol.quiet_zone_modules_per_side()
     }
 
     #[must_use]
     pub const fn symbol_modules(self) -> ModuleCount {
-        self.symbol_modules
+        self.symbol.extent_modules()
+    }
+
+    #[must_use]
+    pub const fn symbol(self) -> SymbolGeometry {
+        self.symbol
     }
 
     #[must_use]

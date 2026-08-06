@@ -65,6 +65,7 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 
 - Square cells are filled by exact integer pixel rectangles.
 - Rounded and dot cells use deterministic final-pixel coverage evaluation; the complete image is never resized.
+- Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering and numeric formatting.
 

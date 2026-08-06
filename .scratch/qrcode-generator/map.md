@@ -25,6 +25,11 @@
   zig-zag placement preserves data/remainder ownership, protects every function
   module, supports all eight explicit masks through a typed core API, and
   matches dual-oracle fixtures at Versions 1, 2, 7, and 40.
+- [Ticket 12](issues/12-create-safe-render-model.md): A borrowed immutable
+  render model preserves encoded ownership and diagnostics, centralizes the
+  exact quiet-zone extent, separates tight SVG from fixed-canvas PNG placement,
+  checks allocation bounds, and exposes only typed data/remainder branding
+  targets.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
