@@ -1,3 +1,5 @@
+#[path = "support/png_fixture.rs"]
+mod png_fixture;
 #[path = "support/versions.rs"]
 mod versions;
 
@@ -6,30 +8,21 @@ use std::io::Cursor;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
-use sha2::{Digest, Sha256};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 
 #[test]
 fn safe_png_has_fixed_structure_and_deterministic_bytes() {
-    let payload = r#"safe/<script>alert("payload")</script>"#;
-    let encoded = encoded_qr(payload);
-    let profile = SUPPORTED_PROFILES[1];
-    let model = RenderModel::new(&encoded, RenderOptions::safe(profile).unwrap()).unwrap();
-
-    let first = render_png(&model).unwrap();
-    let second = render_png(&model).unwrap();
+    let first = png_fixture::artifact();
+    let second = png_fixture::artifact();
 
     assert_eq!(first, second);
-    assert_eq!(
-        sha256_hex(&first),
-        "139610a415ccf86ad47d932318abd86ec7d7dbbffe267df8a12f2001b2ef505d"
-    );
+    assert_eq!(png_fixture::sha256_hex(&first), png_fixture::SHA256);
     assert!(first.starts_with(PNG_SIGNATURE));
     assert!(
         !first
-            .windows(payload.len())
-            .any(|window| window == payload.as_bytes())
+            .windows(png_fixture::PAYLOAD.len())
+            .any(|window| window == png_fixture::PAYLOAD.as_bytes())
     );
 
     let chunks = png_chunks(&first);
@@ -39,7 +32,7 @@ fn safe_png_has_fixed_structure_and_deterministic_bytes() {
     );
 
     let ihdr = chunks[0].data;
-    let dimensions = profile.png_dimensions();
+    let dimensions = SUPPORTED_PROFILES[1].png_dimensions();
     assert_eq!(
         u32::from_be_bytes(ihdr[0..4].try_into().unwrap()),
         dimensions.width().get()
@@ -134,15 +127,6 @@ fn decode_rgba(bytes: &[u8]) -> (u32, u32, Vec<u8>) {
     (output.width, output.height, pixels)
 }
 
-fn encoded_qr(text: &str) -> EncodedQr {
-    encode(EncodeRequest {
-        text,
-        ecc: ErrorCorrection::Medium,
-        max_version: Version::try_from(8).unwrap(),
-    })
-    .unwrap()
-}
-
 fn encoded_qr_at_version(version: u8) -> EncodedQr {
     let text = "a".repeat(versions::first_byte_length(version));
     encode(EncodeRequest {
@@ -151,11 +135,4 @@ fn encoded_qr_at_version(version: u8) -> EncodedQr {
         max_version: Version::try_from(version).unwrap(),
     })
     .unwrap()
-}
-
-fn sha256_hex(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
 }
