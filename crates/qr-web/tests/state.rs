@@ -23,11 +23,32 @@ fn textarea_edits_preserve_unchanged_carriage_return_sequences() {
         .expect("revision is available");
 
     state
-        .set_display_payload("first\nsecond\nthird!".to_owned())
+        .set_display_payload_at("first\nsecond\nthird!".to_owned(), 18)
         .expect("display edit maps to raw payload");
 
     assert_eq!(state.payload(), "first\r\nsecond\rthird!");
     assert_eq!(state.textarea_value(), "first\nsecond\nthird!");
+}
+
+#[test]
+fn edit_anchor_disambiguates_identical_normalized_line_endings() {
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    state
+        .set_payload("\r\n\r".to_owned())
+        .expect("revision is available");
+
+    state
+        .set_display_payload_at("\n".to_owned(), 0)
+        .expect("first displayed newline is deleted");
+    assert_eq!(state.payload(), "\r");
+
+    state
+        .set_payload("\r\n\r".to_owned())
+        .expect("revision is available");
+    state
+        .set_display_payload_at("\n".to_owned(), 1)
+        .expect("second displayed newline is deleted");
+    assert_eq!(state.payload(), "\r\n");
 }
 
 #[test]
@@ -223,6 +244,22 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
         Some("QR generation failed unexpectedly. Change the input and try again."),
     );
     assert!(!state.exports_enabled());
+}
+
+#[test]
+fn textarea_mapping_failure_invalidates_pending_work_and_exports() {
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    let pending = state
+        .set_payload("valid".to_owned())
+        .expect("revision is available");
+
+    assert!(state.replace_display_range(99, 99, "x").is_err());
+    assert_eq!(
+        state.validation_message().as_deref(),
+        Some("QR generation failed unexpectedly. Change the input and try again."),
+    );
+    assert!(!state.exports_enabled());
+    assert!(!state.complete_preview(pending.revision(), evaluate_preview(&pending)));
 }
 
 #[test]

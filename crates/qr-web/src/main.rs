@@ -2,11 +2,12 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
-use leptos::web_sys::{ClipboardEvent, HtmlTextAreaElement};
+use leptos::web_sys::{ClipboardEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_core::tables::ErrorCorrection;
 use qr_render::{ProfileId, SUPPORTED_PROFILES};
 use qr_web::workflow::{
     PreviewRequest, WorkflowFailure, WorkflowState, evaluate_preview, profile_presentation,
+    textarea_display_utf16_length,
 };
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
@@ -15,6 +16,7 @@ const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 fn App() -> impl IntoView {
     let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
     let pending_timer = RwSignal::new(None::<TimeoutHandle>);
+    let pending_edit_start = RwSignal::new(None::<u32>);
 
     Owner::on_cleanup(move || {
         if let Some(handle) = pending_timer.get_untracked() {
@@ -84,10 +86,39 @@ fn App() -> impl IntoView {
                             aria-describedby="payload-counts payload-validation payload-caution"
                             aria-invalid=move || state.with(|value| value.validation_message().is_some())
                             prop:value=move || state.with(WorkflowState::textarea_value)
-                            on:input=move |event| {
-                                let payload = event_target_value(&event);
-                                if let Some(Ok(request)) = state.try_update(|value| value.set_display_payload(payload)) {
-                                    schedule_preview(state, pending_timer, request);
+                            on:beforeinput=move |event: InputEvent| {
+                                let start = event
+                                    .target()
+                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok())
+                                    .and_then(|target| target.selection_start().ok().flatten());
+                                pending_edit_start.set(start);
+                            }
+                            on:input=move |event: Event| {
+                                let Some(target) = event
+                                    .target()
+                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok())
+                                else {
+                                    state.update(WorkflowState::reject_internal_failure);
+                                    return;
+                                };
+                                let before_start = pending_edit_start.get_untracked();
+                                pending_edit_start.set(None);
+                                let after_start = target.selection_start().ok().flatten();
+                                let Some(edit_start) = before_start
+                                    .zip(after_start)
+                                    .map(|(before, after)| before.min(after))
+                                else {
+                                    state.update(WorkflowState::reject_internal_failure);
+                                    target.set_value(&state.with(WorkflowState::textarea_value));
+                                    return;
+                                };
+                                match state.try_update(|value| {
+                                    value.set_display_payload_at(target.value(), edit_start)
+                                }) {
+                                    Some(Ok(request)) => schedule_preview(state, pending_timer, request),
+                                    Some(Err(_)) | None => {
+                                        target.set_value(&state.with(WorkflowState::textarea_value));
+                                    }
                                 }
                             }
                             on:paste=move |event: ClipboardEvent| {
@@ -108,20 +139,22 @@ fn App() -> impl IntoView {
                                 else {
                                     return;
                                 };
-                                let Some(Ok(request)) = state.try_update(|value| {
+                                let result = state.try_update(|value| {
                                     value.replace_display_range(start, end, &pasted)
-                                }) else {
-                                    return;
-                                };
+                                });
 
                                 event.prevent_default();
+                                pending_edit_start.set(None);
                                 target.set_value(&state.with(WorkflowState::textarea_value));
-                                if let Some(inserted_length) = textarea_utf16_length(&pasted)
-                                    && let Some(caret) = start.checked_add(inserted_length)
-                                {
-                                    _ = target.set_selection_range(caret, caret);
+                                if let Some(Ok(request)) = result {
+                                    if let Some(inserted_length) =
+                                        textarea_display_utf16_length(&pasted)
+                                        && let Some(caret) = start.checked_add(inserted_length)
+                                    {
+                                        _ = target.set_selection_range(caret, caret);
+                                    }
+                                    schedule_preview(state, pending_timer, request);
                                 }
-                                schedule_preview(state, pending_timer, request);
                             }
                         ></textarea>
 
@@ -243,22 +276,6 @@ fn profile_card_class(selected: bool) -> &'static str {
     } else {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
     }
-}
-
-fn textarea_utf16_length(payload: &str) -> Option<u32> {
-    let mut length = 0_u32;
-    let mut characters = payload.chars().peekable();
-    while let Some(character) = characters.next() {
-        if character == '\r' {
-            if characters.peek() == Some(&'\n') {
-                _ = characters.next();
-            }
-            length = length.checked_add(1)?;
-        } else {
-            length = length.checked_add(u32::try_from(character.len_utf16()).ok()?)?;
-        }
-    }
-    Some(length)
 }
 
 const fn ecc_label(ecc: ErrorCorrection) -> &'static str {

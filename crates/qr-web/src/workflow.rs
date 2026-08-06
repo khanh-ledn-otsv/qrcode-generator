@@ -7,6 +7,8 @@ use qr_render::{
     OutputProfile, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_svg,
 };
 
+use crate::textarea::{TextAreaBuffer, projected_utf16_length};
+
 const CONTROL_CHARACTER_CAUTION: &str =
     "This payload contains control characters. Confirm that they are intentional.";
 const INTERNAL_FAILURE_MESSAGE: &str =
@@ -217,7 +219,7 @@ enum PreviewState {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct WorkflowState {
-    payload: String,
+    payload: TextAreaBuffer,
     profile_id: ProfileId,
     logo_enabled: bool,
     revision: Revision,
@@ -228,7 +230,7 @@ impl WorkflowState {
     #[must_use]
     pub fn new(profile_id: ProfileId) -> Self {
         Self {
-            payload: String::new(),
+            payload: TextAreaBuffer::new(String::new()),
             profile_id,
             logo_enabled: false,
             revision: Revision(0),
@@ -237,33 +239,23 @@ impl WorkflowState {
     }
 
     pub fn set_payload(&mut self, payload: String) -> Result<PreviewRequest, WorkflowFailure> {
-        self.payload = payload;
+        self.payload.replace_raw(payload);
         self.begin_preview()
     }
 
-    pub fn set_display_payload(
+    pub fn set_display_payload_at(
         &mut self,
         display_payload: String,
+        edit_start_utf16: u32,
     ) -> Result<PreviewRequest, WorkflowFailure> {
-        let previous_display = self.textarea_value();
-        let prefix_bytes = common_prefix_bytes(&previous_display, &display_payload);
-        let (previous_suffix_bytes, display_suffix_bytes) =
-            common_suffix_bytes(&previous_display, &display_payload, prefix_bytes);
-        let replaced_end = previous_display
-            .len()
-            .checked_sub(previous_suffix_bytes)
-            .ok_or(WorkflowFailure::Internal)?;
-        let inserted_end = display_payload
-            .len()
-            .checked_sub(display_suffix_bytes)
-            .ok_or(WorkflowFailure::Internal)?;
-        let start_utf16 = utf16_length(&previous_display[..prefix_bytes])?;
-        let end_utf16 = utf16_length(&previous_display[..replaced_end])?;
-        self.replace_display_range(
-            start_utf16,
-            end_utf16,
-            &display_payload[prefix_bytes..inserted_end],
-        )
+        if self
+            .payload
+            .replace_from_display(display_payload, edit_start_utf16)
+            .is_err()
+        {
+            return Err(self.set_internal_failure());
+        }
+        self.begin_preview()
     }
 
     pub fn replace_display_range(
@@ -272,25 +264,13 @@ impl WorkflowState {
         end_utf16: u32,
         inserted_raw: &str,
     ) -> Result<PreviewRequest, WorkflowFailure> {
-        if start_utf16 > end_utf16 {
-            return Err(WorkflowFailure::Internal);
+        if self
+            .payload
+            .replace_display_range(start_utf16, end_utf16, inserted_raw)
+            .is_err()
+        {
+            return Err(self.set_internal_failure());
         }
-        let start_byte = raw_byte_at_display_utf16(&self.payload, start_utf16)
-            .ok_or(WorkflowFailure::Internal)?;
-        let end_byte =
-            raw_byte_at_display_utf16(&self.payload, end_utf16).ok_or(WorkflowFailure::Internal)?;
-        let capacity = start_byte
-            .checked_add(inserted_raw.len())
-            .and_then(|length| length.checked_add(self.payload.len().checked_sub(end_byte)?))
-            .ok_or(WorkflowFailure::Internal)?;
-        let mut updated = String::new();
-        updated
-            .try_reserve(capacity)
-            .map_err(|_| WorkflowFailure::Internal)?;
-        updated.push_str(&self.payload[..start_byte]);
-        updated.push_str(inserted_raw);
-        updated.push_str(&self.payload[end_byte..]);
-        self.payload = updated;
         self.begin_preview()
     }
 
@@ -309,22 +289,22 @@ impl WorkflowState {
 
     #[must_use]
     pub fn payload(&self) -> &str {
-        &self.payload
+        self.payload.raw()
     }
 
     #[must_use]
     pub fn textarea_value(&self) -> String {
-        normalize_textarea_line_endings(&self.payload)
+        self.payload.display()
     }
 
     #[must_use]
     pub fn character_count(&self) -> usize {
-        self.payload.chars().count()
+        self.payload.raw().chars().count()
     }
 
     #[must_use]
     pub fn byte_count(&self) -> usize {
-        self.payload.len()
+        self.payload.raw().len()
     }
 
     #[must_use]
@@ -360,7 +340,7 @@ impl WorkflowState {
 
     #[must_use]
     pub fn caution(&self) -> Option<&'static str> {
-        control_character_caution(&self.payload)
+        control_character_caution(self.payload.raw())
     }
 
     pub fn complete_preview(
@@ -368,7 +348,7 @@ impl WorkflowState {
         revision: Revision,
         result: Result<Preview, WorkflowFailure>,
     ) -> bool {
-        if revision != self.revision {
+        if revision != self.revision || !matches!(self.preview_state, PreviewState::Pending) {
             return false;
         }
         self.preview_state = match result {
@@ -376,6 +356,10 @@ impl WorkflowState {
             Err(failure) => PreviewState::Invalid(failure),
         };
         true
+    }
+
+    pub fn reject_internal_failure(&mut self) {
+        _ = self.set_internal_failure();
     }
 
     fn begin_preview(&mut self) -> Result<PreviewRequest, WorkflowFailure> {
@@ -387,10 +371,15 @@ impl WorkflowState {
         self.preview_state = PreviewState::Pending;
         Ok(PreviewRequest {
             revision: self.revision,
-            payload: self.payload.clone(),
+            payload: self.payload.raw().to_owned(),
             profile_id: self.profile_id,
             logo_enabled: self.logo_enabled,
         })
+    }
+
+    fn set_internal_failure(&mut self) -> WorkflowFailure {
+        self.preview_state = PreviewState::Invalid(WorkflowFailure::Internal);
+        WorkflowFailure::Internal
     }
 }
 
@@ -447,88 +436,15 @@ fn classify_encode_error(error: EncodeError, maximum_version: Version) -> Workfl
     }
 }
 
-fn normalize_textarea_line_endings(payload: &str) -> String {
-    let mut normalized = String::with_capacity(payload.len());
-    let mut characters = payload.chars().peekable();
-    while let Some(character) = characters.next() {
-        if character == '\r' {
-            if characters.peek() == Some(&'\n') {
-                _ = characters.next();
-            }
-            normalized.push('\n');
-        } else {
-            normalized.push(character);
-        }
-    }
-    normalized
-}
-
-fn raw_byte_at_display_utf16(payload: &str, requested: u32) -> Option<usize> {
-    let mut raw_byte = 0_usize;
-    let mut display_utf16 = 0_u32;
-    while raw_byte < payload.len() {
-        if display_utf16 == requested {
-            return Some(raw_byte);
-        }
-        let remainder = payload.get(raw_byte..)?;
-        let character = remainder.chars().next()?;
-        let (raw_width, display_width) = if character == '\r' {
-            (if remainder.starts_with("\r\n") { 2 } else { 1 }, 1)
-        } else {
-            (
-                character.len_utf8(),
-                u32::try_from(character.len_utf16()).ok()?,
-            )
-        };
-        raw_byte = raw_byte.checked_add(raw_width)?;
-        display_utf16 = display_utf16.checked_add(display_width)?;
-        if display_utf16 > requested {
-            return None;
-        }
-    }
-    (display_utf16 == requested).then_some(raw_byte)
-}
-
-fn common_prefix_bytes(left: &str, right: &str) -> usize {
-    left.chars()
-        .zip(right.chars())
-        .take_while(|(left, right)| left == right)
-        .map(|(character, _)| character.len_utf8())
-        .sum()
-}
-
-fn common_suffix_bytes(left: &str, right: &str, prefix_bytes: usize) -> (usize, usize) {
-    let left_limit = left.len().saturating_sub(prefix_bytes);
-    let right_limit = right.len().saturating_sub(prefix_bytes);
-    let mut left_bytes = 0_usize;
-    let mut right_bytes = 0_usize;
-    for (left_character, right_character) in left.chars().rev().zip(right.chars().rev()) {
-        let Some(next_left_bytes) = left_bytes.checked_add(left_character.len_utf8()) else {
-            break;
-        };
-        let Some(next_right_bytes) = right_bytes.checked_add(right_character.len_utf8()) else {
-            break;
-        };
-        if left_character != right_character
-            || next_left_bytes > left_limit
-            || next_right_bytes > right_limit
-        {
-            break;
-        }
-        left_bytes = next_left_bytes;
-        right_bytes = next_right_bytes;
-    }
-    (left_bytes, right_bytes)
-}
-
-fn utf16_length(value: &str) -> Result<u32, WorkflowFailure> {
-    u32::try_from(value.encode_utf16().count()).map_err(|_| WorkflowFailure::Internal)
-}
-
 #[must_use]
 fn control_character_caution(payload: &str) -> Option<&'static str> {
     payload
         .chars()
         .any(char::is_control)
         .then_some(CONTROL_CHARACTER_CAUTION)
+}
+
+#[must_use]
+pub fn textarea_display_utf16_length(payload: &str) -> Option<u32> {
+    projected_utf16_length(payload)
 }
