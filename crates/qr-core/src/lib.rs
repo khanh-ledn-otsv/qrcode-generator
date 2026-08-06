@@ -8,6 +8,7 @@ use std::fmt;
 pub mod bit_buffer;
 pub mod codeword_stream;
 pub mod encoding;
+pub mod matrix;
 pub mod reed_solomon;
 pub mod tables;
 

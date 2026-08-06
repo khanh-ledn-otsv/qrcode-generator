@@ -232,6 +232,7 @@ impl AlgorithmSource {
 enum AlgorithmKind {
     ReedSolomon,
     CodewordInterleaving,
+    FunctionMatrices,
 }
 
 impl AlgorithmKind {
@@ -277,6 +278,43 @@ impl AlgorithmKind {
                 ],
                 nayuki_observed_fields: &["interleaved_hex", "remainder_bits"],
                 python_observed_fields: &["interleaved_hex"],
+            },
+            Self::FunctionMatrices => AlgorithmPolicy {
+                label: "function-matrices",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_function_matrices.py --check",
+                nayuki_executed_symbols: &[
+                    "encode_segments",
+                    "_set_function_module",
+                    "_get_alignment_pattern_positions",
+                ],
+                nayuki_evidence_symbols: &[
+                    "draw_function_patterns",
+                    "draw_finder_pattern",
+                    "draw_alignment_pattern",
+                    "set_function_module",
+                ],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+                python_symbols: &[
+                    "setup_position_probe_pattern",
+                    "setup_position_adjust_pattern",
+                    "setup_timing_pattern",
+                    "setup_type_info",
+                    "setup_type_number",
+                ],
+                python_supporting_source_urls: &[
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+                ],
+                python_supporting_symbols: &["PATTERN_POSITION_TABLE"],
+                nayuki_observed_fields: &[
+                    "function_coordinates",
+                    "fixed_function_values",
+                    "alignment_centers",
+                ],
+                python_observed_fields: &[
+                    "function_coordinates",
+                    "fixed_function_values",
+                    "alignment_centers",
+                ],
             },
         }
     }

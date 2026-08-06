@@ -85,6 +85,17 @@ uv run --project tests/oracles --locked python \
   tests/support/verify_interleaved_codewords.py --check
 ```
 
+Classified function-matrix fixtures cover Versions 1, 2, 7, and 40 with a
+readable one-character-per-module map. The verifier compares all function
+coordinates and stable finder, separator, timing, alignment, and fixed-dark
+values against both pinned encoders. Format and version regions are recorded as
+light reservations because their BCH values are added by ticket 10:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_function_matrices.py --check
+```
+
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,
 date, notes, and `accepted` state. `fixture-tool verify` rejects pending fixture
 changes.

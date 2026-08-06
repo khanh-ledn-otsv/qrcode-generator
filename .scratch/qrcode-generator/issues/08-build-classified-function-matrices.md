@@ -4,7 +4,7 @@
 
 **Blocked by:** 04 — Establish and validate QR tables.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Finder, separator, timing, alignment, format, version, and fixed-dark regions are placed at the required coordinates for every version.
 - [ ] Versions below 7 omit version information and alignment patterns avoid finder conflicts.

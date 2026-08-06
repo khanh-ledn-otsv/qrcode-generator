@@ -224,6 +224,86 @@
         "verified_at": "2026-08-06",
         "notes": "Both pinned encoders agree exactly for one-group and two-group short/long interleaved streams. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
       }
+    },
+    {
+      "id": "qr-classified-function-matrices",
+      "kind": "function-matrices",
+      "synthetic": true,
+      "artifact_file": "function_matrices.txt",
+      "artifact_sha256": "5e894b31f3898aa48bd37d99ad0d18313d73d710133325df9b16b3a61d805c11",
+      "standard_topic": "ISO/IEC 18004:2024 function patterns and reserved information regions; clause mapping pending audit",
+      "scope": "Human-reviewable classified function matrices for Versions 1, 2, 7, and 40",
+      "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_function_matrices.py --check",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "version": "1.8.0",
+          "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "executed_symbols": [
+            "encode_segments",
+            "_set_function_module",
+            "_get_alignment_pattern_positions"
+          ],
+          "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+          "evidence_symbols": [
+            "draw_function_patterns",
+            "draw_finder_pattern",
+            "draw_alignment_pattern",
+            "set_function_module"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_function_matrices.py --check",
+          "observed_fields": [
+            "function_coordinates",
+            "fixed_function_values",
+            "alignment_centers"
+          ]
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "version": "8.2",
+          "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "executed_symbols": [
+            "setup_position_probe_pattern",
+            "setup_position_adjust_pattern",
+            "setup_timing_pattern",
+            "setup_type_info",
+            "setup_type_number"
+          ],
+          "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "evidence_symbols": [
+            "setup_position_probe_pattern",
+            "setup_position_adjust_pattern",
+            "setup_timing_pattern",
+            "setup_type_info",
+            "setup_type_number"
+          ],
+          "supporting_source_urls": [
+            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py"
+          ],
+          "supporting_symbols": [
+            "PATTERN_POSITION_TABLE"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_function_matrices.py --check",
+          "observed_fields": [
+            "function_coordinates",
+            "fixed_function_values",
+            "alignment_centers"
+          ]
+        }
+      ],
+      "local_verification": [
+        "Every production matrix matches the complete classified map for Versions 1, 2, 7, and 40",
+        "Generated ownership and raw-data-region invariants cover all 40 versions",
+        "The checked builder rejects duplicate, out-of-bounds, invalid-reservation, and incomplete operations"
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "ticket-08-dual-oracle-implementation-review",
+        "verified_at": "2026-08-06",
+        "notes": "Both pinned encoders agree on all function coordinates and stable function values. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
+      }
     }
   ]
 }
