@@ -3,7 +3,6 @@ import pathlib
 import tempfile
 import unittest
 
-
 SCRIPT = pathlib.Path(__file__).with_name("verify_function_matrices.py")
 
 
@@ -11,6 +10,8 @@ class FunctionMatrixOracleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location("verify_function_matrices", SCRIPT)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("could not load support module")
         cls.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.module)
 

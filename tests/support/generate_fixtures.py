@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Explicitly generate and compare development-only QR matrix fixtures."""
 
 from __future__ import annotations
@@ -11,7 +10,6 @@ import json
 import pathlib
 import sys
 from typing import Callable
-
 
 ORACLE_PROVENANCE = {
     "nayuki": {
@@ -56,9 +54,7 @@ def sha256(data: bytes) -> str:
 def require_pinned_package(distribution: str, expected_version: str) -> str:
     actual_version = importlib.metadata.version(distribution)
     if actual_version != expected_version:
-        raise RuntimeError(
-            f"expected {distribution} {expected_version}, got {actual_version}"
-        )
+        raise RuntimeError(f"expected {distribution} {expected_version}, got {actual_version}")
     return actual_version
 
 
@@ -95,8 +91,7 @@ def generate_nayuki(payload: bytes, fixture: dict) -> str:
         boostecl=False,
     )
     return "".join(
-        "".join("1" if code.get_module(x, y) else "0" for x in range(code.get_size()))
-        + "\n"
+        "".join("1" if code.get_module(x, y) else "0" for x in range(code.get_size())) + "\n"
         for y in range(code.get_size())
     )
 
@@ -155,8 +150,7 @@ def generate_python_qrcode(payload: bytes, fixture: dict) -> str:
         code.data_cache = qrcode.util.create_bytes(buffer, blocks)
         code.makeImpl(False, fixture["mask"])
     return "".join(
-        "".join("1" if module else "0" for module in row) + "\n"
-        for row in code.get_matrix()
+        "".join("1" if module else "0" for module in row) + "\n" for row in code.get_matrix()
     )
 
 
@@ -253,9 +247,7 @@ def check_fixture(manifest_path: pathlib.Path, fixture: dict) -> None:
         raise ValueError(f"{fixture['id']} committed matrix drift:\n{difference}")
 
 
-def prepare_fixture_write(
-    manifest_path: pathlib.Path, fixture: dict
-) -> tuple[pathlib.Path, str]:
+def prepare_fixture_write(manifest_path: pathlib.Path, fixture: dict) -> tuple[pathlib.Path, str]:
     payload = load_payload(manifest_path, fixture)
     generated, source_outputs = generate_declared_sources(payload, fixture, True)
     matrix_path = manifest_path.parent / fixture["expected_matrix_file"]

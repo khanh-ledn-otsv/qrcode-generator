@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Verify interleaved QR codeword fixtures with both pinned encoders."""
 
 from __future__ import annotations
@@ -6,7 +5,6 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import pathlib
-
 
 FIXTURE_PATH = pathlib.Path(__file__).parents[1] / "fixtures" / "interleaved_codewords.csv"
 COMMAND = (
@@ -37,9 +35,9 @@ def python_ecc(ecc_name: str) -> int:
 
 
 def oracle_streams(version: int, ecc_name: str, data: bytes) -> tuple[bytes, bytes]:
-    from qrcodegen import QrCode
     import qrcode.base
     import qrcode.util
+    from qrcodegen import QrCode
 
     nayuki_ecc = {
         "L": QrCode.Ecc.LOW,
@@ -63,8 +61,8 @@ def oracle_streams(version: int, ecc_name: str, data: bytes) -> tuple[bytes, byt
 def render_fixture() -> str:
     require_pin("qrcodegen", "1.8.0")
     require_pin("qrcode", "8.2")
-    from qrcodegen import QrCode
     import qrcode.base
+    from qrcodegen import QrCode
 
     lines = [
         "# public-corroborated, non-normative; ISO/IEC 18004:2024 clause mapping pending audit",

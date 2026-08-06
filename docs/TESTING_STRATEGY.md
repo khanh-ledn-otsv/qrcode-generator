@@ -60,7 +60,16 @@ Start with the currently reviewed `cargo-llvm-cov` 0.8.x line, then pin exact ve
 
 Use TypeScript only in `e2e/`. Keep business logic and expected QR calculations in Rust fixtures rather than duplicating the encoder in test JavaScript.
 
-### 2.4 Independent QR tools
+### 2.4 Source quality tools
+
+| Tool | Scope | Policy |
+|---|---|---|
+| Node.js v24 + pnpm | Browser test toolchain | Declare Node.js v24 in `.nvmrc`, pin pnpm through `packageManager`, and commit `pnpm-lock.yaml`. Do not maintain an npm lockfile in parallel. |
+| Oxlint + Oxfmt | TypeScript and browser configuration | Oxlint errors on correctness/suspicious findings and warnings; Oxfmt is the Oxc formatter and its check mode is part of verification. |
+| Ruff | `tests/support` Python | Run both `ruff check` and `ruff format --check`; pin the executable in the oracle `uv.lock`. |
+| ty | `tests/support` Python | Type check the complete support-script tree in the same locked `uv` environment as the Python oracle dependencies. |
+
+### 2.5 Independent QR tools
 
 - **ZXing-C++:** primary pinned decode oracle for PNG and rasterized SVG. Compare decoded Unicode text, raw bytes, ECI state, symbol version, and ECC metadata when exposed.
 - **quirc:** secondary, implementation-diverse decoder for representative ASCII raster tests. Do not use it as the sole UTF-8/ECI oracle.
@@ -69,7 +78,7 @@ Use TypeScript only in `e2e/`. Keep business logic and expected QR calculations 
 
 None of these generators or decoders is linked into the production application.
 
-### 2.5 Public-source corroboration when complete normative text is unavailable
+### 2.6 Public-source corroboration when complete normative text is unavailable
 
 Follow [`research/qr-public-source-provenance.md`](research/qr-public-source-provenance.md) for GF(256), Reed–Solomon, interleaving, function/data placement, BCH, mask predicates, and penalty rules implemented before a licensed ISO/IEC 18004:2024 audit is available.
 

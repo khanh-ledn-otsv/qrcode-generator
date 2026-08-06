@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate composed encoder golden fingerprints from both pinned encoders."""
 
 from __future__ import annotations
@@ -7,18 +6,18 @@ import argparse
 import importlib.util
 import pathlib
 
-
 FIXTURE_PATH = pathlib.Path(__file__).parents[1] / "fixtures" / "encoder_goldens.csv"
 GENERATORS_SCRIPT = pathlib.Path(__file__).with_name("generate_fixtures.py")
 MASK_SCRIPT = pathlib.Path(__file__).with_name("verify_mask_selection.py")
 COMMAND = (
-    "uv run --project tests/oracles --locked python "
-    "tests/support/verify_encoder_goldens.py --check"
+    "uv run --project tests/oracles --locked python tests/support/verify_encoder_goldens.py --check"
 )
 
 
 def load_module(name: str, path: pathlib.Path):
     spec = importlib.util.spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load support module {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -155,7 +154,9 @@ def render_fixture() -> str:
         version, mask, matrix_hash = evaluate_case(
             generators, mask_reference, name, data, mode, ecc
         )
-        rows.append((name, mode, ecc, version, mask, 26 if mode == "utf8" else 0, data, matrix_hash))
+        rows.append(
+            (name, mode, ecc, version, mask, 26 if mode == "utf8" else 0, data, matrix_hash)
+        )
         covered_masks.add(mask)
 
     search_limits = {
@@ -192,7 +193,9 @@ def render_fixture() -> str:
 
 def check_fixture() -> None:
     if render_fixture() != FIXTURE_PATH.read_text(encoding="ascii"):
-        raise ValueError(f"encoder golden fixture drift: run {COMMAND.replace('--check', '--write')}")
+        raise ValueError(
+            f"encoder golden fixture drift: run {COMMAND.replace('--check', '--write')}"
+        )
 
 
 def main() -> None:

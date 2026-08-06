@@ -1,6 +1,9 @@
 /target
 /dist
 /node_modules
+/tests/oracles/.venv
 /playwright-report
 /tests/oracles/zxing-cpp
+.ruff_cache/
+.ty_cache/
 __pycache__/

@@ -14,8 +14,11 @@ test("reports representative modes, UTF-8 counts, and latest debounced input", a
     ["café", "Byte"],
   ] as const;
 
+  // Each case intentionally mutates and observes the same browser page in sequence.
   for (const [payload, mode] of cases) {
+    // oxlint-disable-next-line no-await-in-loop
     await enterPayload(page, payload);
+    // oxlint-disable-next-line no-await-in-loop
     await expect.poll(() => diagnostic(page, "Mode")).toBe(mode);
   }
   await expect(page.getByText("4 characters", { exact: true })).toBeVisible();
@@ -25,10 +28,7 @@ test("reports representative modes, UTF-8 counts, and latest debounced input", a
   await input.fill("old value");
   await input.fill("987654321");
   await expect.poll(() => diagnostic(page, "Mode")).toBe("Numeric");
-  await expect(page.getByTestId("qr-preview")).toHaveAttribute(
-    "aria-label",
-    /Numeric mode/,
-  );
+  await expect(page.getByTestId("qr-preview")).toHaveAttribute("aria-label", /Numeric mode/);
 });
 
 test("distinguishes the input-limit boundary and keeps exports disabled", async ({ page }) => {
@@ -55,7 +55,9 @@ test("disposing the page with pending debounce work initializes cleanly", async 
   expect(pageErrors).toEqual([]);
 });
 
-test("profile controls work by keyboard and layouts fit desktop and mobile widths", async ({ page }) => {
+test("profile controls work by keyboard and layouts fit desktop and mobile widths", async ({
+  page,
+}) => {
   await enterPayload(page, "responsive profile");
   const content = page.getByRole("radio", { name: /Content/ });
   await content.focus();
@@ -64,9 +66,9 @@ test("profile controls work by keyboard and layouts fit desktop and mobile width
   await expect.poll(() => diagnostic(page, "Version")).toContain("V12 max");
   const landing = page.getByRole("radio", { name: /Landing/ });
   await expect(landing).toBeFocused();
-  const focusRing = await landing.locator("xpath=..").evaluate((label) =>
-    getComputedStyle(label).boxShadow,
-  );
+  const focusRing = await landing
+    .locator("xpath=..")
+    .evaluate((label) => getComputedStyle(label).boxShadow);
   expect(focusRing).not.toBe("none");
 
   const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);

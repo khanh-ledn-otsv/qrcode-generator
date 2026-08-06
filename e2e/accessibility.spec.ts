@@ -30,10 +30,7 @@ test("warnings, focus, preview labels, and disabled reasons are programmatic", a
     "aria-label",
     /^Generated QR code preview: .* mode, version \d+, ECC M\.$/,
   );
-  await expect(page.getByTestId("qr-preview")).not.toHaveAttribute(
-    "aria-label",
-    /line one/,
-  );
+  await expect(page.getByTestId("qr-preview")).not.toHaveAttribute("aria-label", /line one/);
 
   await input.fill("");
   await expect(page.getByTestId("download-svg")).toBeDisabled();

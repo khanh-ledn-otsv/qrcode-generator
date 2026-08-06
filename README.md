@@ -17,9 +17,12 @@ Dependencies flow from `qr-web` to `qr-render` and `qr-core`, and from
 
 ## Run locally
 
+Use Node.js v24 (declared in `.nvmrc`), pnpm 11.20.0, and `uv` for the
+development-only Python environment.
+
 ```sh
-rustup target add wasm32-unknown-unknown
-trunk serve --open
+./scripts/setup.sh
+pnpm run dev
 ```
 
 The root `Trunk.toml` targets `crates/qr-web/index.html`, so Trunk commands run
@@ -28,14 +31,15 @@ Trunk builds the Rust application to WebAssembly and compiles Tailwind CSS autom
 
 ## Verify
 
+Run the complete repository gate with one command:
+
 ```sh
-cargo fmt --check
-cargo check
-cargo test
-cargo clippy --all-targets --all-features -- -D warnings
-cargo check --target wasm32-unknown-unknown
-trunk build --release
+pnpm run verify
 ```
+
+Use `pnpm run check` for static checks and the release build, `pnpm run test`
+for all native, Python, WASM, and browser tests, and `pnpm run format` to apply
+Rust, TypeScript, and Python formatters.
 
 Committed QR fixtures are verified without regeneration during `cargo test`.
 The explicit dual-oracle generation and ZXing-C++ decode workflow is documented

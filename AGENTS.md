@@ -40,6 +40,15 @@ Treat those documents as authoritative. Update them when an implementation decis
 - Do not add production QR encoders, Reed-Solomon libraries, general image stacks, SVG rasterizers, or scene renderers unless the development plan is deliberately revised.
 - Keep browser-only crates and features scoped to `qr-web` after the workspace migration.
 
+## Development Tooling
+
+- Use the `.nvmrc`-declared Node.js v24 runtime and the
+  `packageManager`-pinned pnpm version. Commit `pnpm-lock.yaml`; do not create an
+  npm lockfile.
+- Use Oxlint for JavaScript/TypeScript linting and Oxfmt for formatting.
+- Use Ruff for Python linting and formatting, and ty for Python type checking.
+  Run both through the locked `tests/oracles` uv project.
+
 ## Verification
 
 Run the checks relevant to the changed files before handoff:
@@ -55,6 +64,12 @@ For changes to the web application, HTML, CSS, WASM boundary, build configuratio
 
 ```sh
 trunk build --release
+```
+
+For TypeScript, browser-test tooling, or Python support changes, also run:
+
+```sh
+pnpm run verify
 ```
 
 If required tooling is unavailable, report the skipped check and reason.

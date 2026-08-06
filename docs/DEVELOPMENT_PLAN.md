@@ -247,6 +247,13 @@ Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon cra
 
 Additional local verification may use `cargo-llvm-cov`, `cargo-mutants`, Miri, `cargo-audit`, Playwright Test, and `@axe-core/playwright`. See the testing strategy for the rationale and enforcement thresholds.
 
+Browser tooling uses the `.nvmrc`-declared Node.js v24 runtime and the
+`packageManager`-pinned pnpm release. TypeScript is linted with Oxlint and
+formatted with Oxfmt. Development-only Python support code is linted and
+formatted with Ruff and type checked with ty; those tools are exact-pinned in
+the oracle `uv.lock`. These checks must run without weakening QR oracle or
+fixture policies.
+
 ## 6. Test oracle and fixture strategy
 
 Every committed fixture gets a manifest entry containing payload bytes (or a non-sensitive generated payload), mode/ECI policy, version, ECC, mask, source tool and version, generation command, and independent verification status.

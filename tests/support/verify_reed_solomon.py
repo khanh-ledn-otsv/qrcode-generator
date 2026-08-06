@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Verify QR Reed–Solomon vectors with both pinned development oracles."""
 
 from __future__ import annotations
@@ -7,12 +6,10 @@ import argparse
 import importlib.metadata
 import pathlib
 
-
 DEGREES = (7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30)
 FIXTURE_PATH = pathlib.Path(__file__).parents[1] / "fixtures" / "reed_solomon.csv"
 COMMAND = (
-    "uv run --project tests/oracles --locked python "
-    "tests/support/verify_reed_solomon.py --check"
+    "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check"
 )
 
 
@@ -32,14 +29,12 @@ def python_generator(degree: int) -> list[int]:
 
 
 def oracle_vectors(degree: int, data: bytes) -> tuple[list[int], list[int]]:
-    from qrcodegen import QrCode
     import qrcode.base
+    from qrcodegen import QrCode
 
-    nayuki_divisor = list(QrCode._reed_solomon_compute_divisor(degree))
+    nayuki_divisor = QrCode._reed_solomon_compute_divisor(degree)
     nayuki_generator = [1, *nayuki_divisor]
-    nayuki_remainder = list(
-        QrCode._reed_solomon_compute_remainder(data, nayuki_divisor)
-    )
+    nayuki_remainder = list(QrCode._reed_solomon_compute_remainder(data, nayuki_divisor))
 
     qrcode_generator = python_generator(degree)
     raw_remainder = qrcode.base.Polynomial(list(data), degree) % qrcode.base.Polynomial(

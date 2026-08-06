@@ -2,7 +2,6 @@ import importlib.util
 import pathlib
 import unittest
 
-
 SCRIPT = pathlib.Path(__file__).with_name("verify_mask_selection.py")
 
 
@@ -10,6 +9,8 @@ class MaskSelectionOracleTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location("verify_mask_selection", SCRIPT)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("could not load support module")
         cls.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.module)
 
@@ -20,7 +21,9 @@ class MaskSelectionOracleTests(unittest.TestCase):
         self.assertEqual(rendered.count("\ncandidate,"), 24)
         self.assertEqual(rendered.count("\nselected,"), 3)
         self.assertEqual(rendered.count("\nsynthetic,"), 2)
-        candidate = next(line for line in rendered.splitlines() if line.startswith("candidate,2,Q,0,"))
+        candidate = next(
+            line for line in rendered.splitlines() if line.startswith("candidate,2,Q,0,")
+        )
         self.assertEqual(candidate.split(",")[4:6], ["387", "1107"])
         self.module.check_fixture()
 

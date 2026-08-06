@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Verify classified QR function-matrix fixtures with both pinned encoders."""
 
 from __future__ import annotations
@@ -8,7 +7,6 @@ import importlib.metadata
 import pathlib
 from collections.abc import Callable
 from unittest.mock import patch
-
 
 FIXTURE_PATH = pathlib.Path(__file__).parents[1] / "fixtures" / "function_matrices.txt"
 COMMAND = (
@@ -42,9 +40,7 @@ def nayuki_classified_state(version: int) -> dict[tuple[int, int], tuple[str, bo
     original_format = QrCode._draw_format_bits
     original_version = QrCode._draw_version
 
-    def with_context(
-        value: tuple[str, int, int], action: Callable[..., None], self, *args
-    ) -> None:
+    def with_context(value: tuple[str, int, int], action: Callable[..., None], self, *args) -> None:
         previous = context[0]
         context[0] = value
         try:
@@ -70,11 +66,7 @@ def nayuki_classified_state(version: int) -> dict[tuple[int, int], tuple[str, bo
             kind = "timing"
         elif active[0] == "finder":
             _, center_x, center_y = active
-            kind = (
-                "finder"
-                if abs(x - center_x) <= 3 and abs(y - center_y) <= 3
-                else "separator"
-            )
+            kind = "finder" if abs(x - center_x) <= 3 and abs(y - center_y) <= 3 else "separator"
         elif active[0] == "format" and (x, y) == (8, self._size - 8):
             kind = "dark"
         else:
@@ -167,10 +159,7 @@ def classified_matrix(version: int) -> list[list[tuple[str, bool]]]:
             f"Version {version} classified function oracle disagreement at {differing[:10]}"
         )
     size = 17 + 4 * version
-    return [
-        [nayuki.get((x, y), ("data", False)) for x in range(size)]
-        for y in range(size)
-    ]
+    return [[nayuki.get((x, y), ("data", False)) for x in range(size)] for y in range(size)]
 
 
 def glyph(cell: tuple[str, bool]) -> str:

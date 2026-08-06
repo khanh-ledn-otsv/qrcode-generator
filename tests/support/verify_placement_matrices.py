@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Verify explicit-mask data placement with both pinned QR encoders."""
 
 from __future__ import annotations
@@ -8,7 +7,6 @@ import importlib.metadata
 import importlib.util
 import pathlib
 from unittest.mock import patch
-
 
 FIXTURE_PATH = pathlib.Path(__file__).parents[1] / "fixtures" / "placement_matrices.txt"
 FUNCTION_SCRIPT = pathlib.Path(__file__).with_name("verify_function_matrices.py")
@@ -28,14 +26,16 @@ def require_pin(distribution: str, version: str) -> None:
 
 def function_fixture_module():
     spec = importlib.util.spec_from_file_location("function_fixture", FUNCTION_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load support module {FUNCTION_SCRIPT}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
 def ecc_values(ecc_name: str):
-    from qrcodegen import QrCode
     import qrcode.constants
+    from qrcodegen import QrCode
 
     return (
         {
@@ -58,7 +58,9 @@ def synthetic_data(version: int, python_ecc: int) -> tuple[bytes, bytes]:
     import qrcode.util
 
     blocks = qrcode.base.rs_blocks(version, python_ecc)
-    data = bytes((index * 149 + version) & 0xFF for index in range(sum(b.data_count for b in blocks)))
+    data = bytes(
+        (index * 149 + version) & 0xFF for index in range(sum(b.data_count for b in blocks))
+    )
     buffer = qrcode.util.BitBuffer()
     buffer.buffer = list(data)
     buffer.length = len(data) * 8
@@ -94,8 +96,7 @@ def nayuki_result(version: int, ecc, data: bytes, mask: int):
     with patch.object(QrCode, "_draw_codewords", draw_codewords):
         code = QrCode(version, ecc, data, mask)
     matrix = [
-        [code.get_module(x, y) for x in range(code.get_size())]
-        for y in range(code.get_size())
+        [code.get_module(x, y) for x in range(code.get_size())] for y in range(code.get_size())
     ]
     return matrix, placements
 
@@ -141,9 +142,7 @@ def classified_matrix(version: int, ecc_name: str, mask: int, function_state):
     nayuki_ecc, python_ecc = ecc_values(ecc_name)
     data, interleaved = synthetic_data(version, python_ecc)
     nayuki_matrix, nayuki_placements = nayuki_result(version, nayuki_ecc, data, mask)
-    python_matrix, python_placements = python_qrcode_result(
-        version, python_ecc, interleaved, mask
-    )
+    python_matrix, python_placements = python_qrcode_result(version, python_ecc, interleaved, mask)
     if nayuki_matrix != python_matrix:
         raise ValueError(f"Version {version}-{ecc_name} mask {mask} matrix disagreement")
     data_bit_count = len(interleaved) * 8

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate or verify the non-normative QR Model 2 table fixture."""
 
 from __future__ import annotations
@@ -8,7 +7,6 @@ import csv
 import importlib.metadata
 import io
 import pathlib
-
 
 QRCODEGEN_VERSION = "1.8.0"
 PYTHON_QRCODE_VERSION = "8.2"
@@ -26,8 +24,7 @@ def normalized_groups(blocks: list[tuple[int, int]]) -> list[tuple[int, int, int
         shape = (total, data)
         counts[shape] = counts.get(shape, 0) + 1
     return [
-        (counts[shape], shape[0], shape[1])
-        for shape in sorted(counts, key=lambda item: item[1])
+        (counts[shape], shape[0], shape[1]) for shape in sorted(counts, key=lambda item: item[1])
     ]
 
 
@@ -84,9 +81,7 @@ def render_fixture() -> str:
         raw_modules = QrCode._get_num_raw_data_modules(version)
         total_codewords = raw_modules // 8
         remainder_bits = raw_modules % 8
-        generated = QrCode.encode_segments(
-            [], QrCode.Ecc.LOW, version, version, 0, False
-        )
+        generated = QrCode.encode_segments([], QrCode.Ecc.LOW, version, version, 0, False)
         nayuki_centers = generated._get_alignment_pattern_positions()
         python_centers = qrcode.util.pattern_position(version)
         if nayuki_centers != python_centers:
@@ -102,19 +97,13 @@ def render_fixture() -> str:
 
         for letter, nayuki_ecc, python_ecc in levels:
             python_blocks = qrcode.base.rs_blocks(version, python_ecc)
-            python_pairs = [
-                (block.total_count, block.data_count) for block in python_blocks
-            ]
+            python_pairs = [(block.total_count, block.data_count) for block in python_blocks]
             groups = normalized_groups(python_pairs)
             if len(groups) not in (1, 2):
                 raise ValueError(f"version {version}-{letter} has {len(groups)} groups")
 
-            block_count = QrCode._NUM_ERROR_CORRECTION_BLOCKS[
-                nayuki_ecc.ordinal
-            ][version]
-            ecc_per_block = QrCode._ECC_CODEWORDS_PER_BLOCK[
-                nayuki_ecc.ordinal
-            ][version]
+            block_count = QrCode._NUM_ERROR_CORRECTION_BLOCKS[nayuki_ecc.ordinal][version]
+            ecc_per_block = QrCode._ECC_CODEWORDS_PER_BLOCK[nayuki_ecc.ordinal][version]
             data_codewords = total_codewords - block_count * ecc_per_block
             nayuki_short_total = total_codewords // block_count
             nayuki_long_count = total_codewords % block_count

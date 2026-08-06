@@ -7,5 +7,12 @@ dependencies = [
     "qrcodegen==1.8.0",
 ]
 
+[dependency-groups]
+dev = [
+    "cmake==4.4.2",
+    "ruff==0.16.1",
+    "ty==0.0.69",
+]
+
 [tool.uv]
 package = false

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Verify BCH information, completed mask candidates, and penalty selection."""
 
 from __future__ import annotations
@@ -7,18 +6,18 @@ import argparse
 import importlib.util
 import pathlib
 
-
 FIXTURE_PATH = pathlib.Path(__file__).parents[1] / "fixtures" / "mask_selection.csv"
 PLACEMENT_SCRIPT = pathlib.Path(__file__).with_name("verify_placement_matrices.py")
 COMMAND = (
-    "uv run --project tests/oracles --locked python "
-    "tests/support/verify_mask_selection.py --check"
+    "uv run --project tests/oracles --locked python tests/support/verify_mask_selection.py --check"
 )
 SELECTION_CASES = ((2, "Q"), (7, "H"), (40, "L"))
 
 
 def placement_fixture_module():
     spec = importlib.util.spec_from_file_location("placement_fixture", PLACEMENT_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load support module {PLACEMENT_SCRIPT}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -142,7 +141,9 @@ def render_fixture() -> str:
             python = qrcode.util.lost_point(matrix)
             nayuki = nayuki_penalty(matrix)
             if accepted != python:
-                raise ValueError(f"Version {version}-{ecc_name} mask {mask} literal score disagreement")
+                raise ValueError(
+                    f"Version {version}-{ecc_name} mask {mask} literal score disagreement"
+                )
             accepted_scores.append(accepted)
             nayuki_scores.append(nayuki)
             lines.append(
@@ -168,7 +169,9 @@ def render_fixture() -> str:
 
 def check_fixture(path: pathlib.Path = FIXTURE_PATH) -> None:
     if render_fixture() != path.read_text(encoding="ascii"):
-        raise ValueError(f"mask-selection fixture drift: run {COMMAND.replace('--check', '--write')}")
+        raise ValueError(
+            f"mask-selection fixture drift: run {COMMAND.replace('--check', '--write')}"
+        )
 
 
 def main() -> None:

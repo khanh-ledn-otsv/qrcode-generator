@@ -3,7 +3,6 @@ import pathlib
 import unittest
 from unittest import mock
 
-
 SCRIPT = pathlib.Path(__file__).with_name("generate_fixtures.py")
 
 
@@ -11,6 +10,8 @@ class DualOracleComparisonTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location("generate_fixtures", SCRIPT)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("could not load support module")
         cls.module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.module)
 
@@ -47,19 +48,17 @@ class DualOracleComparisonTests(unittest.TestCase):
             "command": self.module.canonical_command("fixture-01", "python-qrcode"),
         }
 
-        with mock.patch.object(
-            self.module, "require_pinned_package", return_value="8.2"
+        with (
+            mock.patch.object(self.module, "require_pinned_package", return_value="8.2"),
+            self.assertRaisesRegex(ValueError, "provenance mismatch in tool"),
         ):
-            with self.assertRaisesRegex(ValueError, "provenance mismatch in tool"):
-                self.module.refresh_or_validate_source(fixture, source, False)
+            self.module.refresh_or_validate_source(fixture, source, False)
 
     def test_regeneration_refreshes_provenance_from_the_executed_oracle(self):
         fixture = {"id": "fixture-01"}
         source = {"oracle": "python-qrcode"}
 
-        with mock.patch.object(
-            self.module, "require_pinned_package", return_value="8.2"
-        ):
+        with mock.patch.object(self.module, "require_pinned_package", return_value="8.2"):
             self.module.refresh_or_validate_source(fixture, source, True)
 
         self.assertEqual(source["tool"], "python-qrcode")
