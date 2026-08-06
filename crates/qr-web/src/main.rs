@@ -83,14 +83,44 @@ fn App() -> impl IntoView {
                             id="qr-payload"
                             class="focus:border-brand focus:ring-brand mt-2 min-h-44 w-full resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm leading-6 text-slate-950 shadow-inner outline-none transition focus:ring-2 focus:ring-offset-2"
                             placeholder="Paste or type text exactly as it should be encoded"
+                            autocomplete="off"
+                            autocapitalize="off"
+                            spellcheck="false"
                             aria-describedby="payload-counts payload-validation payload-caution"
                             aria-invalid=move || state.with(|value| value.validation_message().is_some())
                             prop:value=move || state.with(WorkflowState::textarea_value)
                             on:beforeinput=move |event: InputEvent| {
-                                let start = event
+                                let target = event
                                     .target()
-                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok())
-                                    .and_then(|target| target.selection_start().ok().flatten());
+                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok());
+                                let selection = target.as_ref().and_then(|target| {
+                                    target
+                                        .selection_start()
+                                        .ok()
+                                        .flatten()
+                                        .zip(target.selection_end().ok().flatten())
+                                });
+                                if matches!(
+                                    event.input_type().as_str(),
+                                    "insertFromDrop" | "insertFromPaste"
+                                ) && let Some(raw) = event
+                                    .data_transfer()
+                                    .and_then(|transfer| transfer.get_data("text/plain").ok())
+                                    && let (Some(target), Some((start, end))) = (target, selection)
+                                {
+                                    event.prevent_default();
+                                    pending_edit_start.set(None);
+                                    apply_raw_textarea_insertion(
+                                        state,
+                                        pending_timer,
+                                        &target,
+                                        start,
+                                        end,
+                                        &raw,
+                                    );
+                                    return;
+                                }
+                                let start = selection.map(|(start, _)| start);
                                 pending_edit_start.set(start);
                             }
                             on:input=move |event: Event| {
@@ -139,22 +169,16 @@ fn App() -> impl IntoView {
                                 else {
                                     return;
                                 };
-                                let result = state.try_update(|value| {
-                                    value.replace_display_range(start, end, &pasted)
-                                });
-
                                 event.prevent_default();
                                 pending_edit_start.set(None);
-                                target.set_value(&state.with(WorkflowState::textarea_value));
-                                if let Some(Ok(request)) = result {
-                                    if let Some(inserted_length) =
-                                        textarea_display_utf16_length(&pasted)
-                                        && let Some(caret) = start.checked_add(inserted_length)
-                                    {
-                                        _ = target.set_selection_range(caret, caret);
-                                    }
-                                    schedule_preview(state, pending_timer, request);
-                                }
+                                apply_raw_textarea_insertion(
+                                    state,
+                                    pending_timer,
+                                    &target,
+                                    start,
+                                    end,
+                                    &pasted,
+                                );
                             }
                         ></textarea>
 
@@ -255,6 +279,26 @@ fn schedule_preview(
         Err(_) => state.update(|value| {
             _ = value.complete_preview(revision, Err(WorkflowFailure::Internal));
         }),
+    }
+}
+
+fn apply_raw_textarea_insertion(
+    state: RwSignal<WorkflowState>,
+    pending_timer: RwSignal<Option<TimeoutHandle>>,
+    target: &HtmlTextAreaElement,
+    start: u32,
+    end: u32,
+    raw: &str,
+) {
+    let result = state.try_update(|value| value.replace_display_range(start, end, raw));
+    target.set_value(&state.with(WorkflowState::textarea_value));
+    if let Some(Ok(request)) = result {
+        if let Some(inserted_length) = textarea_display_utf16_length(raw)
+            && let Some(caret) = start.checked_add(inserted_length)
+        {
+            _ = target.set_selection_range(caret, caret);
+        }
+        schedule_preview(state, pending_timer, request);
     }
 }
 
