@@ -21,6 +21,10 @@
   construction classifies every function region for all 40 versions, validates
   reservations and finalization, and is covered by exact all-version invariants
   plus dual-oracle readable fixtures for Versions 1, 2, 7, and 40.
+- [Ticket 09](issues/09-place-data-remainder-and-explicit-masks.md): Checked
+  zig-zag placement preserves data/remainder ownership, protects every function
+  module, supports all eight explicit masks through a typed core API, and
+  matches dual-oracle fixtures at Versions 1, 2, 7, and 40.
 
 ## Notes
 
