@@ -136,10 +136,9 @@ fn placement_rejects_stream_length_and_matrix_ownership_mismatches() {
             &version_two_stream,
             MaskId::new(0).expect("mask 0 is valid"),
         ),
-        Err(PlacementError::StreamLengthMismatch {
-            writable_modules: 208,
-            data_bits: 352,
-            remainder_bits: 7,
+        Err(PlacementError::VersionMismatch {
+            matrix: version_one,
+            stream: version_two,
         })
     );
 

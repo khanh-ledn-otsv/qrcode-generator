@@ -1,10 +1,12 @@
 //! Penalty scoring for completed QR matrices.
 //!
 //! ISO/IEC 18004:2024 mask evaluation penalty rules; 2024 clause mapping
-//! pending audit. Corroborated by Nayuki 1.8.0
+//! pending audit. Nayuki 1.8.0
 //! `rust/src/lib.rs::{get_penalty_score,FinderPenalty}` and python-qrcode 8.2
-//! `qrcode/util.py::lost_point`. Evidence is `public-corroborated,
-//! non-normative` pending a complete 2024 audit.
+//! `qrcode/util.py::lost_point` are the pinned public sources, but their Rule 3
+//! totals disagree on completed candidates. The unresolved evidence is
+//! quarantined in `.scratch/qrcode-generator/penalty-oracle-disagreement.md`;
+//! this implementation is not accepted as public-corroborated pending audit.
 
 use crate::matrix::ModuleMatrix;
 
@@ -108,7 +110,9 @@ fn balance_penalty(dark: u32, total: u32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{balance_penalty, block_penalty, finder_like_penalty, run_penalty};
+    use super::{balance_penalty, block_penalty, finder_like_penalty, penalty_score, run_penalty};
+    use crate::Version;
+    use crate::matrix::{MatrixBuilder, Module, ModuleKind, ModuleMatrix};
 
     #[test]
     fn runs_start_at_five_and_grow_one_point_per_module() {
@@ -121,6 +125,15 @@ mod tests {
             ]),
             6
         );
+    }
+
+    #[test]
+    fn completed_matrix_scoring_counts_horizontal_and_vertical_runs() {
+        let horizontal = run_matrix(false);
+        let vertical = run_matrix(true);
+
+        assert_eq!(penalty_score(&horizontal), 5);
+        assert_eq!(penalty_score(&vertical), 5);
     }
 
     #[test]
@@ -152,5 +165,24 @@ mod tests {
         assert_eq!(balance_penalty(55, 100), 10);
         assert_eq!(balance_penalty(45, 100), 10);
         assert_eq!(balance_penalty(0, 100), 100);
+    }
+
+    fn run_matrix(transpose: bool) -> ModuleMatrix {
+        let version = Version::new(1).expect("version 1 is valid");
+        let mut builder = MatrixBuilder::new(version).expect("matrix builder exists");
+        for y in 0..builder.size() {
+            for x in 0..builder.size() {
+                let (pattern_x, pattern_y) = if transpose { (y, x) } else { (x, y) };
+                let dark = if pattern_y == 10 && (3..8).contains(&pattern_x) {
+                    true
+                } else {
+                    (x + y) % 2 == 0
+                };
+                builder
+                    .write(x, y, Module::new(dark, ModuleKind::Data))
+                    .expect("each coordinate is written once");
+            }
+        }
+        builder.finish().expect("matrix is complete")
     }
 }

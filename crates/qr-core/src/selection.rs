@@ -1,20 +1,20 @@
 //! Deterministic QR mask selection over completed candidates.
 //!
 //! ISO/IEC 18004:2024 mask evaluation and selection; 2024 clause mapping
-//! pending audit. Corroborated by Nayuki 1.8.0
+//! pending audit. Compared against Nayuki 1.8.0
 //! `rust/src/lib.rs::{draw_format_bits,draw_version,get_penalty_score}` and
 //! python-qrcode 8.2 `qrcode/main.py::{makeImpl,best_mask_pattern}` plus
-//! `qrcode/util.py::lost_point`. Evidence is `public-corroborated,
-//! non-normative` pending a complete 2024 audit.
+//! `qrcode/util.py::lost_point`. Their completed matrices agree but exposed
+//! penalty totals do not; see the quarantined evidence in
+//! `.scratch/qrcode-generator/penalty-oracle-disagreement.md`. Automatic
+//! selection remains unaccepted pending resolution and a complete 2024 audit.
 
-use crate::Version;
 use crate::codeword_stream::InterleavedCodewords;
 use crate::matrix::{
     InformationError, MaskError, MaskId, MatrixError, ModuleMatrix, PlacementError,
     build_function_matrix, finalize_information, place_data,
 };
 use crate::penalty::penalty_score;
-use crate::tables::ErrorCorrection;
 use std::error::Error;
 use std::fmt;
 
@@ -104,16 +104,13 @@ impl From<InformationError> for SelectionError {
     }
 }
 
-pub fn select_mask(
-    version: Version,
-    ecc: ErrorCorrection,
-    stream: &InterleavedCodewords,
-) -> Result<SelectedMask, SelectionError> {
+pub fn select_mask(stream: &InterleavedCodewords) -> Result<SelectedMask, SelectionError> {
+    let version = stream.version();
     let mut selected = None;
     for mask_number in MaskId::MIN..=MaskId::MAX {
         let mask = MaskId::new(mask_number)?;
         let matrix = place_data(build_function_matrix(version)?, stream, mask)?;
-        let matrix = finalize_information(matrix, ecc, mask)?;
+        let matrix = finalize_information(matrix)?;
         let penalty = penalty_score(&matrix);
         if is_better_candidate(
             mask,

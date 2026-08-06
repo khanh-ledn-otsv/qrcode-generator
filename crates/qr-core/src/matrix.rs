@@ -62,8 +62,14 @@ pub struct ModuleMatrix {
     version: Version,
     size: u16,
     modules: Vec<Module>,
-    data_placed: bool,
+    placement: Option<PlacementMetadata>,
     information_finalized: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct PlacementMetadata {
+    ecc: ErrorCorrection,
+    mask: MaskId,
 }
 
 impl ModuleMatrix {
@@ -215,7 +221,7 @@ impl MatrixBuilder {
             version: self.version,
             size: self.size,
             modules,
-            data_placed: false,
+            placement: None,
             information_finalized: false,
         })
     }
@@ -313,6 +319,10 @@ impl Error for MaskError {}
 pub enum PlacementError {
     Matrix(MatrixError),
     AlreadyPlaced,
+    VersionMismatch {
+        matrix: Version,
+        stream: Version,
+    },
     OwnershipMismatch {
         x: u16,
         y: u16,
@@ -336,6 +346,12 @@ impl fmt::Display for PlacementError {
         match self {
             Self::Matrix(error) => error.fmt(formatter),
             Self::AlreadyPlaced => formatter.write_str("QR matrix data has already been placed"),
+            Self::VersionMismatch { matrix, stream } => write!(
+                formatter,
+                "QR matrix Version {} does not match stream Version {}",
+                matrix.number(),
+                stream.number()
+            ),
             Self::OwnershipMismatch {
                 x,
                 y,
@@ -367,6 +383,7 @@ impl Error for PlacementError {
         match self {
             Self::Matrix(error) => Some(error),
             Self::AlreadyPlaced
+            | Self::VersionMismatch { .. }
             | Self::OwnershipMismatch { .. }
             | Self::LengthOverflow
             | Self::StreamLengthMismatch { .. }
@@ -386,8 +403,14 @@ pub fn place_data(
     stream: &InterleavedCodewords,
     mask: MaskId,
 ) -> Result<ModuleMatrix, PlacementError> {
-    if matrix.data_placed {
+    if matrix.placement.is_some() {
         return Err(PlacementError::AlreadyPlaced);
+    }
+    if matrix.version != stream.version() {
+        return Err(PlacementError::VersionMismatch {
+            matrix: matrix.version,
+            stream: stream.version(),
+        });
     }
     let expected_matrix = build_function_matrix(matrix.version)?;
     for (index, (expected, actual)) in expected_matrix
@@ -489,7 +512,10 @@ pub fn place_data(
             placed,
         });
     }
-    matrix.data_placed = true;
+    matrix.placement = Some(PlacementMetadata {
+        ecc: stream.error_correction(),
+        mask,
+    });
     Ok(matrix)
 }
 
@@ -537,20 +563,14 @@ impl fmt::Display for InformationError {
 
 impl Error for InformationError {}
 
-pub fn finalize_information(
-    mut matrix: ModuleMatrix,
-    ecc: ErrorCorrection,
-    mask: MaskId,
-) -> Result<ModuleMatrix, InformationError> {
-    if !matrix.data_placed {
-        return Err(InformationError::DataNotPlaced);
-    }
+pub fn finalize_information(mut matrix: ModuleMatrix) -> Result<ModuleMatrix, InformationError> {
+    let placement = matrix.placement.ok_or(InformationError::DataNotPlaced)?;
     if matrix.information_finalized {
         return Err(InformationError::AlreadyFinalized);
     }
 
     let size = matrix.size;
-    let format = format_bits(ecc, mask);
+    let format = format_bits(placement.ecc, placement.mask);
     for bit in 0..15_u16 {
         let dark = ((format >> bit) & 1) != 0;
         let primary = match bit {

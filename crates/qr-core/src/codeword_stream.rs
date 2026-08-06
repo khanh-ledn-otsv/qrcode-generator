@@ -24,11 +24,23 @@ pub struct CodewordStreamRequest<'a> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InterleavedCodewords {
+    version: Version,
+    ecc: ErrorCorrection,
     codewords: Vec<u8>,
     remainder_bit_count: u8,
 }
 
 impl InterleavedCodewords {
+    #[must_use]
+    pub const fn version(&self) -> Version {
+        self.version
+    }
+
+    #[must_use]
+    pub const fn error_correction(&self) -> ErrorCorrection {
+        self.ecc
+    }
+
     #[must_use]
     pub fn codewords(&self) -> &[u8] {
         &self.codewords
@@ -115,6 +127,8 @@ pub fn construct(
         });
     }
     Ok(InterleavedCodewords {
+        version: request.version,
+        ecc: request.ecc,
         codewords,
         remainder_bit_count: row.remainder_bits(),
     })

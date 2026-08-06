@@ -47,14 +47,21 @@ fn every_format_information_value_matches_the_pinned_oracles() {
 
 #[test]
 fn version_information_values_cover_the_first_and_last_bch_versions() {
-    assert_eq!(
-        version_bits(Version::new(7).expect("version 7 is valid")),
-        Some(0x07C94)
-    );
-    assert_eq!(
-        version_bits(Version::new(40).expect("version 40 is valid")),
-        Some(0x28C69)
-    );
+    // Public-corroborated, non-normative values from Nayuki 1.8.0
+    // `_draw_version`/`draw_version` and python-qrcode 8.2
+    // `setup_type_number`/`BCH_type_number`; fixture acceptance remains
+    // blocked as recorded in `.scratch/qrcode-generator/penalty-oracle-disagreement.md`.
+    let expected = [
+        0x07C94, 0x085BC, 0x09A99, 0x0A4D3, 0x0BBF6, 0x0C762, 0x0D847, 0x0E60D, 0x0F928, 0x10B78,
+        0x1145D, 0x12A17, 0x13532, 0x149A6, 0x15683, 0x168C9, 0x177EC, 0x18EC4, 0x191E1, 0x1AFAB,
+        0x1B08E, 0x1CC1A, 0x1D33F, 0x1ED75, 0x1F250, 0x209D5, 0x216F0, 0x228BA, 0x2379F, 0x24B0B,
+        0x2542E, 0x26A64, 0x27541, 0x28C69,
+    ];
+    for (offset, expected_bits) in expected.into_iter().enumerate() {
+        let version_number = u8::try_from(offset + 7).expect("fixture version fits u8");
+        let version = Version::new(version_number).expect("fixture version is valid");
+        assert_eq!(version_bits(version), Some(expected_bits));
+    }
     assert_eq!(
         version_bits(Version::new(6).expect("version 6 is valid")),
         None
@@ -109,11 +116,7 @@ fn finalization_rejects_a_matrix_without_placed_data() {
     let matrix = build_function_matrix(Version::new(1).expect("version 1 is valid"))
         .expect("function matrix builds");
     assert_eq!(
-        finalize_information(
-            matrix,
-            ErrorCorrection::Medium,
-            MaskId::new(0).expect("mask 0 is valid")
-        ),
+        finalize_information(matrix),
         Err(InformationError::DataNotPlaced)
     );
 }
@@ -139,7 +142,7 @@ fn completed_matrix(
         mask,
     )
     .expect("data placement succeeds");
-    finalize_information(placed, ecc, mask).expect("information finalization succeeds")
+    finalize_information(placed).expect("information finalization succeeds")
 }
 
 fn format_coordinates(size: u16, bit: u16) -> Vec<(u16, u16)> {
