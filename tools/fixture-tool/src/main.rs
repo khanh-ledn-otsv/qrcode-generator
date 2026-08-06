@@ -43,7 +43,7 @@ fn usage() -> &'static str {
 
 fn verify(manifest_path: &Path) -> Result<(), Box<dyn Error>> {
     let manifest = FixtureManifest::load_and_verify(manifest_path)?;
-    let fixture_count = manifest.fixtures().len() + manifest.algorithm_fixtures().len();
+    let fixture_count = manifest.fixtures().len() + manifest.reed_solomon_fixtures().len();
     println!("verified {fixture_count} fixture(s)");
     Ok(())
 }

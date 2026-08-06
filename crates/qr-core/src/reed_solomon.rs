@@ -15,8 +15,21 @@ use std::fmt;
 pub const PRIMITIVE_POLYNOMIAL: u16 = 0x11D;
 
 /// Error-correction codeword counts used by the 160 QR version/ECC table rows.
-pub const SUPPORTED_ECC_CODEWORD_COUNTS: [u8; 13] =
-    [7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30];
+pub const SUPPORTED_ECC_CODEWORD_COUNTS: [ErrorCorrectionCodewordCount; 13] = [
+    ErrorCorrectionCodewordCount(7),
+    ErrorCorrectionCodewordCount(10),
+    ErrorCorrectionCodewordCount(13),
+    ErrorCorrectionCodewordCount(15),
+    ErrorCorrectionCodewordCount(16),
+    ErrorCorrectionCodewordCount(17),
+    ErrorCorrectionCodewordCount(18),
+    ErrorCorrectionCodewordCount(20),
+    ErrorCorrectionCodewordCount(22),
+    ErrorCorrectionCodewordCount(24),
+    ErrorCorrectionCodewordCount(26),
+    ErrorCorrectionCodewordCount(28),
+    ErrorCorrectionCodewordCount(30),
+];
 
 const EXPONENTS: [u8; 510] = exponent_table();
 const LOGARITHMS: [u8; 256] = logarithm_table();
@@ -46,11 +59,30 @@ pub fn divide(dividend: u8, divisor: u8) -> Result<u8, ReedSolomonError> {
     Ok(EXPONENTS[exponent])
 }
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct ErrorCorrectionCodewordCount(u8);
+
+impl ErrorCorrectionCodewordCount {
+    pub fn new(requested: u8) -> Result<Self, ReedSolomonError> {
+        let count = Self(requested);
+        if SUPPORTED_ECC_CODEWORD_COUNTS.contains(&count) {
+            Ok(count)
+        } else {
+            Err(ReedSolomonError::UnsupportedCodewordCount { requested })
+        }
+    }
+
+    #[must_use]
+    pub const fn number(self) -> u8 {
+        self.0
+    }
+}
+
 /// Builds the monic QR generator polynomial in descending coefficient order.
-pub fn generator_polynomial(degree: u8) -> Result<Vec<u8>, ReedSolomonError> {
-    validate_degree(degree)?;
+#[must_use]
+pub fn generator_polynomial(degree: ErrorCorrectionCodewordCount) -> Vec<u8> {
     let mut polynomial = vec![1_u8];
-    for root_power in 0..degree {
+    for root_power in 0..degree.number() {
         let root = EXPONENTS[usize::from(root_power)];
         let mut product = vec![0_u8; polynomial.len() + 1];
         for (index, coefficient) in polynomial.iter().copied().enumerate() {
@@ -59,33 +91,31 @@ pub fn generator_polynomial(degree: u8) -> Result<Vec<u8>, ReedSolomonError> {
         }
         polynomial = product;
     }
-    Ok(polynomial)
+    polynomial
 }
 
 /// Returns the error-correction codewords for one QR data block.
 pub fn generate_error_correction(
     data: &[u8],
-    codeword_count: u8,
+    codeword_count: ErrorCorrectionCodewordCount,
 ) -> Result<Vec<u8>, ReedSolomonError> {
-    let generator = generator_polynomial(codeword_count)?;
-    let maximum_data_codewords = usize::from(u8::MAX - codeword_count);
+    let generator = generator_polynomial(codeword_count);
+    let count = codeword_count.number();
+    let maximum_data_codewords = usize::from(u8::MAX - count);
     if data.len() > maximum_data_codewords {
         return Err(ReedSolomonError::BlockTooLong {
             data_codewords: data.len(),
-            ecc_codewords: codeword_count,
+            ecc_codewords: count,
             maximum_total_codewords: usize::from(u8::MAX),
         });
     }
 
-    let mut remainder = vec![0_u8; usize::from(codeword_count)];
+    let mut remainder = vec![0_u8; usize::from(count)];
     for &data_codeword in data {
-        let first =
-            remainder
-                .first()
-                .copied()
-                .ok_or(ReedSolomonError::UnsupportedCodewordCount {
-                    requested: codeword_count,
-                })?;
+        let first = remainder
+            .first()
+            .copied()
+            .ok_or(ReedSolomonError::UnsupportedCodewordCount { requested: count })?;
         let factor = data_codeword ^ first;
         remainder.rotate_left(1);
         if let Some(last) = remainder.last_mut() {
@@ -117,7 +147,7 @@ impl fmt::Display for ReedSolomonError {
             Self::DivisionByZero => write!(formatter, "cannot divide a GF(256) value by zero"),
             Self::UnsupportedCodewordCount { requested } => write!(
                 formatter,
-                "QR error-correction codeword count must be one of {SUPPORTED_ECC_CODEWORD_COUNTS:?}, got {requested}"
+                "QR error-correction codeword count must be one of [7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30], got {requested}"
             ),
             Self::BlockTooLong {
                 data_codewords,
@@ -132,14 +162,6 @@ impl fmt::Display for ReedSolomonError {
 }
 
 impl Error for ReedSolomonError {}
-
-fn validate_degree(degree: u8) -> Result<(), ReedSolomonError> {
-    if SUPPORTED_ECC_CODEWORD_COUNTS.contains(&degree) {
-        Ok(())
-    } else {
-        Err(ReedSolomonError::UnsupportedCodewordCount { requested: degree })
-    }
-}
 
 const fn exponent_table() -> [u8; 510] {
     let mut exponents = [0_u8; 510];

@@ -1,8 +1,8 @@
 use proptest::prelude::*;
 use qr_core::Version;
 use qr_core::reed_solomon::{
-    ReedSolomonError, SUPPORTED_ECC_CODEWORD_COUNTS, divide, generate_error_correction,
-    generator_polynomial, multiply,
+    ErrorCorrectionCodewordCount, ReedSolomonError, SUPPORTED_ECC_CODEWORD_COUNTS, divide,
+    generate_error_correction, generator_polynomial, multiply,
 };
 use qr_core::tables::{ErrorCorrection, lookup};
 
@@ -31,13 +31,14 @@ fn every_qr_generator_and_remainder_matches_dual_oracle_fixtures() {
             line_number + 1
         );
         let degree = fields[0].parse::<u8>().expect("fixture degree is a u8");
+        let count = ErrorCorrectionCodewordCount::new(degree).expect("fixture degree is supported");
         let generator = decode_hex(fields[1]);
         let data = decode_hex(fields[2]);
         let remainder = decode_hex(fields[3]);
 
-        assert_eq!(generator_polynomial(degree), Ok(generator));
-        assert_eq!(generate_error_correction(&data, degree), Ok(remainder));
-        observed_degrees.push(degree);
+        assert_eq!(generator_polynomial(count), generator);
+        assert_eq!(generate_error_correction(&data, count), Ok(remainder));
+        observed_degrees.push(count);
     }
     observed_degrees.sort_unstable();
     observed_degrees.dedup();
@@ -64,7 +65,10 @@ fn supported_degrees_are_derived_from_all_standard_table_rows() {
     }
     table_degrees.sort_unstable();
     table_degrees.dedup();
-    assert_eq!(table_degrees, SUPPORTED_ECC_CODEWORD_COUNTS);
+    assert_eq!(
+        table_degrees,
+        SUPPORTED_ECC_CODEWORD_COUNTS.map(ErrorCorrectionCodewordCount::number)
+    );
 }
 
 fn decode_hex(value: &str) -> Vec<u8> {
@@ -115,15 +119,16 @@ fn malformed_requests_return_typed_errors_without_mutating_input() {
     );
     for requested in [0, 1, 6, 8, 29, 31, u8::MAX] {
         assert_eq!(
-            generator_polynomial(requested),
+            ErrorCorrectionCodewordCount::new(requested),
             Err(ReedSolomonError::UnsupportedCodewordCount { requested })
         );
     }
 
     let data = vec![0xA5; 249];
     let unchanged = data.clone();
+    let seven = ErrorCorrectionCodewordCount::new(7).expect("seven is a QR ECC degree");
     assert_eq!(
-        generate_error_correction(&data, 7),
+        generate_error_correction(&data, seven),
         Err(ReedSolomonError::BlockTooLong {
             data_codewords: 249,
             ecc_codewords: 7,
@@ -131,13 +136,13 @@ fn malformed_requests_return_typed_errors_without_mutating_input() {
         })
     );
     assert_eq!(
-        generate_error_correction(&data, 7)
+        generate_error_correction(&data, seven)
             .expect_err("oversized block is invalid")
             .to_string(),
         "Reed–Solomon block has 249 data and 7 error-correction codewords, exceeding 255 total codewords"
     );
     assert_eq!(
-        generator_polynomial(8)
+        ErrorCorrectionCodewordCount::new(8)
             .expect_err("unsupported degree is invalid")
             .to_string(),
         "QR error-correction codeword count must be one of [7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30], got 8"
@@ -148,13 +153,13 @@ fn malformed_requests_return_typed_errors_without_mutating_input() {
 #[test]
 fn field_block_length_boundaries_are_exact_for_every_supported_degree() {
     for degree in SUPPORTED_ECC_CODEWORD_COUNTS {
-        let maximum_data_codewords = usize::from(u8::MAX - degree);
+        let maximum_data_codewords = usize::from(u8::MAX - degree.number());
         let accepted = vec![0xA5; maximum_data_codewords];
         assert_eq!(
             generate_error_correction(&accepted, degree)
                 .expect("exact field-sized block is accepted")
                 .len(),
-            usize::from(degree)
+            usize::from(degree.number())
         );
 
         let rejected = vec![0xA5; maximum_data_codewords + 1];
@@ -164,7 +169,7 @@ fn field_block_length_boundaries_are_exact_for_every_supported_degree() {
                 data_codewords,
                 ecc_codewords,
                 maximum_total_codewords: 255,
-            }) if data_codewords == maximum_data_codewords + 1 && ecc_codewords == degree
+            }) if data_codewords == maximum_data_codewords + 1 && ecc_codewords == degree.number()
         ));
     }
 }
@@ -224,8 +229,8 @@ proptest! {
         let original = data.clone();
         let remainder = generate_error_correction(&data, degree)
             .expect("generated QR-sized block is valid");
-        prop_assert_eq!(&remainder, &slow_remainder(&data, degree));
-        prop_assert_eq!(remainder.len(), usize::from(degree));
+        prop_assert_eq!(&remainder, &slow_remainder(&data, degree.number()));
+        prop_assert_eq!(remainder.len(), usize::from(degree.number()));
         prop_assert_eq!(data, original);
     }
 }

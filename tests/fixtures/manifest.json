@@ -86,7 +86,7 @@
       }
     }
   ],
-  "algorithm_fixtures": [
+  "reed_solomon_fixtures": [
     {
       "id": "qr-reed-solomon-vectors",
       "synthetic": true,
@@ -100,11 +100,17 @@
           "oracle": "nayuki",
           "tool": "Nayuki QR Code Generator",
           "version": "1.8.0",
-          "source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
-          "symbols": [
+          "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "executed_symbols": [
             "_reed_solomon_compute_divisor",
             "_reed_solomon_compute_remainder",
             "_reed_solomon_multiply"
+          ],
+          "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+          "evidence_symbols": [
+            "reed_solomon_compute_divisor",
+            "reed_solomon_compute_remainder",
+            "reed_solomon_multiply"
           ],
           "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
           "observed_artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1"
@@ -113,8 +119,14 @@
           "oracle": "python-qrcode",
           "tool": "python-qrcode",
           "version": "8.2",
-          "source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
-          "symbols": [
+          "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+          "executed_symbols": [
+            "Polynomial",
+            "gexp",
+            "glog"
+          ],
+          "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+          "evidence_symbols": [
             "Polynomial",
             "gexp",
             "glog"

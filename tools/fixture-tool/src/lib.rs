@@ -18,7 +18,7 @@ pub struct FixtureManifest {
     decoder: DecoderProvenance,
     fixtures: Vec<Fixture>,
     #[serde(default)]
-    algorithm_fixtures: Vec<AlgorithmFixture>,
+    reed_solomon_fixtures: Vec<ReedSolomonFixture>,
 }
 
 impl FixtureManifest {
@@ -43,8 +43,8 @@ impl FixtureManifest {
     }
 
     #[must_use]
-    pub fn algorithm_fixtures(&self) -> &[AlgorithmFixture] {
-        &self.algorithm_fixtures
+    pub fn reed_solomon_fixtures(&self) -> &[ReedSolomonFixture] {
+        &self.reed_solomon_fixtures
     }
 
     #[must_use]
@@ -83,7 +83,7 @@ impl FixtureManifest {
             }
             fixture.verify(root)?;
         }
-        for fixture in &self.algorithm_fixtures {
+        for fixture in &self.reed_solomon_fixtures {
             if !ids.insert(fixture.id.as_str()) {
                 return Err(VerificationError::new(format!(
                     "duplicate fixture id {}",
@@ -98,7 +98,7 @@ impl FixtureManifest {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct AlgorithmFixture {
+pub struct ReedSolomonFixture {
     id: String,
     synthetic: bool,
     artifact_file: PathBuf,
@@ -106,27 +106,27 @@ pub struct AlgorithmFixture {
     standard_topic: String,
     scope: String,
     generation_command: String,
-    sources: Vec<AlgorithmSource>,
+    sources: Vec<ReedSolomonSource>,
     local_verification: Vec<String>,
     verification: VerificationState,
 }
 
-impl AlgorithmFixture {
+impl ReedSolomonFixture {
     fn verify(&self, root: &Path) -> Result<(), VerificationError> {
         const COMMAND: &str = "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check";
 
-        require_nonempty("algorithm fixture id", &self.id)?;
+        require_nonempty("Reed–Solomon fixture id", &self.id)?;
         if !self.synthetic {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {} must explicitly declare synthetic data",
+                "Reed–Solomon fixture {} must explicitly declare synthetic data",
                 self.id
             )));
         }
-        require_nonempty("algorithm standard topic", &self.standard_topic)?;
-        require_nonempty("algorithm fixture scope", &self.scope)?;
+        require_nonempty("Reed–Solomon standard topic", &self.standard_topic)?;
+        require_nonempty("Reed–Solomon fixture scope", &self.scope)?;
         if self.generation_command != COMMAND {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {} has an unpinned generation command",
+                "Reed–Solomon fixture {} has an unpinned generation command",
                 self.id
             )));
         }
@@ -134,12 +134,12 @@ impl AlgorithmFixture {
             root,
             &self.artifact_file,
             &self.artifact_sha256,
-            "algorithm fixture",
+            "Reed–Solomon fixture",
             &self.id,
         )?;
         if self.sources.len() != 2 {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {} requires two independent generators",
+                "Reed–Solomon fixture {} requires two independent generators",
                 self.id
             )));
         }
@@ -148,19 +148,19 @@ impl AlgorithmFixture {
             source.verify(&self.id, &self.artifact_sha256, COMMAND)?;
             if !oracles.insert(source.oracle) {
                 return Err(VerificationError::new(format!(
-                    "algorithm fixture {} does not identify two independent generators",
+                    "Reed–Solomon fixture {} does not identify two independent generators",
                     self.id
                 )));
             }
         }
         if self.local_verification.is_empty() {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {} requires local invariant or reference coverage",
+                "Reed–Solomon fixture {} requires local invariant or reference coverage",
                 self.id
             )));
         }
         for evidence in &self.local_verification {
-            require_nonempty("local algorithm verification", evidence)?;
+            require_nonempty("local Reed–Solomon verification", evidence)?;
         }
         self.verification.verify(&self.id)
     }
@@ -168,17 +168,19 @@ impl AlgorithmFixture {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct AlgorithmSource {
+struct ReedSolomonSource {
     oracle: Oracle,
     tool: String,
     version: String,
-    source_url: String,
-    symbols: Vec<String>,
+    executed_source_url: String,
+    executed_symbols: Vec<String>,
+    evidence_source_url: String,
+    evidence_symbols: Vec<String>,
     command: String,
     observed_artifact_sha256: String,
 }
 
-impl AlgorithmSource {
+impl ReedSolomonSource {
     fn verify(
         &self,
         fixture_id: &str,
@@ -186,32 +188,38 @@ impl AlgorithmSource {
         expected_command: &str,
     ) -> Result<(), VerificationError> {
         let pinned = self.oracle.provenance();
-        let expected_source_url = match self.oracle {
-            Oracle::Nayuki => {
-                "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py"
-            }
-            Oracle::PythonQrcode => {
-                "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py"
-            }
+        let (expected_executed_source_url, expected_evidence_source_url) = match self.oracle {
+            Oracle::Nayuki => (
+                "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+                "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+            ),
+            Oracle::PythonQrcode => (
+                "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+            ),
         };
         if self.tool != pinned.tool
             || self.version != pinned.version
-            || self.source_url != expected_source_url
+            || self.executed_source_url != expected_executed_source_url
+            || self.evidence_source_url != expected_evidence_source_url
             || self.command != expected_command
         {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {fixture_id} source {} does not match pinned provenance",
+                "Reed–Solomon fixture {fixture_id} source {} does not match pinned provenance",
                 pinned.cli_name
             )));
         }
-        if self.symbols.is_empty() {
+        if self.executed_symbols.is_empty() || self.evidence_symbols.is_empty() {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {fixture_id} source {} requires exact symbols",
+                "Reed–Solomon fixture {fixture_id} source {} requires exact symbols",
                 pinned.cli_name
             )));
         }
-        for symbol in &self.symbols {
-            require_nonempty("algorithm source symbol", symbol)?;
+        for symbol in &self.executed_symbols {
+            require_nonempty("Reed–Solomon executed source symbol", symbol)?;
+        }
+        for symbol in &self.evidence_symbols {
+            require_nonempty("Reed–Solomon evidence source symbol", symbol)?;
         }
         verify_sha256_text(
             &self.observed_artifact_sha256,
@@ -220,7 +228,7 @@ impl AlgorithmSource {
         )?;
         if self.observed_artifact_sha256 != artifact_sha256 {
             return Err(VerificationError::new(format!(
-                "algorithm fixture {fixture_id} source {} disagrees with the accepted artifact",
+                "Reed–Solomon fixture {fixture_id} source {} disagrees with the accepted artifact",
                 pinned.cli_name
             )));
         }

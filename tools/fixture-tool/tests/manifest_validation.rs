@@ -100,7 +100,7 @@ fn accepts_a_strict_dual_oracle_fixture_with_matching_hashes() {
 }
 
 #[test]
-fn accepts_a_provenance_record_for_an_algorithm_fixture() {
+fn accepts_a_provenance_record_for_a_reed_solomon_fixture() {
     let directory = fixture_tree(2);
     let root = directory.path();
     let artifact = b"synthetic algorithm vectors\n";
@@ -108,7 +108,7 @@ fn accepts_a_provenance_record_for_an_algorithm_fixture() {
     let manifest_path = root.join("manifest.json");
     let mut manifest: serde_json::Value =
         serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
-    manifest["algorithm_fixtures"] = serde_json::json!([{
+    manifest["reed_solomon_fixtures"] = serde_json::json!([{
         "id": "qr-reed-solomon-vectors",
         "synthetic": true,
         "artifact_file": "reed_solomon.csv",
@@ -121,8 +121,10 @@ fn accepts_a_provenance_record_for_an_algorithm_fixture() {
                 "oracle": "nayuki",
                 "tool": "Nayuki QR Code Generator",
                 "version": "1.8.0",
-                "source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
-                "symbols": ["_reed_solomon_compute_divisor", "_reed_solomon_compute_remainder"],
+                "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+                "executed_symbols": ["_reed_solomon_compute_divisor", "_reed_solomon_compute_remainder"],
+                "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+                "evidence_symbols": ["reed_solomon_compute_divisor", "reed_solomon_compute_remainder"],
                 "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
                 "observed_artifact_sha256": sha256(artifact)
             },
@@ -130,8 +132,10 @@ fn accepts_a_provenance_record_for_an_algorithm_fixture() {
                 "oracle": "python-qrcode",
                 "tool": "python-qrcode",
                 "version": "8.2",
-                "source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
-                "symbols": ["Polynomial", "gexp", "glog"],
+                "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                "executed_symbols": ["Polynomial", "gexp", "glog"],
+                "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                "evidence_symbols": ["Polynomial", "gexp", "glog"],
                 "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
                 "observed_artifact_sha256": sha256(artifact)
             }
@@ -154,7 +158,7 @@ fn accepts_a_provenance_record_for_an_algorithm_fixture() {
     .unwrap();
 
     let manifest = load_and_verify(root).unwrap();
-    assert_eq!(manifest.algorithm_fixtures().len(), 1);
+    assert_eq!(manifest.reed_solomon_fixtures().len(), 1);
 }
 
 #[test]

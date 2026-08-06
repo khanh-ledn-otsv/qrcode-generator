@@ -31,6 +31,13 @@ Use the tagged Rust source [`rust/src/lib.rs`](https://github.com/nayuki/QR-Code
 
 The repository is MIT-licensed and explicitly supports all 40 Model 2 versions and all four ECC levels. Its code is an oracle only.
 
+Executable fixtures may use the pinned `qrcodegen==1.8.0` Python distribution,
+which is the same release's official language port, from tagged
+[`python/qrcodegen.py`](https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py).
+Fixture metadata must distinguish that executed source and its underscore-prefixed
+`_reed_solomon_*` symbols from the Rust source/symbols above that provide the
+recorded public-source evidence. Both must remain pinned to release 1.8.0.
+
 ### Pinned encoder oracle B: python-qrcode 8.2
 
 Use the tagged sources, recording exact file and symbol:
@@ -52,7 +59,8 @@ Successful decode cannot prove the exact required matrix: many valid encodings a
 For each rule or fixture:
 
 1. Record the intended ISO/IEC 18004:2024 clause/table topic. If its exact 2024 number has not been checked against a complete edition, say `2024 clause mapping pending audit`.
-2. Pin the two encoder versions above and record their exact source files/symbols and generation commands.
+2. Pin the two encoder versions above and record their exact executed source
+   files/symbols, public-evidence source files/symbols, and generation commands.
 3. Generate synthetic, non-sensitive results independently. Accept only exact agreement for behavior both expose.
 4. Add a locally written slow reference or invariant where practical: field cycles/inverses, block totals and de-interleaving, single ownership of every module, complete placement, BCH remainder properties, and isolated penalty truth tables.
 5. Compare explicit version/ECC/mask matrices before automatic mask-selection results.
