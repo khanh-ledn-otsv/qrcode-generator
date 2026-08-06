@@ -12,4 +12,9 @@ path = "src/lib.rs"
 qr-core.workspace = true
 
 [dev-dependencies]
+fixture-tool = { path = "../../tools/fixture-tool" }
 proptest = "=1.11.0"
+resvg = { version = "=0.48.1", default-features = false }
+roxmltree = "=0.21.1"
+sha2.workspace = true
+tempfile = "=3.27.0"

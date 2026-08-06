@@ -30,6 +30,10 @@
   exact quiet-zone extent, separates tight SVG from fixed-canvas PNG placement,
   checks allocation bounds, and exposes only typed data/remainder branding
   targets.
+- [Ticket 13](issues/13-export-safe-svg-artifacts.md): A dependency-free
+  production exporter emits compact deterministic safe SVG with exact logical
+  placement; parsed all-profile/version structure, independent rasterization,
+  and pinned ZXing decode prove the artifact boundary.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.

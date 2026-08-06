@@ -1036,9 +1036,9 @@ impl ZxingDecoder {
         }
 
         let format = metadata_value(&metadata, "Format")?;
-        if format != "QRCode" {
+        if format != "QR Code" {
             return Err(VerificationError::new(format!(
-                "decoded format is {format}, expected QRCode"
+                "decoded format is {format}, expected QR Code"
             )));
         }
         let version_number = metadata_value(&metadata, "Version")?

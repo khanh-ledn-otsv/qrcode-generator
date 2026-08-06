@@ -20,7 +20,7 @@ else
   cat <<'EOF'
 Text:       "SYNTHETIC-FIXTURE-01"
 Bytes:      53 59 4E
-Format:     QRCode
+Format:     QR Code
 HasECI:     0
 ECLevel:    M
 Version:    1

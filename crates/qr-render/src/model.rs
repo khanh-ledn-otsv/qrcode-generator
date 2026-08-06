@@ -462,6 +462,7 @@ pub enum RenderError {
         required_bytes: u64,
         maximum_bytes: u64,
     },
+    RenderFailure,
 }
 
 impl fmt::Display for RenderError {
@@ -477,6 +478,7 @@ impl fmt::Display for RenderError {
                 formatter,
                 "render buffer requires {required_bytes} bytes; maximum is {maximum_bytes} bytes"
             ),
+            Self::RenderFailure => formatter.write_str("rendering failed"),
         }
     }
 }

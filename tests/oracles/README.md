@@ -139,6 +139,13 @@ checks exact bytes, version and ECI presence across all ECC levels and masks:
 cargo test -p qr-core --test independent_decode -- --ignored --nocapture
 ```
 
+Replay the production SVG artifact suite through pinned `resvg` rasterization
+and the same pinned ZXing-C++ reader:
+
+```sh
+cargo test -p qr-render --test independent_svg_decode -- --ignored --nocapture
+```
+
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,
 date, notes, and `accepted` state. `fixture-tool verify` rejects pending fixture
 changes.

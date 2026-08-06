@@ -1,3 +1,6 @@
+#[path = "support/versions.rs"]
+mod versions;
+
 use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
@@ -195,9 +198,7 @@ fn encoded_qr(text: &str) -> EncodedQr {
 }
 
 fn encoded_qr_at_version(version: u8) -> EncodedQr {
-    const FIRST_BYTE_LENGTHS: [usize; 13] =
-        [1, 15, 27, 43, 63, 85, 107, 123, 153, 181, 214, 252, 288];
-    let length = FIRST_BYTE_LENGTHS[usize::from(version - 1)];
+    let length = versions::first_byte_length(version);
     let text = "a".repeat(length);
     encode(EncodeRequest {
         text: &text,

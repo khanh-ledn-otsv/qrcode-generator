@@ -5,6 +5,7 @@
 mod geometry;
 mod model;
 mod profile;
+mod svg;
 
 pub use geometry::{
     CanvasGeometry, GeometryError, ModuleCount, OuterPadding, PaddingContent, PixelCount,
@@ -17,3 +18,4 @@ pub use model::{
 };
 pub use profile::{OutputProfile, ProfileError, ProfileId, SUPPORTED_PROFILES};
 pub use qr_core::{Version, VersionError};
+pub use svg::render_svg;
