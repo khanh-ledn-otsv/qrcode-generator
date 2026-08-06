@@ -59,7 +59,7 @@ pub fn divide(dividend: u8, divisor: u8) -> Result<u8, ReedSolomonError> {
     Ok(EXPONENTS[exponent])
 }
 
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ErrorCorrectionCodewordCount(u8);
 
 impl ErrorCorrectionCodewordCount {
@@ -75,6 +75,12 @@ impl ErrorCorrectionCodewordCount {
     #[must_use]
     pub const fn number(self) -> u8 {
         self.0
+    }
+}
+
+impl fmt::Debug for ErrorCorrectionCodewordCount {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
     }
 }
 
@@ -147,7 +153,7 @@ impl fmt::Display for ReedSolomonError {
             Self::DivisionByZero => write!(formatter, "cannot divide a GF(256) value by zero"),
             Self::UnsupportedCodewordCount { requested } => write!(
                 formatter,
-                "QR error-correction codeword count must be one of [7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30], got {requested}"
+                "QR error-correction codeword count must be one of {SUPPORTED_ECC_CODEWORD_COUNTS:?}, got {requested}"
             ),
             Self::BlockTooLong {
                 data_codewords,

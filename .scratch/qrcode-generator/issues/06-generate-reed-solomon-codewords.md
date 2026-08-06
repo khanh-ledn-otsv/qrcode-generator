@@ -31,8 +31,8 @@ with independently written polynomial references.
 
 Verification passed: formatting, workspace check/test/Clippy with warnings
 denied, the pinned Python oracle tests and Reed–Solomon fixture check, and a
-release Trunk build. Focused `cargo-mutants` 27.1.0 verification caught 56 of
-58 viable mutants (96.6%, above the 90% critical-arithmetic target); 10 mutants
+release Trunk build. Focused `cargo-mutants` 27.1.0 verification caught 57 of
+59 viable mutants (96.6%, above the 90% critical-arithmetic target); 10 mutants
 were unviable and none timed out. The two survivors were
 triaged as equivalent for the public QR domain: changing the generator update
 from XOR to OR produces identical coefficients at every one of the 13 supported
