@@ -41,6 +41,15 @@ Committed QR fixtures are verified without regeneration during `cargo test`.
 The explicit dual-oracle generation and ZXing-C++ decode workflow is documented
 in [`tests/oracles/README.md`](tests/oracles/README.md).
 
+Replay the committed core robustness regressions and run the payload-silent
+native diagnostic example with:
+
+```sh
+cargo test -p qr-core --test fuzz_regressions
+cargo fuzz run encode -- -runs=10000
+printf %s 'synthetic diagnostic input' | cargo run -p qr-core --example diagnostics
+```
+
 ## Documentation
 
 - [Development plan](docs/DEVELOPMENT_PLAN.md)

@@ -13,6 +13,9 @@ if [ "$1" = "-version" ]; then
   echo "ZXingReader version 3.0.2"
 elif printf '%s\n' "$@" | grep -q -- '-bytes'; then
   printf 'SYNTHETIC-FIXTURE-01'
+elif ! printf '%s\n' "$@" | grep -qx -- 'eci'; then
+  echo 'expected lowercase eci mode' >&2
+  exit 2
 else
   cat <<'EOF'
 Text:       "SYNTHETIC-FIXTURE-01"

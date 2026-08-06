@@ -5,7 +5,7 @@
     "version": "3.0.2",
     "source_url": "https://github.com/zxing-cpp/zxing-cpp.git",
     "source_commit": "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825",
-    "checkout_command": "git clone https://github.com/zxing-cpp/zxing-cpp.git tests/oracles/zxing-cpp && git -C tests/oracles/zxing-cpp checkout --detach 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825",
+    "checkout_command": "git clone --recurse-submodules https://github.com/zxing-cpp/zxing-cpp.git tests/oracles/zxing-cpp && git -C tests/oracles/zxing-cpp checkout --detach 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825 && git -C tests/oracles/zxing-cpp submodule update --init --recursive",
     "build_command": "cmake -S tests/oracles/zxing-cpp -B tests/oracles/zxing-cpp/build -DCMAKE_BUILD_TYPE=Release -DZXING_EXAMPLES=ON && cmake --build tests/oracles/zxing-cpp/build --config Release"
   },
   "fixtures": [
@@ -404,6 +404,103 @@
         "reviewer": "ticket-09-dual-oracle-implementation-review",
         "verified_at": "2026-08-06",
         "notes": "Both pinned encoders agree exactly on traversal and masked matrices. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
+      }
+    },
+    {
+      "id": "qr-bch-penalty-mask-selection",
+      "kind": "mask-selection",
+      "synthetic": true,
+      "artifact_file": "mask_selection.csv",
+      "artifact_sha256": "bbfd2116aa07840c881dc608f29ef7a2cac557e08e30234d962b07172f44da16",
+      "standard_topic": "ISO/IEC 18004:2024 format/version BCH information, mask penalties, and automatic selection; clause mapping pending audit",
+      "scope": "All 32 format values, all Version 7-40 values, 24 completed explicit-mask candidates, three agreed automatic selections, two combined synthetic penalty matrices, and preserved Nayuki Rule 3 disagreement totals",
+      "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_mask_selection.py --check",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "version": "1.8.0",
+          "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "executed_symbols": ["__init__", "_draw_format_bits", "_draw_version", "_apply_mask", "_get_penalty_score"],
+          "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+          "evidence_symbols": ["draw_format_bits", "draw_version", "apply_mask", "get_penalty_score", "FinderPenalty"],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_mask_selection.py --check",
+          "observed_fields": ["format_bits", "version_bits", "completed_candidate_matrix", "candidate_penalty_disagreement", "automatic_mask", "isolated_penalty"]
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "version": "8.2",
+          "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "executed_symbols": ["makeImpl", "setup_type_info", "setup_type_number", "map_data", "best_mask_pattern"],
+          "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "evidence_symbols": ["makeImpl", "setup_type_info", "setup_type_number", "map_data", "best_mask_pattern"],
+          "supporting_source_urls": ["https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py"],
+          "supporting_symbols": ["BCH_type_info", "BCH_type_number", "mask_func", "lost_point"],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_mask_selection.py --check",
+          "observed_fields": ["format_bits", "version_bits", "completed_candidate_matrix", "candidate_penalty", "automatic_mask", "isolated_penalty"]
+        }
+      ],
+      "local_verification": [
+        "Independent polynomial-division tests cover every format/ECC value and all version values",
+        "Literal complete-window Rule 3 semantics are owner-approved and independently implemented",
+        "Nayuki run-history totals remain recorded beside every accepted candidate total",
+        "Both encoders agree on every completed candidate matrix and selected mask for all accepted automatic cases",
+        "Representative selected artifacts independently decode through pinned ZXing-C++"
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "ticket-10-owner-rule3-resolution",
+        "verified_at": "2026-08-06",
+        "notes": "Owner approved literal complete-matrix Rule 3 windows without virtual quiet-zone padding. python-qrcode and the independent slow reference agree; Nayuki's differing totals are preserved as an explicit exception. Completed matrices, selected masks, and independent decode evidence remain required. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
+      }
+    },
+    {
+      "id": "qr-composed-encoder-goldens",
+      "kind": "encoder-goldens",
+      "synthetic": true,
+      "artifact_file": "encoder_goldens.csv",
+      "artifact_sha256": "fee4840285f0df57022ac802c924580c651e60feea101452b4cadf711be650eb",
+      "standard_topic": "ISO/IEC 18004:2024 composed encoding across mode, character-count, version, ECC, ECI, mask and completed-matrix boundaries; clause mapping pending audit",
+      "scope": "Versions 1, 2, 6, 7, 9, 10, 26, 27 and 40; every ECC and mask; Numeric, Alphanumeric, ASCII Byte and UTF-8 ECI 26; exact and one-over version-band boundaries",
+      "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_encoder_goldens.py --check",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "version": "1.8.0",
+          "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "executed_symbols": ["encode_segments", "make_numeric", "make_alphanumeric", "make_bytes", "make_eci"],
+          "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+          "evidence_symbols": ["encode_segments", "make_numeric", "make_alphanumeric", "make_bytes", "make_eci"],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_encoder_goldens.py --check",
+          "observed_fields": ["first_fit_version", "mode", "eci_assignment", "completed_matrix", "literal_rule3_mask"]
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "version": "8.2",
+          "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "executed_symbols": ["make", "makeImpl"],
+          "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "evidence_symbols": ["make", "makeImpl"],
+          "supporting_source_urls": ["https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py", "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py"],
+          "supporting_symbols": ["QRData", "BitBuffer", "length_in_bits", "create_bytes", "rs_blocks"],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_encoder_goldens.py --check",
+          "observed_fields": ["mode", "eci_assignment", "completed_matrix", "literal_rule3_mask"]
+        }
+      ],
+      "local_verification": [
+        "The public encode facade reproduces every completed-matrix fingerprint and diagnostic",
+        "Boundary pairs cover Version 1 to 2, 9 to 10 and 26 to 27 transitions",
+        "UTF-8 ECI framing is independently assembled through python-qrcode's bit-buffer, block and matrix path",
+        "Literal Rule 3 selection follows the recorded owner resolution and covers every selected mask"
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "ticket-11-composed-golden-review",
+        "verified_at": "2026-08-06",
+        "notes": "Nayuki and the local public-facade test agree on first-fit versions. Both pinned encoders agree on every completed composed matrix, including independently assembled UTF-8 ECI 26 framing. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
       }
     }
   ]

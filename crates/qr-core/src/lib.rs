@@ -8,12 +8,16 @@ use std::fmt;
 pub mod bch;
 pub mod bit_buffer;
 pub mod codeword_stream;
+mod encoder;
 pub mod encoding;
 pub mod matrix;
 pub mod penalty;
 pub mod reed_solomon;
 pub mod selection;
 pub mod tables;
+
+pub use encoder::{EncodeError, EncodedQr, encode};
+pub use encoding::{EciAssignment, EncodeRequest};
 
 /// A QR Code Model 2 symbol version.
 ///

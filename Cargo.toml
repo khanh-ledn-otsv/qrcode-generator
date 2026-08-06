@@ -5,6 +5,7 @@ members = [
     "crates/qr-web",
     "tools/fixture-tool",
 ]
+exclude = ["fuzz"]
 default-members = [
     "crates/qr-core",
     "crates/qr-render",

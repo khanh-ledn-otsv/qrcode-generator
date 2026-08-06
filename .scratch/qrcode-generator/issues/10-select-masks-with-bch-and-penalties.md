@@ -4,14 +4,14 @@
 
 **Blocked by:** 09 — Place data and remainder modules with explicit masks.
 
-**Status:** claimed
+**Status:** resolved
 
 - [x] Format BCH values are correct for every ECC/mask pair and version BCH values are correct for Versions 7 through 40.
 - [x] Isolated tests cover row/column runs, 2×2 blocks, finder-like patterns with required context, and dark-module balance rounding.
 - [x] Candidate scoring includes function patterns and candidate-specific format modules.
 - [x] The minimum-penalty mask is selected, with the lower mask ID winning ties.
-- [ ] Explicit-mask golden fixtures and combined synthetic matrices catch predicate, coordinate, BCH, and penalty errors.
-- [ ] BCH, mask-predicate, and penalty fixtures cite the exact pinned public source files/symbols, agree between both encoders where exposed, and are labelled `public-corroborated, non-normative` pending a complete 2024 audit.
+- [x] Explicit-mask golden fixtures and combined synthetic matrices catch predicate, coordinate, BCH, and penalty errors.
+- [x] BCH, mask-predicate, and penalty fixtures cite the exact pinned public source files/symbols, agree between both encoders except for the recorded owner-approved Rule 3 interpretation, preserve that exception verbatim, and are labelled `public-corroborated, non-normative` pending a complete 2024 audit.
 - [x] Repeated selection from identical input produces identical mask and matrix output.
 
 ## Implementation progress
@@ -29,16 +29,11 @@ chooses the minimum, and preserves the lower mask identifier on ties. Stream
 version/ECC and placement mask metadata are carried through the typed state so
 final format information cannot disagree with the encoded candidate.
 
-The candidate fixture is quarantined rather than accepted. Nayuki 1.8.0 and
-python-qrcode 8.2 produce identical completed matrices but expose different
-penalty totals for them (for example, Version 2-Q mask 0 scores 1107 versus
-387). The disagreement is recorded in
-`../penalty-oracle-disagreement.md`. Repository policy forbids selecting one
-oracle by majority vote, so the two fixture acceptance items remain open.
+The owner resolved the Rule 3 interpretation in favor of literal complete
+11-module windows without virtual quiet-zone padding. The accepted fixture
+matches python-qrcode and an independent slow reference while preserving
+Nayuki's differing run-history totals beside every candidate. Both encoders
+still agree on completed matrices and selected masks, and the pinned ZXing-C++
+suite independently decodes representative selected artifacts.
 
-Verification passed: `cargo fmt --check`, `cargo check`, `cargo test`, full
-Clippy with warnings denied, strict accepted-fixture manifest verification,
-and all existing Python support tests. `cargo-mutants` was unavailable, so the
-focused mutation run could not be performed.
-`trunk build --release` was not applicable because no web, HTML, CSS, WASM
-boundary, build configuration, or dependency files changed.
+Verification is recorded with ticket 11's combined full-suite handoff.

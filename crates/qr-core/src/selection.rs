@@ -5,9 +5,10 @@
 //! `rust/src/lib.rs::{draw_format_bits,draw_version,get_penalty_score}` and
 //! python-qrcode 8.2 `qrcode/main.py::{makeImpl,best_mask_pattern}` plus
 //! `qrcode/util.py::lost_point`. Their completed matrices agree but exposed
-//! penalty totals do not; see the quarantined evidence in
-//! `.scratch/qrcode-generator/penalty-oracle-disagreement.md`. Automatic
-//! selection remains unaccepted pending resolution and a complete 2024 audit.
+//! penalty totals do not. The owner-approved interpretation selects literal
+//! complete Rule 3 windows without virtual quiet-zone padding; all differing
+//! totals remain recorded in
+//! `.scratch/qrcode-generator/penalty-oracle-disagreement.md`.
 
 use crate::codeword_stream::InterleavedCodewords;
 use crate::matrix::{

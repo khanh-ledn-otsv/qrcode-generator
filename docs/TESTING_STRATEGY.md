@@ -79,7 +79,7 @@ Follow [`research/qr-public-source-provenance.md`](research/qr-public-source-pro
 - Compare explicit version/ECC/mask matrices before testing automatic mask selection.
 - Decode completed artifacts with pinned ZXing-C++; a successful decode supplements but never replaces exact matrix and invariant checks.
 - Mark the evidence `public-corroborated, non-normative` until a complete licensed 2024 text is audited.
-- Treat any source, fixture, invariant, or decoder disagreement as a blocked test fixture requiring investigation and recorded resolution.
+- Treat any source, fixture, invariant, or decoder disagreement as a blocked test fixture requiring investigation and recorded resolution. A recorded owner resolution may select narrowly defined semantics only when it preserves every disagreeing result, is backed by an independently written reference, and retains exact completed-matrix and independent-decode gates; it is never a majority vote.
 
 ## 3. Test repository structure
 
@@ -250,6 +250,13 @@ For all versions:
 Use small human-reviewable coordinate fixtures for Versions 1, 2, 7, and 40, plus generated invariant tests for all versions.
 
 ### 5.6 Masks, BCH, and penalty scoring
+
+For Rule 3, the owner-approved interpretation is literal complete-matrix
+matching: count `00001011101` and `10111010000` windows wholly inside rows and
+columns, without virtual quiet-zone padding. Tests preserve Nayuki 1.8.0's
+differing run-history totals as an explicit oracle exception and require the
+production result to match both python-qrcode 8.2 and an independently written
+slow reference.
 
 Test each mask predicate across a coordinate grid with explicit expected truth tables. Test format BCH for all 4 ECC × 8 masks and version BCH for Versions 7–40.
 

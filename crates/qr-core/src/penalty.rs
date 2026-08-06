@@ -4,9 +4,10 @@
 //! pending audit. Nayuki 1.8.0
 //! `rust/src/lib.rs::{get_penalty_score,FinderPenalty}` and python-qrcode 8.2
 //! `qrcode/util.py::lost_point` are the pinned public sources, but their Rule 3
-//! totals disagree on completed candidates. The unresolved evidence is
-//! quarantined in `.scratch/qrcode-generator/penalty-oracle-disagreement.md`;
-//! this implementation is not accepted as public-corroborated pending audit.
+//! totals disagree on completed candidates. The owner-approved interpretation
+//! counts literal complete 11-module windows without virtual quiet-zone
+//! padding; the differing totals remain recorded in
+//! `.scratch/qrcode-generator/penalty-oracle-disagreement.md`.
 
 use crate::matrix::ModuleMatrix;
 

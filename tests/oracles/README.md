@@ -24,6 +24,10 @@ different or tracked-modified source checkout and verifies the binary version
 before decoding. It then compares raw bytes and checks exposed QR version, ECC,
 and ECI-presence metadata.
 
+If `cmake` is not installed globally, the same build can be run with the
+ephemeral executable supplied by `uv tool run cmake`; the verified decoder pin
+is the ZXing source commit and reported reader version.
+
 ## Fixture workflow
 
 Normal tests only validate the strict manifest, hashes, matrix dimensions, and
@@ -106,6 +110,33 @@ regions:
 ```sh
 uv run --project tests/oracles --locked python \
   tests/support/verify_placement_matrices.py --check
+```
+
+Mask-selection evidence records both the owner-approved literal complete-window
+Rule 3 score and Nayuki's differing run-history score for every candidate:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_mask_selection.py --check
+```
+
+Composed encoder goldens cover Versions 1, 2, 6, 7, 9, 10, 26, 27 and 40,
+all ECC levels and masks, every supported mode, UTF-8 ECI 26, and the
+character-count version-band boundaries. Both pinned encoders must produce the
+same completed matrix; the verifier manually frames ECI 26 through
+python-qrcode's independent bit-buffer, RS-block, and matrix path because its
+public API does not expose ECI segments:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_encoder_goldens.py --check
+```
+
+Replay the seeded end-to-end decode suite after building the pinned reader. It
+checks exact bytes, version and ECI presence across all ECC levels and masks:
+
+```sh
+cargo test -p qr-core --test independent_decode -- --ignored --nocapture
 ```
 
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,

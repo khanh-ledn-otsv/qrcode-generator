@@ -107,8 +107,6 @@ def generate_python_qrcode(payload: bytes, fixture: dict) -> str:
     import qrcode
     from qrcode.util import MODE_8BIT_BYTE, MODE_ALPHA_NUM, MODE_NUMBER, QRData
 
-    if fixture["eci_assignment"] is not None:
-        raise ValueError("python-qrcode does not expose ECI segments")
     mode = {
         "numeric": MODE_NUMBER,
         "alphanumeric": MODE_ALPHA_NUM,
@@ -126,8 +124,36 @@ def generate_python_qrcode(payload: bytes, fixture: dict) -> str:
         border=0,
         mask_pattern=fixture["mask"],
     )
-    code.add_data(QRData(payload, mode=mode, check_data=False), optimize=0)
-    code.make(fit=False)
+    if fixture["eci_assignment"] is None:
+        code.add_data(QRData(payload, mode=mode, check_data=False), optimize=0)
+        code.make(fit=False)
+    else:
+        if fixture["eci_assignment"] != 26 or mode != MODE_8BIT_BYTE:
+            raise ValueError("manual python-qrcode ECI support is limited to UTF-8 byte mode")
+        import qrcode.base
+        import qrcode.util
+
+        buffer = qrcode.util.BitBuffer()
+        buffer.put(0b0111, 4)
+        buffer.put(26, 8)
+        buffer.put(MODE_8BIT_BYTE, 4)
+        buffer.put(len(payload), qrcode.util.length_in_bits(MODE_8BIT_BYTE, fixture["version"]))
+        for byte in payload:
+            buffer.put(byte, 8)
+        blocks = qrcode.base.rs_blocks(fixture["version"], ecc)
+        bit_limit = sum(block.data_count for block in blocks) * 8
+        if len(buffer) > bit_limit:
+            raise ValueError("manual ECI payload exceeds the requested version")
+        for _ in range(min(bit_limit - len(buffer), 4)):
+            buffer.put_bit(False)
+        while len(buffer) % 8:
+            buffer.put_bit(False)
+        pad = 0
+        while len(buffer) < bit_limit:
+            buffer.put(0xEC if pad % 2 == 0 else 0x11, 8)
+            pad += 1
+        code.data_cache = qrcode.util.create_bytes(buffer, blocks)
+        code.makeImpl(False, fixture["mask"])
     return "".join(
         "".join("1" if module else "0" for module in row) + "\n"
         for row in code.get_matrix()

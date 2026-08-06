@@ -20,7 +20,7 @@ Development can proceed with the decisions in this document. The remaining owner
 
 - ISO/IEC 18004:2024 remains the normative source for QR Code Model 2 behavior, but a licensed complete copy is not a repository or implementation prerequisite.
 - When the complete standard text is unavailable, non-table algorithm rules may be implemented under the public-source corroboration procedure in [`research/qr-public-source-provenance.md`](research/qr-public-source-provenance.md). Public sources are evidence and test oracles, never relabelled as normative text.
-- Each such rule must record its intended ISO clause/table topic, agree across two pinned independently maintained encoders where both expose it, have an independently written local invariant or slow reference where practical, and pass independently decoded end-to-end fixtures. A disagreement blocks acceptance; majority vote is not allowed.
+- Each such rule must record its intended ISO clause/table topic, agree across two pinned independently maintained encoders where both expose it, have an independently written local invariant or slow reference where practical, and pass independently decoded end-to-end fixtures. A disagreement blocks acceptance; majority vote is not allowed. A disagreement may be resolved only by a narrowly recorded owner decision that defines the exact chosen semantics, preserves the disagreeing observations, requires an independent local reference, and still passes exact completed-matrix and independent-decode gates.
 - Stable capacity, block, remainder-bit, alignment-pattern, and character-count tables may be implemented from committed development fixtures only after two pinned, independently maintained QR generators agree on every value they expose.
 - Values exposed by only one generator must also satisfy an independently implemented structural invariant (for example, matrix function-module accounting for remainder bits).
 - Public implementations remain development/test oracles. They are not production dependencies, and their implementation code is not copied into production.
@@ -28,6 +28,8 @@ Development can proceed with the decisions in this document. The remaining owner
 - A table-validation test must verify dimensions, totals, and invariants for every version/ECC row before encoder work is accepted.
 
 **Phase 0 gate (accepted by the project owner on 2026-08-05 and expanded on 2026-08-06):** development-only QR generators and public first-party source material are permitted for fixture creation and algorithm corroboration under the policy above.
+
+**Mask-penalty Rule 3 decision (accepted by the project owner on 2026-08-06):** score only literal `00001011101` and `10111010000` sequences wholly inside each completed matrix row or column. Do not add virtual quiet-zone modules. python-qrcode 8.2 exposes this interpretation and an independently written slow reference must match it. Nayuki 1.8.0's differing run-history totals remain recorded as a named oracle exception rather than being discarded or treated as a vote.
 
 ### 2.2 Text, byte mode, and ECI
 

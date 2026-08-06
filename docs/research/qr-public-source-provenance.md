@@ -67,7 +67,7 @@ For each rule or fixture:
 4. Add a locally written slow reference or invariant where practical: field cycles/inverses, block totals and de-interleaving, single ownership of every module, complete placement, BCH remainder properties, and isolated penalty truth tables.
 5. Compare explicit version/ECC/mask matrices before automatic mask-selection results.
 6. Decode representative completed artifacts with pinned ZXing-C++ and compare exact decoded bytes/text plus exposed metadata.
-7. If any public source, fixture, invariant, or decoder disagrees, quarantine the fixture and investigate. Do not choose by majority vote and do not weaken the failing gate.
+7. If any public source, fixture, invariant, or decoder disagrees, quarantine the fixture and investigate. Do not choose by majority vote and do not weaken the failing gate. An owner may resolve a disagreement only through a narrow written decision that defines the selected semantics, preserves all disagreeing observations, adds an independent local reference, and retains exact completed-matrix and independent-decode requirements.
 8. Label accepted evidence `public-corroborated, non-normative`. A later licensed-standard audit records any difference as an explicit reviewed migration.
 
 ## Independence caveats
@@ -76,3 +76,18 @@ For each rule or fixture:
 - ZXing-C++ exercises the reverse path and is implementation-diverse, but decode success is a weaker assertion than exact encoding agreement.
 - Locally authored references must use a deliberately simple formulation and must not call production helpers; otherwise production would become its own oracle.
 - No public implementation is linked into `qr-core`, `qr-render`, or `qr-web`, and no upstream implementation body is copied into production.
+
+## Recorded Rule 3 resolution
+
+On 2026-08-06 the owner selected literal complete-matrix matching for the
+finder-like penalty rule: count `00001011101` and `10111010000` windows wholly
+inside each row and column, with no virtual quiet-zone padding. This matches
+python-qrcode 8.2 `qrcode/util.py::lost_point` and the independently written
+local slow reference.
+
+Nayuki 1.8.0 `get_penalty_score`/`FinderPenalty` uses a run-history
+interpretation and exposes different totals for some identical completed
+matrices. Those totals remain committed in the decision evidence and are not
+relabelled as agreement. Acceptance still requires both encoders to agree on
+the completed explicit-mask matrices and selected-mask cases, plus independent
+ZXing-C++ decoding of representative completed artifacts.

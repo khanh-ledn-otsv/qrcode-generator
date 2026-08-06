@@ -234,6 +234,8 @@ enum AlgorithmKind {
     CodewordInterleaving,
     FunctionMatrices,
     DataPlacement,
+    MaskSelection,
+    EncoderGoldens,
 }
 
 impl AlgorithmKind {
@@ -368,6 +370,101 @@ impl AlgorithmKind {
                     "placement_coordinates",
                     "masked_matrix_values",
                     "remainder_coordinates",
+                ],
+            },
+            Self::MaskSelection => AlgorithmPolicy {
+                label: "mask-selection",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_mask_selection.py --check",
+                nayuki_executed_symbols: &[
+                    "__init__",
+                    "_draw_format_bits",
+                    "_draw_version",
+                    "_apply_mask",
+                    "_get_penalty_score",
+                ],
+                nayuki_evidence_symbols: &[
+                    "draw_format_bits",
+                    "draw_version",
+                    "apply_mask",
+                    "get_penalty_score",
+                    "FinderPenalty",
+                ],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+                python_symbols: &[
+                    "makeImpl",
+                    "setup_type_info",
+                    "setup_type_number",
+                    "map_data",
+                    "best_mask_pattern",
+                ],
+                python_supporting_source_urls: &[
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+                ],
+                python_supporting_symbols: &[
+                    "BCH_type_info",
+                    "BCH_type_number",
+                    "mask_func",
+                    "lost_point",
+                ],
+                nayuki_observed_fields: &[
+                    "format_bits",
+                    "version_bits",
+                    "completed_candidate_matrix",
+                    "candidate_penalty_disagreement",
+                    "automatic_mask",
+                    "isolated_penalty",
+                ],
+                python_observed_fields: &[
+                    "format_bits",
+                    "version_bits",
+                    "completed_candidate_matrix",
+                    "candidate_penalty",
+                    "automatic_mask",
+                    "isolated_penalty",
+                ],
+            },
+            Self::EncoderGoldens => AlgorithmPolicy {
+                label: "encoder-goldens",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_encoder_goldens.py --check",
+                nayuki_executed_symbols: &[
+                    "encode_segments",
+                    "make_numeric",
+                    "make_alphanumeric",
+                    "make_bytes",
+                    "make_eci",
+                ],
+                nayuki_evidence_symbols: &[
+                    "encode_segments",
+                    "make_numeric",
+                    "make_alphanumeric",
+                    "make_bytes",
+                    "make_eci",
+                ],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+                python_symbols: &["make", "makeImpl"],
+                python_supporting_source_urls: &[
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                ],
+                python_supporting_symbols: &[
+                    "QRData",
+                    "BitBuffer",
+                    "length_in_bits",
+                    "create_bytes",
+                    "rs_blocks",
+                ],
+                nayuki_observed_fields: &[
+                    "first_fit_version",
+                    "mode",
+                    "eci_assignment",
+                    "completed_matrix",
+                    "literal_rule3_mask",
+                ],
+                python_observed_fields: &[
+                    "mode",
+                    "eci_assignment",
+                    "completed_matrix",
+                    "literal_rule3_mask",
                 ],
             },
         }
@@ -918,7 +1015,7 @@ impl ZxingDecoder {
             "QRCode",
             "-single",
             "-mode",
-            "ECI",
+            "eci",
             artifact
                 .to_str()
                 .ok_or_else(|| VerificationError::new("artifact path is not valid UTF-8"))?,
