@@ -108,6 +108,18 @@ uv run --project tests/oracles --locked python \
   tests/support/verify_placement_matrices.py --check
 ```
 
+BCH and mask-selection fixtures cover all format/ECC combinations, every
+Version 7–40 information value, completed candidates for three structural
+versions, deterministic minimum selection, and combined synthetic penalty
+matrices. Both encoders must agree on the completed matrices and chosen masks;
+candidate totals are also checked by an independently written complete-matrix
+reference:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_mask_selection.py --check
+```
+
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,
 date, notes, and `accepted` state. `fixture-tool verify` rejects pending fixture
 changes.

@@ -15,8 +15,9 @@
 //! non-normative` until that audit is complete.
 
 use crate::Version;
+use crate::bch::{format_bits, version_bits};
 use crate::codeword_stream::InterleavedCodewords;
-use crate::tables::{self, TableLookupError};
+use crate::tables::{self, ErrorCorrection, TableLookupError};
 use std::error::Error;
 use std::fmt;
 
@@ -62,6 +63,7 @@ pub struct ModuleMatrix {
     size: u16,
     modules: Vec<Module>,
     data_placed: bool,
+    information_finalized: bool,
 }
 
 impl ModuleMatrix {
@@ -214,6 +216,7 @@ impl MatrixBuilder {
             size: self.size,
             modules,
             data_placed: false,
+            information_finalized: false,
         })
     }
 
@@ -488,6 +491,127 @@ pub fn place_data(
     }
     matrix.data_placed = true;
     Ok(matrix)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum InformationError {
+    DataNotPlaced,
+    AlreadyFinalized,
+    OutOfBounds {
+        x: u16,
+        y: u16,
+    },
+    OwnershipMismatch {
+        x: u16,
+        y: u16,
+        expected: ModuleKind,
+        actual: ModuleKind,
+    },
+}
+
+impl fmt::Display for InformationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::DataNotPlaced => {
+                formatter.write_str("QR information cannot be finalized before data placement")
+            }
+            Self::AlreadyFinalized => formatter.write_str("QR information is already finalized"),
+            Self::OutOfBounds { x, y } => {
+                write!(
+                    formatter,
+                    "QR information coordinate ({x}, {y}) is out of bounds"
+                )
+            }
+            Self::OwnershipMismatch {
+                x,
+                y,
+                expected,
+                actual,
+            } => write!(
+                formatter,
+                "QR information coordinate ({x}, {y}) requires {expected:?}, got {actual:?}"
+            ),
+        }
+    }
+}
+
+impl Error for InformationError {}
+
+pub fn finalize_information(
+    mut matrix: ModuleMatrix,
+    ecc: ErrorCorrection,
+    mask: MaskId,
+) -> Result<ModuleMatrix, InformationError> {
+    if !matrix.data_placed {
+        return Err(InformationError::DataNotPlaced);
+    }
+    if matrix.information_finalized {
+        return Err(InformationError::AlreadyFinalized);
+    }
+
+    let size = matrix.size;
+    let format = format_bits(ecc, mask);
+    for bit in 0..15_u16 {
+        let dark = ((format >> bit) & 1) != 0;
+        let primary = match bit {
+            0..=5 => (8, bit),
+            6 => (8, 7),
+            7 => (8, 8),
+            8 => (7, 8),
+            9..=14 => (14 - bit, 8),
+            _ => continue,
+        };
+        let secondary = if bit <= 7 {
+            (size - 1 - bit, 8)
+        } else {
+            (8, size - 15 + bit)
+        };
+        write_information_module(&mut matrix, primary.0, primary.1, dark, ModuleKind::Format)?;
+        write_information_module(
+            &mut matrix,
+            secondary.0,
+            secondary.1,
+            dark,
+            ModuleKind::Format,
+        )?;
+    }
+
+    if let Some(version) = version_bits(matrix.version) {
+        let start = size - 11;
+        for bit in 0..18_u16 {
+            let a = start + bit % 3;
+            let b = bit / 3;
+            let dark = ((version >> bit) & 1) != 0;
+            write_information_module(&mut matrix, a, b, dark, ModuleKind::Version)?;
+            write_information_module(&mut matrix, b, a, dark, ModuleKind::Version)?;
+        }
+    }
+    matrix.information_finalized = true;
+    Ok(matrix)
+}
+
+fn write_information_module(
+    matrix: &mut ModuleMatrix,
+    x: u16,
+    y: u16,
+    dark: bool,
+    kind: ModuleKind,
+) -> Result<(), InformationError> {
+    let index = checked_index(matrix.size, x, y).ok_or(InformationError::OutOfBounds { x, y })?;
+    let module = matrix
+        .modules
+        .get_mut(index)
+        .ok_or(InformationError::OutOfBounds { x, y })?;
+    if module.kind() != kind {
+        return Err(InformationError::OwnershipMismatch {
+            x,
+            y,
+            expected: kind,
+            actual: module.kind(),
+        });
+    }
+    *module = Module::new(dark, kind);
+    Ok(())
 }
 
 pub fn build_function_matrix(version: Version) -> Result<ModuleMatrix, MatrixError> {

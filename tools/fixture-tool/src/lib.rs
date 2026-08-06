@@ -234,6 +234,7 @@ enum AlgorithmKind {
     CodewordInterleaving,
     FunctionMatrices,
     DataPlacement,
+    MaskSelection,
 }
 
 impl AlgorithmKind {
@@ -368,6 +369,56 @@ impl AlgorithmKind {
                     "placement_coordinates",
                     "masked_matrix_values",
                     "remainder_coordinates",
+                ],
+            },
+            Self::MaskSelection => AlgorithmPolicy {
+                label: "mask-selection",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_mask_selection.py --check",
+                nayuki_executed_symbols: &[
+                    "__init__",
+                    "_draw_format_bits",
+                    "_draw_version",
+                    "_apply_mask",
+                    "_get_penalty_score",
+                ],
+                nayuki_evidence_symbols: &[
+                    "draw_format_bits",
+                    "draw_version",
+                    "apply_mask",
+                    "get_penalty_score",
+                    "FinderPenalty",
+                ],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+                python_symbols: &[
+                    "makeImpl",
+                    "setup_type_info",
+                    "setup_type_number",
+                    "map_data",
+                    "best_mask_pattern",
+                ],
+                python_supporting_source_urls: &[
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+                ],
+                python_supporting_symbols: &[
+                    "BCH_type_info",
+                    "BCH_type_number",
+                    "mask_func",
+                    "lost_point",
+                ],
+                nayuki_observed_fields: &[
+                    "format_bits",
+                    "version_bits",
+                    "completed_candidate_matrix",
+                    "automatic_mask",
+                    "isolated_penalty",
+                ],
+                python_observed_fields: &[
+                    "format_bits",
+                    "version_bits",
+                    "completed_candidate_matrix",
+                    "candidate_penalty",
+                    "automatic_mask",
+                    "isolated_penalty",
                 ],
             },
         }

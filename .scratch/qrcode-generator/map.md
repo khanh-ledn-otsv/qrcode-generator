@@ -25,6 +25,10 @@
   zig-zag placement preserves data/remainder ownership, protects every function
   module, supports all eight explicit masks through a typed core API, and
   matches dual-oracle fixtures at Versions 1, 2, 7, and 40.
+- [Ticket 10](issues/10-select-masks-with-bch-and-penalties.md): Completed
+  candidates receive checked format/version BCH information, all four penalty
+  rules score the full matrix, and deterministic minimum selection with
+  lower-mask tie breaking matches committed public-corroborated fixtures.
 
 ## Notes
 

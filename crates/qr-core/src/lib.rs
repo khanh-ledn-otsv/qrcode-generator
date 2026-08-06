@@ -5,11 +5,14 @@
 use std::error::Error;
 use std::fmt;
 
+pub mod bch;
 pub mod bit_buffer;
 pub mod codeword_stream;
 pub mod encoding;
 pub mod matrix;
+pub mod penalty;
 pub mod reed_solomon;
+pub mod selection;
 pub mod tables;
 
 /// A QR Code Model 2 symbol version.
