@@ -97,6 +97,17 @@ uv run --project tests/oracles --locked python \
   tests/support/verify_function_matrices.py --check
 ```
 
+Explicit data-placement fixtures cover Versions 1, 2, 7, and 40 under every
+mask. The verifier instruments both encoders' placement routines, compares the
+exact traversal and completed masked matrices, and preserves separate data and
+remainder classifications after normalizing the already-accepted function
+regions:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_placement_matrices.py --check
+```
+
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,
 date, notes, and `accepted` state. `fixture-tool verify` rejects pending fixture
 changes.

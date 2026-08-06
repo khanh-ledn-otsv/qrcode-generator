@@ -9,10 +9,13 @@
 //! and python-qrcode 8.2
 //! `qrcode/main.py::{setup_position_probe_pattern,
 //! setup_position_adjust_pattern,setup_timing_pattern,setup_type_info,
-//! setup_type_number}`. This evidence is `public-corroborated, non-normative`
-//! until that audit is complete.
+//! setup_type_number}`. Data placement and explicit masking are corroborated
+//! by Nayuki's `draw_codewords`/`apply_mask` and python-qrcode's
+//! `map_data`/`mask_func`. This evidence is `public-corroborated,
+//! non-normative` until that audit is complete.
 
 use crate::Version;
+use crate::codeword_stream::InterleavedCodewords;
 use crate::tables::{self, TableLookupError};
 use std::error::Error;
 use std::fmt;
@@ -55,11 +58,18 @@ impl Module {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ModuleMatrix {
+    version: Version,
     size: u16,
     modules: Vec<Module>,
+    data_placed: bool,
 }
 
 impl ModuleMatrix {
+    #[must_use]
+    pub const fn version(&self) -> Version {
+        self.version
+    }
+
     #[must_use]
     pub const fn size(&self) -> u16 {
         self.size
@@ -127,6 +137,7 @@ impl From<TableLookupError> for MatrixError {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MatrixBuilder {
+    version: Version,
     size: u16,
     modules: Vec<Option<Module>>,
 }
@@ -138,6 +149,7 @@ impl MatrixBuilder {
             .checked_mul(usize::from(size))
             .ok_or(MatrixError::DimensionOverflow { size })?;
         Ok(Self {
+            version,
             size,
             modules: vec![None; length],
         })
@@ -198,8 +210,10 @@ impl MatrixBuilder {
         }
         let modules = self.modules.into_iter().flatten().collect();
         Ok(ModuleMatrix {
+            version: self.version,
             size: self.size,
             modules,
+            data_placed: false,
         })
     }
 
@@ -226,6 +240,254 @@ impl MatrixBuilder {
                 size: self.size,
             })
     }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MaskId(u8);
+
+impl MaskId {
+    pub const MIN: u8 = 0;
+    pub const MAX: u8 = 7;
+
+    pub const fn new(number: u8) -> Result<Self, MaskError> {
+        if number > Self::MAX {
+            return Err(MaskError { number });
+        }
+        Ok(Self(number))
+    }
+
+    #[must_use]
+    pub const fn number(self) -> u8 {
+        self.0
+    }
+
+    #[must_use]
+    pub fn applies(self, x: u16, y: u16) -> bool {
+        let x = u32::from(x);
+        let y = u32::from(y);
+        let product = x * y;
+        match self.0 {
+            0 => (x + y) % 2 == 0,
+            1 => y % 2 == 0,
+            2 => x % 3 == 0,
+            3 => (x + y) % 3 == 0,
+            4 => (y / 2 + x / 3) % 2 == 0,
+            5 => product % 2 + product % 3 == 0,
+            6 => (product % 2 + product % 3) % 2 == 0,
+            7 => ((x + y) % 2 + product % 3) % 2 == 0,
+            _ => false,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MaskError {
+    number: u8,
+}
+
+impl MaskError {
+    #[must_use]
+    pub const fn number(self) -> u8 {
+        self.number
+    }
+}
+
+impl fmt::Display for MaskError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "QR mask must be between {} and {}, got {}",
+            MaskId::MIN,
+            MaskId::MAX,
+            self.number
+        )
+    }
+}
+
+impl Error for MaskError {}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum PlacementError {
+    Matrix(MatrixError),
+    AlreadyPlaced,
+    OwnershipMismatch {
+        x: u16,
+        y: u16,
+        expected: Module,
+        actual: Module,
+    },
+    LengthOverflow,
+    StreamLengthMismatch {
+        writable_modules: usize,
+        data_bits: usize,
+        remainder_bits: usize,
+    },
+    TraversalIncomplete {
+        expected: usize,
+        placed: usize,
+    },
+}
+
+impl fmt::Display for PlacementError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Matrix(error) => error.fmt(formatter),
+            Self::AlreadyPlaced => formatter.write_str("QR matrix data has already been placed"),
+            Self::OwnershipMismatch {
+                x,
+                y,
+                expected,
+                actual,
+            } => write!(
+                formatter,
+                "matrix ownership mismatch at ({x}, {y}): expected {expected:?}, got {actual:?}"
+            ),
+            Self::LengthOverflow => formatter.write_str("QR placement bit length overflowed"),
+            Self::StreamLengthMismatch {
+                writable_modules,
+                data_bits,
+                remainder_bits,
+            } => write!(
+                formatter,
+                "matrix has {writable_modules} writable modules but stream requires {data_bits} data bits and {remainder_bits} remainder bits"
+            ),
+            Self::TraversalIncomplete { expected, placed } => write!(
+                formatter,
+                "matrix traversal expected {expected} writable modules but placed {placed}"
+            ),
+        }
+    }
+}
+
+impl Error for PlacementError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Matrix(error) => Some(error),
+            Self::AlreadyPlaced
+            | Self::OwnershipMismatch { .. }
+            | Self::LengthOverflow
+            | Self::StreamLengthMismatch { .. }
+            | Self::TraversalIncomplete { .. } => None,
+        }
+    }
+}
+
+impl From<MatrixError> for PlacementError {
+    fn from(error: MatrixError) -> Self {
+        Self::Matrix(error)
+    }
+}
+
+pub fn place_data(
+    mut matrix: ModuleMatrix,
+    stream: &InterleavedCodewords,
+    mask: MaskId,
+) -> Result<ModuleMatrix, PlacementError> {
+    if matrix.data_placed {
+        return Err(PlacementError::AlreadyPlaced);
+    }
+    let expected_matrix = build_function_matrix(matrix.version)?;
+    for (index, (expected, actual)) in expected_matrix
+        .modules
+        .iter()
+        .copied()
+        .zip(matrix.modules.iter().copied())
+        .enumerate()
+    {
+        if expected != actual {
+            let size = usize::from(matrix.size);
+            let x = u16::try_from(index % size).map_err(|_| PlacementError::LengthOverflow)?;
+            let y = u16::try_from(index / size).map_err(|_| PlacementError::LengthOverflow)?;
+            return Err(PlacementError::OwnershipMismatch {
+                x,
+                y,
+                expected,
+                actual,
+            });
+        }
+    }
+
+    let data_bits = stream
+        .codewords()
+        .len()
+        .checked_mul(8)
+        .ok_or(PlacementError::LengthOverflow)?;
+    let remainder_bits = usize::from(stream.remainder_bit_count());
+    let required_modules = data_bits
+        .checked_add(remainder_bits)
+        .ok_or(PlacementError::LengthOverflow)?;
+    let writable_modules = matrix
+        .modules
+        .iter()
+        .filter(|module| module.kind() == ModuleKind::Data)
+        .count();
+    if writable_modules != required_modules {
+        return Err(PlacementError::StreamLengthMismatch {
+            writable_modules,
+            data_bits,
+            remainder_bits,
+        });
+    }
+
+    let mut placed = 0_usize;
+    let size = matrix.size;
+    let mut right = size - 1;
+    let mut upward = true;
+    loop {
+        if right == 6 {
+            right = 5;
+        }
+        for step in 0..size {
+            let y = if upward { size - 1 - step } else { step };
+            for x in [right, right - 1] {
+                let index =
+                    checked_index(size, x, y).ok_or(PlacementError::TraversalIncomplete {
+                        expected: required_modules,
+                        placed,
+                    })?;
+                let module =
+                    matrix
+                        .modules
+                        .get_mut(index)
+                        .ok_or(PlacementError::TraversalIncomplete {
+                            expected: required_modules,
+                            placed,
+                        })?;
+                if module.kind() != ModuleKind::Data {
+                    continue;
+                }
+                let (dark, kind) = if placed < data_bits {
+                    let byte = stream.codewords().get(placed / 8).copied().ok_or(
+                        PlacementError::TraversalIncomplete {
+                            expected: required_modules,
+                            placed,
+                        },
+                    )?;
+                    let bit = (byte >> (7 - placed % 8)) & 1 != 0;
+                    (bit ^ mask.applies(x, y), ModuleKind::Data)
+                } else {
+                    (mask.applies(x, y), ModuleKind::Remainder)
+                };
+                *module = Module::new(dark, kind);
+                placed = placed
+                    .checked_add(1)
+                    .ok_or(PlacementError::LengthOverflow)?;
+            }
+        }
+        if right < 2 {
+            break;
+        }
+        right -= 2;
+        upward = !upward;
+    }
+    if placed != required_modules {
+        return Err(PlacementError::TraversalIncomplete {
+            expected: required_modules,
+            placed,
+        });
+    }
+    matrix.data_placed = true;
+    Ok(matrix)
 }
 
 pub fn build_function_matrix(version: Version) -> Result<ModuleMatrix, MatrixError> {

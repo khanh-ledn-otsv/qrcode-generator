@@ -311,6 +311,100 @@
         "verified_at": "2026-08-06",
         "notes": "Both pinned encoders agree on all function coordinates and stable function values. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
       }
+    },
+    {
+      "id": "qr-explicit-mask-placement-matrices",
+      "kind": "data-placement",
+      "synthetic": true,
+      "artifact_file": "placement_matrices.txt",
+      "artifact_sha256": "f9cdc90326acd51276a1a755de2856ade79b21cc12d531fdc06d55e6d866e050",
+      "standard_topic": "ISO/IEC 18004:2024 data/remainder module placement and mask patterns; clause mapping pending audit",
+      "scope": "All eight explicit masks for Versions 1, 2, 7, and 40 with classified readable maps for one mask per version",
+      "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_placement_matrices.py --check",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "version": "1.8.0",
+          "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "executed_symbols": [
+            "__init__",
+            "encode_segments",
+            "_set_function_module",
+            "_get_alignment_pattern_positions",
+            "_draw_finder_pattern",
+            "_draw_alignment_pattern",
+            "_draw_format_bits",
+            "_draw_version",
+            "_add_ecc_and_interleave",
+            "_draw_codewords",
+            "_apply_mask"
+          ],
+          "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+          "evidence_symbols": [
+            "draw_function_patterns",
+            "draw_finder_pattern",
+            "draw_alignment_pattern",
+            "set_function_module",
+            "draw_format_bits",
+            "draw_version",
+            "add_ecc_and_interleave",
+            "draw_codewords",
+            "apply_mask"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_placement_matrices.py --check",
+          "observed_fields": [
+            "function_coordinates",
+            "fixed_function_values",
+            "placement_coordinates",
+            "masked_matrix_values",
+            "remainder_coordinates"
+          ]
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "version": "8.2",
+          "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "executed_symbols": [
+            "makeImpl",
+            "map_data"
+          ],
+          "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+          "evidence_symbols": [
+            "makeImpl",
+            "map_data"
+          ],
+          "supporting_source_urls": [
+            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py"
+          ],
+          "supporting_symbols": [
+            "BitBuffer",
+            "create_bytes",
+            "mask_func",
+            "rs_blocks"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_placement_matrices.py --check",
+          "observed_fields": [
+            "placement_coordinates",
+            "masked_matrix_values",
+            "remainder_coordinates"
+          ]
+        }
+      ],
+      "local_verification": [
+        "Exact classified matrix fingerprints cover four structural versions and every explicit mask",
+        "Readable maps preserve separate data and remainder ownership",
+        "Generated invariants verify every writable module is assigned once while function modules remain unchanged",
+        "Typed errors reject stream-length and ownership mismatches without partial output"
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "ticket-09-dual-oracle-implementation-review",
+        "verified_at": "2026-08-06",
+        "notes": "Both pinned encoders agree exactly on traversal and masked matrices. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
+      }
     }
   ]
 }

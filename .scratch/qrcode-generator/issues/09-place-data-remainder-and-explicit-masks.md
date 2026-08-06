@@ -4,7 +4,7 @@
 
 **Blocked by:** 07 — Construct the complete interleaved codeword stream; 08 — Build classified QR function matrices.
 
-**Status:** ready-for-agent
+**Status:** claimed
 
 - [ ] Zig-zag traversal skips timing column 6 and every function cell while assigning each writable cell exactly once.
 - [ ] Payload bits and remainder bits retain distinct module classifications after placement.

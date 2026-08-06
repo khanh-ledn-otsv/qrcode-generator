@@ -233,6 +233,7 @@ enum AlgorithmKind {
     ReedSolomon,
     CodewordInterleaving,
     FunctionMatrices,
+    DataPlacement,
 }
 
 impl AlgorithmKind {
@@ -320,6 +321,53 @@ impl AlgorithmKind {
                     "function_coordinates",
                     "fixed_function_values",
                     "alignment_centers",
+                ],
+            },
+            Self::DataPlacement => AlgorithmPolicy {
+                label: "data-placement",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_placement_matrices.py --check",
+                nayuki_executed_symbols: &[
+                    "__init__",
+                    "encode_segments",
+                    "_set_function_module",
+                    "_get_alignment_pattern_positions",
+                    "_draw_finder_pattern",
+                    "_draw_alignment_pattern",
+                    "_draw_format_bits",
+                    "_draw_version",
+                    "_add_ecc_and_interleave",
+                    "_draw_codewords",
+                    "_apply_mask",
+                ],
+                nayuki_evidence_symbols: &[
+                    "draw_function_patterns",
+                    "draw_finder_pattern",
+                    "draw_alignment_pattern",
+                    "set_function_module",
+                    "draw_format_bits",
+                    "draw_version",
+                    "add_ecc_and_interleave",
+                    "draw_codewords",
+                    "apply_mask",
+                ],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+                python_symbols: &["makeImpl", "map_data"],
+                python_supporting_source_urls: &[
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                ],
+                python_supporting_symbols: &["BitBuffer", "create_bytes", "mask_func", "rs_blocks"],
+                nayuki_observed_fields: &[
+                    "function_coordinates",
+                    "fixed_function_values",
+                    "placement_coordinates",
+                    "masked_matrix_values",
+                    "remainder_coordinates",
+                ],
+                python_observed_fields: &[
+                    "placement_coordinates",
+                    "masked_matrix_values",
+                    "remainder_coordinates",
                 ],
             },
         }
