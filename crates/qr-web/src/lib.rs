@@ -2,6 +2,9 @@
 
 #![forbid(unsafe_code)]
 
+pub mod debounce;
 pub mod workflow;
+
+pub mod download;
 
 mod textarea;

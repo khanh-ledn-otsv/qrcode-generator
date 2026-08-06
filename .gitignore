@@ -1,4 +1,6 @@
 /target
 /dist
+/node_modules
+/playwright-report
 /tests/oracles/zxing-cpp
 __pycache__/

@@ -1,0 +1,13 @@
+{
+  "name": "qrcode-generator-e2e",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test --project=chromium --project=mobile-chromium",
+    "test:e2e:all": "playwright test"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.62.1",
+    "typescript": "7.0.2"
+  }
+}

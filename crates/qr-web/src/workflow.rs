@@ -1,10 +1,11 @@
 //! Plain-Rust state transitions for the interactive QR workflow.
 
 use qr_core::encoding::EncodingError;
-use qr_core::tables::ErrorCorrection;
+use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
-    OutputProfile, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_svg,
+    OutputProfile, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
+    render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -102,7 +103,9 @@ impl PreviewRequest {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Diagnostics {
+    mode: DataMode,
     ecc: ErrorCorrection,
+    mask: u8,
     maximum_version: Version,
     selected_version: Version,
     used_data_bits: u32,
@@ -111,13 +114,27 @@ pub struct Diagnostics {
     matrix_modules: u16,
     svg_side_pixels: u32,
     png_side_pixels: u32,
+    quiet_zone_modules: u32,
+    module_scale: u32,
+    rendered_symbol_side_pixels: u32,
+    outer_padding_per_side: u32,
     print_guidance: &'static str,
 }
 
 impl Diagnostics {
     #[must_use]
+    pub const fn mode(self) -> DataMode {
+        self.mode
+    }
+
+    #[must_use]
     pub const fn ecc(self) -> ErrorCorrection {
         self.ecc
+    }
+
+    #[must_use]
+    pub const fn mask(self) -> u8 {
+        self.mask
     }
 
     #[must_use]
@@ -161,6 +178,26 @@ impl Diagnostics {
     }
 
     #[must_use]
+    pub const fn quiet_zone_modules(self) -> u32 {
+        self.quiet_zone_modules
+    }
+
+    #[must_use]
+    pub const fn module_scale(self) -> u32 {
+        self.module_scale
+    }
+
+    #[must_use]
+    pub const fn rendered_symbol_side_pixels(self) -> u32 {
+        self.rendered_symbol_side_pixels
+    }
+
+    #[must_use]
+    pub const fn outer_padding_per_side(self) -> u32 {
+        self.outer_padding_per_side
+    }
+
+    #[must_use]
     pub const fn print_guidance(self) -> &'static str {
         self.print_guidance
     }
@@ -169,13 +206,70 @@ impl Diagnostics {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Preview {
     svg: String,
+    png: Vec<u8>,
     diagnostics: Diagnostics,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ArtifactKind {
+    Svg,
+    Png,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct DownloadArtifact<'preview> {
+    filename: &'static str,
+    mime_type: &'static str,
+    bytes: &'preview [u8],
+}
+
+impl DownloadArtifact<'_> {
+    #[must_use]
+    pub const fn filename(self) -> &'static str {
+        self.filename
+    }
+
+    #[must_use]
+    pub const fn mime_type(self) -> &'static str {
+        self.mime_type
+    }
+
+    #[must_use]
+    pub const fn bytes(&self) -> &[u8] {
+        self.bytes
+    }
 }
 
 impl Preview {
     #[must_use]
     pub fn svg(&self) -> &str {
         &self.svg
+    }
+
+    #[must_use]
+    pub fn artifact(&self, kind: ArtifactKind) -> DownloadArtifact<'_> {
+        match kind {
+            ArtifactKind::Svg => DownloadArtifact {
+                filename: "qr-code.svg",
+                mime_type: "image/svg+xml",
+                bytes: self.svg.as_bytes(),
+            },
+            ArtifactKind::Png => DownloadArtifact {
+                filename: "qr-code.png",
+                mime_type: "image/png",
+                bytes: &self.png,
+            },
+        }
+    }
+
+    #[must_use]
+    pub fn accessible_label(&self) -> String {
+        format!(
+            "Generated QR code preview: {} mode, version {}, ECC {}.",
+            mode_label(self.diagnostics.mode),
+            self.diagnostics.selected_version.number(),
+            ecc_label(self.diagnostics.ecc),
+        )
     }
 
     #[must_use]
@@ -353,6 +447,15 @@ impl WorkflowState {
     }
 
     #[must_use]
+    pub fn export_disabled_reason(&self) -> Option<String> {
+        match &self.preview_state {
+            PreviewState::Pending => Some("QR preview is updating.".to_owned()),
+            PreviewState::Invalid(failure) => Some(failure.message()),
+            PreviewState::Ready(_) => None,
+        }
+    }
+
+    #[must_use]
     pub fn caution(&self) -> Option<&'static str> {
         control_character_caution(self.payload.raw())
     }
@@ -408,12 +511,24 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
     let options = RenderOptions::safe(profile).map_err(|_| WorkflowFailure::Internal)?;
     let model = RenderModel::new(&encoded, options).map_err(|_| WorkflowFailure::Internal)?;
     let svg = render_svg(&model).map_err(|_| WorkflowFailure::Internal)?;
+    let png = render_png(&model).map_err(|_| WorkflowFailure::Internal)?;
+    let png_placement = model.png_placement();
+    let outer_padding = png_placement.outer_padding();
+    if outer_padding.left != outer_padding.right
+        || outer_padding.left != outer_padding.top
+        || outer_padding.left != outer_padding.bottom
+    {
+        return Err(WorkflowFailure::Internal);
+    }
     let data_codewords =
         u16::try_from(encoded.data_bits_capacity() / 8).map_err(|_| WorkflowFailure::Internal)?;
     Ok(Preview {
         svg,
+        png,
         diagnostics: Diagnostics {
+            mode: encoded.mode(),
             ecc: encoded.ecc(),
+            mask: encoded.mask().number(),
             maximum_version: profile.maximum_version(),
             selected_version: encoded.version(),
             used_data_bits: encoded.data_bits_used(),
@@ -422,9 +537,33 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             matrix_modules: encoded.version().symbol_size(),
             svg_side_pixels: profile.svg_dimensions().width().get(),
             png_side_pixels: profile.png_dimensions().width().get(),
+            quiet_zone_modules: png_placement.symbol().quiet_zone_modules_per_side().get(),
+            module_scale: png_placement.module_scale().get(),
+            rendered_symbol_side_pixels: png_placement.rendered_symbol_dimensions().width().get(),
+            outer_padding_per_side: outer_padding.left.get(),
             print_guidance: profile_presentation(profile.id()).guidance(),
         },
     })
+}
+
+#[must_use]
+pub const fn mode_label(mode: DataMode) -> &'static str {
+    match mode {
+        DataMode::Numeric => "Numeric",
+        DataMode::Alphanumeric => "Alphanumeric",
+        DataMode::Byte => "Byte",
+        DataMode::Kanji => "Kanji",
+    }
+}
+
+#[must_use]
+pub const fn ecc_label(ecc: ErrorCorrection) -> &'static str {
+    match ecc {
+        ErrorCorrection::Low => "L",
+        ErrorCorrection::Medium => "M",
+        ErrorCorrection::Quartile => "Q",
+        ErrorCorrection::High => "H",
+    }
 }
 
 fn supported_profile(profile_id: ProfileId) -> Option<OutputProfile> {

@@ -10,7 +10,13 @@ name = "qr-web"
 path = "src/main.rs"
 
 [dependencies]
+js-sys.workspace = true
 leptos.workspace = true
 qr-core.workspace = true
 qr-render.workspace = true
-web-sys = { workspace = true, features = ["ClipboardEvent", "DataTransfer", "DragEvent", "Event", "HtmlTextAreaElement", "InputEvent"] }
+wasm-bindgen.workspace = true
+web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "ClipboardEvent", "DataTransfer", "Document", "DragEvent", "Element", "Event", "HtmlAnchorElement", "HtmlElement", "HtmlTextAreaElement", "InputEvent", "Node", "Response", "Url", "Window"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+wasm-bindgen-futures.workspace = true
+wasm-bindgen-test.workspace = true

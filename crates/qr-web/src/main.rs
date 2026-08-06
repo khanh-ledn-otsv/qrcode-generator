@@ -3,25 +3,25 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
-use qr_core::tables::ErrorCorrection;
 use qr_render::{ProfileId, SUPPORTED_PROFILES};
+use qr_web::debounce::{BrowserTimeout, DebounceTimer};
+use qr_web::download::trigger_download;
 use qr_web::workflow::{
-    PreviewRequest, WorkflowFailure, WorkflowState, evaluate_preview, profile_presentation,
-    textarea_display_utf16_length,
+    ArtifactKind, PreviewRequest, WorkflowFailure, WorkflowState, ecc_label, evaluate_preview,
+    mode_label, profile_presentation, textarea_display_utf16_length,
 };
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
+type DebounceSignal = RwSignal<DebounceTimer, leptos::reactive::owner::LocalStorage>;
 
 #[component]
 fn App() -> impl IntoView {
     let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
-    let pending_timer = RwSignal::new(None::<TimeoutHandle>);
+    let pending_timer = RwSignal::new_local(DebounceTimer::default());
     let pending_edit_start = RwSignal::new(None::<u32>);
 
     Owner::on_cleanup(move || {
-        if let Some(handle) = pending_timer.get_untracked() {
-            handle.clear();
-        }
+        pending_timer.update(DebounceTimer::cancel);
     });
 
     let profile_options = SUPPORTED_PROFILES.map(|profile| {
@@ -211,7 +211,7 @@ fn App() -> impl IntoView {
                             {move || state.with(WorkflowState::validation_message).unwrap_or_default()}
                         </p>
                         <p id="payload-caution" class="mt-2 min-h-6 text-sm font-semibold text-amber-800" role="status">
-                            {move || state.with(|value| value.caution().unwrap_or_default())}
+                            {move || state.with(|value| value.caution().map(|message| format!("Caution: {message}")).unwrap_or_default())}
                         </p>
 
                         <fieldset class="mt-8">
@@ -225,17 +225,19 @@ fn App() -> impl IntoView {
                             <div class="flex items-center justify-between gap-4">
                                 <h2 id="preview-heading" class="text-xl font-bold text-slate-950">"Preview"</h2>
                                 <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200">
-                                    "ECC M"
+                                    {move || state.with(|value| value.preview().map(|preview| format!("ECC {}", ecc_label(preview.diagnostics().ecc()))).unwrap_or_else(|| "ECC —".to_owned()))}
                                 </span>
                             </div>
                             <div
                                 class="mt-5 grid aspect-square w-full place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-5"
                                 role="img"
-                                aria-label="Generated QR code preview"
+                                aria-label=move || state.with(|value| value.preview().map(|preview| preview.accessible_label()).unwrap_or_else(|| "QR code preview unavailable".to_owned()))
+                                data-testid="qr-preview"
                             >
                                 <div
                                     class:hidden=move || state.with(|value| value.preview().is_none())
                                     class="w-full [&>svg]:h-auto [&>svg]:w-full"
+                                    aria-hidden="true"
                                     inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())
                                 ></div>
                                 <p class:hidden=move || state.with(|value| value.preview().is_some()) class="max-w-xs text-center text-sm leading-6 text-slate-500">
@@ -247,15 +249,51 @@ fn App() -> impl IntoView {
                         <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="diagnostics-heading">
                             <h2 id="diagnostics-heading" class="text-xl font-bold text-slate-950">"Diagnostics"</h2>
                             <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 text-sm">
+                                <Diagnostic label="Mode" value=move || diagnostic_value(state, |details| mode_label(details.mode()).to_owned()) />
                                 <Diagnostic label="ECC" value=move || diagnostic_value(state, |details| ecc_label(details.ecc()).to_owned()) />
+                                <Diagnostic label="Mask" value=move || diagnostic_value(state, |details| details.mask().to_string()) />
                                 <Diagnostic label="Version" value=move || diagnostic_value(state, |details| format!("V{} / V{} max", details.selected_version().number(), details.maximum_version().number())) />
                                 <Diagnostic label="Data bits" value=move || diagnostic_value(state, |details| format!("{} / {}", details.used_data_bits(), details.available_data_bits())) />
                                 <Diagnostic label="Data codewords" value=move || diagnostic_value(state, |details| details.data_codewords().to_string()) />
                                 <Diagnostic label="Matrix" value=move || diagnostic_value(state, |details| format!("{} × {} modules", details.matrix_modules(), details.matrix_modules())) />
+                                <Diagnostic label="Quiet zone" value=move || diagnostic_value(state, |details| format!("{} modules per side", details.quiet_zone_modules())) />
+                                <Diagnostic label="PNG geometry" value=move || diagnostic_value(state, |details| format!("{} px/module · {} px symbol · {} px padding", details.module_scale(), details.rendered_symbol_side_pixels(), details.outer_padding_per_side())) />
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
                             </dl>
                             <p class="mt-5 rounded-2xl bg-slate-100 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
                                 {move || diagnostic_value(state, |details| details.print_guidance().to_owned())}
+                            </p>
+                        </section>
+
+                        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="exports-heading">
+                            <h2 id="exports-heading" class="text-xl font-bold text-slate-950">"Download"</h2>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">
+                                "Files use fixed private filenames and contain no payload metadata."
+                            </p>
+                            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    class="focus:ring-brand rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                                    disabled=move || !state.with(WorkflowState::exports_enabled)
+                                    aria-describedby="export-status"
+                                    data-testid="download-svg"
+                                    on:click=move |_| download_artifact(state, pending_timer, ArtifactKind::Svg)
+                                >
+                                    "Download SVG"
+                                </button>
+                                <button
+                                    type="button"
+                                    class="focus:ring-brand rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                                    disabled=move || !state.with(WorkflowState::exports_enabled)
+                                    aria-describedby="export-status"
+                                    data-testid="download-png"
+                                    on:click=move |_| download_artifact(state, pending_timer, ArtifactKind::Png)
+                                >
+                                    "Download PNG"
+                                </button>
+                            </div>
+                            <p id="export-status" class="mt-3 min-h-6 text-sm font-medium text-slate-700" role="status">
+                                {move || state.with(|value| value.export_disabled_reason().unwrap_or_else(|| "SVG and PNG downloads are ready.".to_owned()))}
                             </p>
                         </section>
                     </div>
@@ -280,23 +318,18 @@ where
 
 fn schedule_preview(
     state: RwSignal<WorkflowState>,
-    pending_timer: RwSignal<Option<TimeoutHandle>>,
+    pending_timer: DebounceSignal,
     request: PreviewRequest,
 ) {
-    if let Some(handle) = pending_timer.get_untracked() {
-        handle.clear();
-    }
+    pending_timer.update(DebounceTimer::cancel);
     let revision = request.revision();
-    match set_timeout_with_handle(
-        move || {
-            let result = evaluate_preview(&request);
-            state.update(|value| {
-                _ = value.complete_preview(revision, result);
-            });
-        },
-        PREVIEW_DEBOUNCE,
-    ) {
-        Ok(handle) => pending_timer.set(Some(handle)),
+    match BrowserTimeout::new(PREVIEW_DEBOUNCE, move || {
+        let result = evaluate_preview(&request);
+        state.update(|value| {
+            _ = value.complete_preview(revision, result);
+        });
+    }) {
+        Ok(handle) => pending_timer.update(|timer| timer.replace(handle)),
         Err(_) => state.update(|value| {
             _ = value.complete_preview(revision, Err(WorkflowFailure::Internal));
         }),
@@ -305,7 +338,7 @@ fn schedule_preview(
 
 fn apply_raw_textarea_insertion(
     state: RwSignal<WorkflowState>,
-    pending_timer: RwSignal<Option<TimeoutHandle>>,
+    pending_timer: DebounceSignal,
     target: &HtmlTextAreaElement,
     start: u32,
     end: u32,
@@ -333,16 +366,32 @@ fn textarea_selection(target: &HtmlTextAreaElement) -> Option<(u32, u32)> {
 
 fn reject_raw_input_failure(
     state: RwSignal<WorkflowState>,
-    pending_timer: RwSignal<Option<TimeoutHandle>>,
+    pending_timer: DebounceSignal,
     target: Option<&HtmlTextAreaElement>,
 ) {
-    if let Some(handle) = pending_timer.get_untracked() {
-        handle.clear();
-    }
-    pending_timer.set(None);
+    pending_timer.update(DebounceTimer::cancel);
     state.update(WorkflowState::reject_internal_failure);
     if let Some(target) = target {
         target.set_value(&state.with(WorkflowState::textarea_value));
+    }
+}
+
+fn download_artifact(
+    state: RwSignal<WorkflowState>,
+    pending_timer: DebounceSignal,
+    kind: ArtifactKind,
+) {
+    let result = state.with(|value| {
+        value
+            .preview()
+            .ok_or(WorkflowFailure::Internal)
+            .and_then(|preview| {
+                trigger_download(preview.artifact(kind)).map_err(|_| WorkflowFailure::Internal)
+            })
+    });
+    if result.is_err() {
+        pending_timer.update(DebounceTimer::cancel);
+        state.update(WorkflowState::reject_internal_failure);
     }
 }
 
@@ -363,15 +412,6 @@ fn profile_card_class(selected: bool) -> &'static str {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-brand bg-pink-50 p-4 ring-2 ring-brand ring-offset-2 transition"
     } else {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
-    }
-}
-
-const fn ecc_label(ecc: ErrorCorrection) -> &'static str {
-    match ecc {
-        ErrorCorrection::Low => "L",
-        ErrorCorrection::Medium => "M",
-        ErrorCorrection::Quartile => "Q",
-        ErrorCorrection::High => "H",
     }
 }
 

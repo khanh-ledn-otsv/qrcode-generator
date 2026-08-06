@@ -8,6 +8,10 @@
       content="Generate QR codes locally in your browser"
     />
     <meta name="theme-color" content="#f8fafc" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
     <link
       data-trunk
       rel="rust"

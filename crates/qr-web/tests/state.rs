@@ -1,6 +1,6 @@
-use qr_core::tables::ErrorCorrection;
+use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_render::ProfileId;
-use qr_web::workflow::{WorkflowFailure, WorkflowState, evaluate_preview};
+use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
 
 #[test]
 fn payload_entry_preserves_text_and_reports_character_and_byte_counts() {
@@ -101,6 +101,49 @@ fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     assert_eq!(diagnostics.svg_side_pixels(), 90);
     assert_eq!(diagnostics.png_side_pixels(), 270);
     assert!(state.exports_enabled());
+}
+
+#[test]
+fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text() {
+    let sensitive = "private!";
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    let request = state
+        .set_payload(sensitive.to_owned())
+        .expect("revision is available");
+    assert_eq!(
+        state.export_disabled_reason().as_deref(),
+        Some("QR preview is updating.")
+    );
+    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+
+    let preview = state.preview().expect("valid payload has a preview");
+    let svg = preview.artifact(ArtifactKind::Svg);
+    assert_eq!(svg.filename(), "qr-code.svg");
+    assert_eq!(svg.mime_type(), "image/svg+xml");
+    assert_eq!(svg.bytes(), preview.svg().as_bytes());
+    let png = preview.artifact(ArtifactKind::Png);
+    assert_eq!(png.filename(), "qr-code.png");
+    assert_eq!(png.mime_type(), "image/png");
+    assert!(png.bytes().starts_with(b"\x89PNG\r\n\x1a\n"));
+
+    let diagnostics = preview.diagnostics();
+    assert_eq!(diagnostics.mode(), DataMode::Byte);
+    assert!(diagnostics.mask() <= 7);
+    assert_eq!(diagnostics.quiet_zone_modules(), 4);
+    assert_eq!(diagnostics.module_scale(), 8);
+    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 232);
+    assert_eq!(diagnostics.outer_padding_per_side(), 19);
+    assert_eq!(state.export_disabled_reason(), None);
+
+    let label = preview.accessible_label();
+    assert_eq!(
+        label,
+        "Generated QR code preview: Byte mode, version 1, ECC M."
+    );
+    assert!(!label.contains(sensitive));
+    assert!(!svg.filename().contains(sensitive));
+    assert!(!png.filename().contains(sensitive));
+    assert!(!preview.svg().contains(sensitive));
 }
 
 #[test]

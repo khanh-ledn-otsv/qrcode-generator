@@ -42,6 +42,10 @@
   revisioned workflow state machine owns exact payload/profile fitting and
   validation, while a responsive Leptos view schedules cancellable preview
   work and exposes safe fixed-ECC diagnostics without allowing stale results.
+- [Ticket 16](issues/16-complete-downloads-accessibility-and-privacy.md): Ready
+  previews own deterministic SVG/PNG downloads with bounded browser resources;
+  complete payload-free diagnostics and accessible states are backed by native,
+  WASM, axe, privacy-interception, hash, responsive, and pinned-decode tests.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
