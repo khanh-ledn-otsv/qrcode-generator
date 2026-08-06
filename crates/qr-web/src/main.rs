@@ -1,36 +1,236 @@
+use std::time::Duration;
+
 use leptos::prelude::*;
+use qr_core::tables::ErrorCorrection;
+use qr_render::{ProfileId, SUPPORTED_PROFILES};
+use qr_web::workflow::{PreviewRequest, WorkflowFailure, WorkflowState, evaluate_preview};
+
+const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 
 #[component]
 fn App() -> impl IntoView {
+    let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
+    let pending_timer = RwSignal::new(None::<TimeoutHandle>);
+
+    Owner::on_cleanup(move || {
+        if let Some(handle) = pending_timer.get_untracked() {
+            handle.clear();
+        }
+    });
+
+    let profile_options = SUPPORTED_PROFILES.map(|profile| {
+        let profile_id = profile.id();
+        view! {
+            <label class=move || profile_card_class(state.with(|value| value.profile_id() == profile_id))>
+                <input
+                    class="peer sr-only"
+                    type="radio"
+                    name="output-profile"
+                    value=profile_value(profile_id)
+                    prop:checked=move || state.with(|value| value.profile_id() == profile_id)
+                    on:change=move |_| {
+                        if let Some(request) = state.try_update(|value| value.select_profile(profile_id)) {
+                            schedule_preview(state, pending_timer, request);
+                        }
+                    }
+                />
+                <span class="block text-sm font-bold text-slate-950">{profile_name(profile_id)}</span>
+                <span class="mt-1 block text-xs leading-5 text-slate-600">
+                    {format!(
+                        "{} px SVG · {} px PNG · up to V{}",
+                        profile.svg_dimensions().width().get(),
+                        profile.png_dimensions().width().get(),
+                        profile.maximum_version().number(),
+                    )}
+                </span>
+            </label>
+        }
+    });
+
     view! {
-        <main class="relative isolate grid min-h-screen place-items-center overflow-hidden bg-slate-50 px-6 py-16">
-            <div class="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_top,#fce7f3_0%,#f8fafc_46%,#f1f5f9_100%)]"></div>
-            <div class="bg-brand/15 absolute left-1/2 top-0 -z-10 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"></div>
+        <main class="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
+            <div class="mx-auto max-w-7xl">
+                <header class="mb-8 max-w-3xl">
+                    <p class="text-brand text-sm font-bold uppercase tracking-[0.22em]">"Private by design"</p>
+                    <h1 class="mt-3 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                        "Create a safe QR code"
+                    </h1>
+                    <p class="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
+                        "Your text stays in this browser. Choose an output profile and the QR code will refit automatically at error correction M."
+                    </p>
+                </header>
 
-            <section class="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white/85 p-8 text-center shadow-2xl shadow-slate-300/50 backdrop-blur-xl sm:p-14">
-                <div class="bg-brand/10 text-brand mx-auto mb-8 grid size-14 place-items-center rounded-2xl ring-1 ring-inset ring-brand/15">
-                    <span class="text-2xl font-bold">"Q"</span>
+                <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
+                    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="payload-heading">
+                        <div>
+                            <h2 id="payload-heading" class="text-xl font-bold text-slate-950">"Payload"</h2>
+                            <p class="mt-1 text-sm leading-6 text-slate-600">
+                                "Text is encoded exactly as entered—spaces, line breaks, and Unicode included."
+                            </p>
+                        </div>
+
+                        <label for="qr-payload" class="mt-6 block text-sm font-semibold text-slate-800">
+                            "Text to encode"
+                        </label>
+                        <textarea
+                            id="qr-payload"
+                            class="focus:border-brand focus:ring-brand mt-2 min-h-44 w-full resize-y rounded-2xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm leading-6 text-slate-950 shadow-inner outline-none transition focus:ring-2 focus:ring-offset-2"
+                            placeholder="Paste or type text exactly as it should be encoded"
+                            aria-describedby="payload-counts payload-validation payload-caution"
+                            aria-invalid=move || state.with(|value| value.validation_message().is_some())
+                            prop:value=move || state.with(|value| value.payload().to_owned())
+                            on:input=move |event| {
+                                let payload = event_target_value(&event);
+                                if let Some(request) = state.try_update(|value| value.set_payload(payload)) {
+                                    schedule_preview(state, pending_timer, request);
+                                }
+                            }
+                        ></textarea>
+
+                        <p id="payload-counts" class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
+                            <span>{move || format!("{} characters", state.with(WorkflowState::character_count))}</span>
+                            <span>{move || format!("{} UTF-8 bytes", state.with(WorkflowState::byte_count))}</span>
+                        </p>
+                        <p id="payload-validation" class="mt-3 min-h-6 text-sm font-semibold text-red-700" role="alert" aria-live="polite">
+                            {move || state.with(WorkflowState::validation_message).unwrap_or_default()}
+                        </p>
+                        <p id="payload-caution" class="mt-2 min-h-6 text-sm font-semibold text-amber-800" role="status">
+                            {move || state.with(|value| value.caution().unwrap_or_default())}
+                        </p>
+
+                        <fieldset class="mt-8">
+                            <legend class="text-sm font-semibold text-slate-800">"Output profile"</legend>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{profile_options}</div>
+                        </fieldset>
+                    </section>
+
+                    <div class="grid gap-6 lg:sticky lg:top-8">
+                        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="preview-heading">
+                            <div class="flex items-center justify-between gap-4">
+                                <h2 id="preview-heading" class="text-xl font-bold text-slate-950">"Preview"</h2>
+                                <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                                    "ECC M"
+                                </span>
+                            </div>
+                            <div
+                                class="mt-5 grid aspect-square w-full place-items-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                                role="img"
+                                aria-label="Generated QR code preview"
+                            >
+                                <div
+                                    class:hidden=move || state.with(|value| value.preview().is_none())
+                                    class="w-full [&>svg]:h-auto [&>svg]:w-full"
+                                    inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())
+                                ></div>
+                                <p class:hidden=move || state.with(|value| value.preview().is_some()) class="max-w-xs text-center text-sm leading-6 text-slate-500">
+                                    {move || if state.with(WorkflowState::is_pending) { "Updating preview…" } else { "Enter a valid payload to see the QR preview." }}
+                                </p>
+                            </div>
+                        </section>
+
+                        <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="diagnostics-heading">
+                            <h2 id="diagnostics-heading" class="text-xl font-bold text-slate-950">"Diagnostics"</h2>
+                            <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 text-sm">
+                                <Diagnostic label="ECC" value=move || diagnostic_value(state, |details| ecc_label(details.ecc()).to_owned()) />
+                                <Diagnostic label="Version" value=move || diagnostic_value(state, |details| format!("V{} / V{} max", details.selected_version().number(), details.maximum_version().number())) />
+                                <Diagnostic label="Data bits" value=move || diagnostic_value(state, |details| format!("{} / {}", details.used_data_bits(), details.available_data_bits())) />
+                                <Diagnostic label="Data codewords" value=move || diagnostic_value(state, |details| details.data_codewords().to_string()) />
+                                <Diagnostic label="Matrix" value=move || diagnostic_value(state, |details| format!("{} × {} modules", details.matrix_modules(), details.matrix_modules())) />
+                                <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
+                            </dl>
+                            <p class="mt-5 rounded-2xl bg-slate-100 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
+                                {move || diagnostic_value(state, |details| details.print_guidance().to_owned())}
+                            </p>
+                        </section>
+                    </div>
                 </div>
-
-                <p class="text-brand mb-4 text-sm font-semibold uppercase tracking-[0.28em]">
-                    "Leptos + Tailwind CSS"
-                </p>
-                <h1 class="text-5xl font-extrabold tracking-tight text-slate-950 sm:text-7xl">
-                    "Hello, "
-                    <span class="text-brand">"world!"</span>
-                </h1>
-                <p class="mx-auto mt-6 max-w-lg text-lg leading-8 text-slate-600">
-                    "Your QR code generator has a new look and is ready for the next feature."
-                </p>
-
-                <div class="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                    <button class="bg-brand hover:bg-brand-dark focus-visible:outline-brand w-full rounded-xl px-6 py-3.5 font-semibold text-white shadow-lg shadow-pink-200 transition hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 sm:w-auto">
-                        "Create a QR code"
-                    </button>
-                    <span class="text-sm text-slate-500">"Built with Rust and WebAssembly"</span>
-                </div>
-            </section>
+            </div>
         </main>
+    }
+}
+
+#[component]
+fn Diagnostic<F>(label: &'static str, value: F) -> impl IntoView
+where
+    F: Fn() -> String + Send + 'static,
+{
+    view! {
+        <div>
+            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
+            <dd class="mt-1 font-bold text-slate-900">{value}</dd>
+        </div>
+    }
+}
+
+fn schedule_preview(
+    state: RwSignal<WorkflowState>,
+    pending_timer: RwSignal<Option<TimeoutHandle>>,
+    request: PreviewRequest,
+) {
+    if let Some(handle) = pending_timer.get_untracked() {
+        handle.clear();
+    }
+    let revision = request.revision();
+    match set_timeout_with_handle(
+        move || {
+            let result = evaluate_preview(&request);
+            state.update(|value| {
+                _ = value.complete_preview(revision, result);
+            });
+        },
+        PREVIEW_DEBOUNCE,
+    ) {
+        Ok(handle) => pending_timer.set(Some(handle)),
+        Err(_) => state.update(|value| {
+            _ = value.complete_preview(revision, Err(WorkflowFailure::Internal));
+        }),
+    }
+}
+
+fn diagnostic_value(
+    state: RwSignal<WorkflowState>,
+    format: impl FnOnce(qr_web::workflow::Diagnostics) -> String,
+) -> String {
+    state.with(|value| {
+        value
+            .preview()
+            .map(|preview| format(preview.diagnostics()))
+            .unwrap_or_else(|| "—".to_owned())
+    })
+}
+
+const fn profile_name(profile_id: ProfileId) -> &'static str {
+    match profile_id {
+        ProfileId::Inline => "Inline",
+        ProfileId::Content => "Content",
+        ProfileId::Landing => "Landing",
+        ProfileId::Print => "Print",
+    }
+}
+
+const fn profile_value(profile_id: ProfileId) -> &'static str {
+    match profile_id {
+        ProfileId::Inline => "inline",
+        ProfileId::Content => "content",
+        ProfileId::Landing => "landing",
+        ProfileId::Print => "print",
+    }
+}
+
+fn profile_card_class(selected: bool) -> &'static str {
+    if selected {
+        "focus-within:ring-brand cursor-pointer rounded-2xl border border-brand bg-pink-50 p-4 ring-2 ring-brand ring-offset-2 transition"
+    } else {
+        "focus-within:ring-brand cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
+    }
+}
+
+const fn ecc_label(ecc: ErrorCorrection) -> &'static str {
+    match ecc {
+        ErrorCorrection::Low => "L",
+        ErrorCorrection::Medium => "M",
+        ErrorCorrection::Quartile => "Q",
+        ErrorCorrection::High => "H",
     }
 }
 

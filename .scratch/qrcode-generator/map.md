@@ -38,6 +38,10 @@
   exporter paints checked RGBA rectangles, emits deterministic metadata-free
   artifacts, matches a native/WASM hash contract, and passes parsed-pixel plus
   pinned ZXing decode gates across every supported profile and version.
+- [Ticket 15](issues/15-deliver-safe-interactive-workflow.md): A plain-Rust,
+  revisioned workflow state machine owns exact payload/profile fitting and
+  validation, while a responsive Leptos view schedules cancellable preview
+  work and exposes safe fixed-ECC diagnostics without allowing stale results.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
