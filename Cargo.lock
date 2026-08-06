@@ -1390,6 +1390,7 @@ dependencies = [
  "leptos",
  "qr-core",
  "qr-render",
+ "web-sys",
 ]
 
 [[package]]

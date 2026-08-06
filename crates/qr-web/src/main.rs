@@ -1,9 +1,13 @@
 use std::time::Duration;
 
 use leptos::prelude::*;
+use leptos::wasm_bindgen::JsCast;
+use leptos::web_sys::{ClipboardEvent, HtmlTextAreaElement};
 use qr_core::tables::ErrorCorrection;
 use qr_render::{ProfileId, SUPPORTED_PROFILES};
-use qr_web::workflow::{PreviewRequest, WorkflowFailure, WorkflowState, evaluate_preview};
+use qr_web::workflow::{
+    PreviewRequest, WorkflowFailure, WorkflowState, evaluate_preview, profile_presentation,
+};
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 
@@ -20,21 +24,22 @@ fn App() -> impl IntoView {
 
     let profile_options = SUPPORTED_PROFILES.map(|profile| {
         let profile_id = profile.id();
+        let presentation = profile_presentation(profile_id);
         view! {
             <label class=move || profile_card_class(state.with(|value| value.profile_id() == profile_id))>
                 <input
                     class="peer sr-only"
                     type="radio"
                     name="output-profile"
-                    value=profile_value(profile_id)
+                    value=presentation.value()
                     prop:checked=move || state.with(|value| value.profile_id() == profile_id)
                     on:change=move |_| {
-                        if let Some(request) = state.try_update(|value| value.select_profile(profile_id)) {
+                        if let Some(Ok(request)) = state.try_update(|value| value.select_profile(profile_id)) {
                             schedule_preview(state, pending_timer, request);
                         }
                     }
                 />
-                <span class="block text-sm font-bold text-slate-950">{profile_name(profile_id)}</span>
+                <span class="block text-sm font-bold text-slate-950">{presentation.name()}</span>
                 <span class="mt-1 block text-xs leading-5 text-slate-600">
                     {format!(
                         "{} px SVG · {} px PNG · up to V{}",
@@ -78,12 +83,45 @@ fn App() -> impl IntoView {
                             placeholder="Paste or type text exactly as it should be encoded"
                             aria-describedby="payload-counts payload-validation payload-caution"
                             aria-invalid=move || state.with(|value| value.validation_message().is_some())
-                            prop:value=move || state.with(|value| value.payload().to_owned())
+                            prop:value=move || state.with(WorkflowState::textarea_value)
                             on:input=move |event| {
                                 let payload = event_target_value(&event);
-                                if let Some(request) = state.try_update(|value| value.set_payload(payload)) {
+                                if let Some(Ok(request)) = state.try_update(|value| value.set_display_payload(payload)) {
                                     schedule_preview(state, pending_timer, request);
                                 }
+                            }
+                            on:paste=move |event: ClipboardEvent| {
+                                let Some(clipboard) = event.clipboard_data() else {
+                                    return;
+                                };
+                                let Ok(pasted) = clipboard.get_data("text/plain") else {
+                                    return;
+                                };
+                                let Some(target) = event
+                                    .target()
+                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok())
+                                else {
+                                    return;
+                                };
+                                let (Ok(Some(start)), Ok(Some(end))) =
+                                    (target.selection_start(), target.selection_end())
+                                else {
+                                    return;
+                                };
+                                let Some(Ok(request)) = state.try_update(|value| {
+                                    value.replace_display_range(start, end, &pasted)
+                                }) else {
+                                    return;
+                                };
+
+                                event.prevent_default();
+                                target.set_value(&state.with(WorkflowState::textarea_value));
+                                if let Some(inserted_length) = textarea_utf16_length(&pasted)
+                                    && let Some(caret) = start.checked_add(inserted_length)
+                                {
+                                    _ = target.set_selection_range(caret, caret);
+                                }
+                                schedule_preview(state, pending_timer, request);
                             }
                         ></textarea>
 
@@ -199,30 +237,28 @@ fn diagnostic_value(
     })
 }
 
-const fn profile_name(profile_id: ProfileId) -> &'static str {
-    match profile_id {
-        ProfileId::Inline => "Inline",
-        ProfileId::Content => "Content",
-        ProfileId::Landing => "Landing",
-        ProfileId::Print => "Print",
-    }
-}
-
-const fn profile_value(profile_id: ProfileId) -> &'static str {
-    match profile_id {
-        ProfileId::Inline => "inline",
-        ProfileId::Content => "content",
-        ProfileId::Landing => "landing",
-        ProfileId::Print => "print",
-    }
-}
-
 fn profile_card_class(selected: bool) -> &'static str {
     if selected {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-brand bg-pink-50 p-4 ring-2 ring-brand ring-offset-2 transition"
     } else {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
     }
+}
+
+fn textarea_utf16_length(payload: &str) -> Option<u32> {
+    let mut length = 0_u32;
+    let mut characters = payload.chars().peekable();
+    while let Some(character) = characters.next() {
+        if character == '\r' {
+            if characters.peek() == Some(&'\n') {
+                _ = characters.next();
+            }
+            length = length.checked_add(1)?;
+        } else {
+            length = length.checked_add(u32::try_from(character.len_utf16()).ok()?)?;
+        }
+    }
+    Some(length)
 }
 
 const fn ecc_label(ecc: ErrorCorrection) -> &'static str {

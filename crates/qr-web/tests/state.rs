@@ -6,7 +6,9 @@ use qr_web::workflow::{WorkflowFailure, WorkflowState, evaluate_preview};
 fn payload_entry_preserves_text_and_reports_character_and_byte_counts() {
     let mut state = WorkflowState::new(ProfileId::Inline);
 
-    state.set_payload("  café\n".to_owned());
+    state
+        .set_payload("  café\n".to_owned())
+        .expect("revision is available");
 
     assert_eq!(state.payload(), "  café\n");
     assert_eq!(state.character_count(), 7);
@@ -14,9 +16,41 @@ fn payload_entry_preserves_text_and_reports_character_and_byte_counts() {
 }
 
 #[test]
+fn textarea_edits_preserve_unchanged_carriage_return_sequences() {
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    state
+        .set_payload("first\r\nsecond\rthird".to_owned())
+        .expect("revision is available");
+
+    state
+        .set_display_payload("first\nsecond\nthird!".to_owned())
+        .expect("display edit maps to raw payload");
+
+    assert_eq!(state.payload(), "first\r\nsecond\rthird!");
+    assert_eq!(state.textarea_value(), "first\nsecond\nthird!");
+}
+
+#[test]
+fn raw_paste_replaces_a_textarea_selection_without_normalizing_line_endings() {
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    state
+        .set_payload("before after".to_owned())
+        .expect("revision is available");
+
+    state
+        .replace_display_range(7, 7, "one\r\ntwo\r")
+        .expect("selection maps to raw payload");
+
+    assert_eq!(state.payload(), "before one\r\ntwo\rafter");
+    assert_eq!(state.textarea_value(), "before one\ntwo\nafter");
+}
+
+#[test]
 fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     let mut state = WorkflowState::new(ProfileId::Inline);
-    let request = state.set_payload("hello".to_owned());
+    let request = state
+        .set_payload("hello".to_owned())
+        .expect("revision is available");
 
     assert_eq!(request.ecc(), ErrorCorrection::Medium);
     assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
@@ -46,7 +80,9 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
 
     for (profile_id, maximum_version, svg_side, png_side, is_print) in cases {
         let mut state = WorkflowState::new(profile_id);
-        let request = state.set_payload("hello".to_owned());
+        let request = state
+            .set_payload("hello".to_owned())
+            .expect("revision is available");
         assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
         let diagnostics = state.preview().expect("short payload fits").diagnostics();
         assert_eq!(diagnostics.ecc(), ErrorCorrection::Medium);
@@ -64,7 +100,9 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
 #[test]
 fn profile_changes_refit_without_changing_safe_ecc() {
     let mut state = WorkflowState::new(ProfileId::Content);
-    let payload_request = state.set_payload("a".repeat(90));
+    let payload_request = state
+        .set_payload("a".repeat(90))
+        .expect("revision is available");
     assert!(state.complete_preview(
         payload_request.revision(),
         evaluate_preview(&payload_request),
@@ -79,12 +117,16 @@ fn profile_changes_refit_without_changing_safe_ecc() {
         6,
     );
 
-    let inline_request = state.select_profile(ProfileId::Inline);
+    let inline_request = state
+        .select_profile(ProfileId::Inline)
+        .expect("revision is available");
     assert_eq!(inline_request.ecc(), ErrorCorrection::Medium);
     assert!(state.complete_preview(inline_request.revision(), evaluate_preview(&inline_request),));
     assert!(!state.exports_enabled());
 
-    let print_request = state.select_profile(ProfileId::Print);
+    let print_request = state
+        .select_profile(ProfileId::Print)
+        .expect("revision is available");
     assert_eq!(print_request.ecc(), ErrorCorrection::Medium);
     assert!(state.complete_preview(print_request.revision(), evaluate_preview(&print_request),));
     assert_eq!(
@@ -101,7 +143,9 @@ fn profile_changes_refit_without_changing_safe_ecc() {
 #[test]
 fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
     let mut state = WorkflowState::new(ProfileId::Print);
-    let safe_request = state.set_payload("a".repeat(70));
+    let safe_request = state
+        .set_payload("a".repeat(70))
+        .expect("revision is available");
     assert!(state.complete_preview(safe_request.revision(), evaluate_preview(&safe_request),));
     assert_eq!(
         state
@@ -113,14 +157,16 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
         5,
     );
 
-    let logo_request = state.set_logo_enabled(true);
+    let logo_request = state.set_logo_enabled(true).expect("revision is available");
     assert_eq!(logo_request.ecc(), ErrorCorrection::High);
     assert!(state.complete_preview(logo_request.revision(), evaluate_preview(&logo_request),));
     let logo_diagnostics = state.preview().expect("logo preview fits").diagnostics();
     assert_eq!(logo_diagnostics.ecc(), ErrorCorrection::High);
     assert_eq!(logo_diagnostics.selected_version().number(), 8);
 
-    let restored_request = state.set_logo_enabled(false);
+    let restored_request = state
+        .set_logo_enabled(false)
+        .expect("revision is available");
     assert_eq!(restored_request.ecc(), ErrorCorrection::Medium);
     assert!(state.complete_preview(
         restored_request.revision(),
@@ -138,7 +184,9 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
 fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     let mut state = WorkflowState::new(ProfileId::Inline);
 
-    let empty = state.set_payload(String::new());
+    let empty = state
+        .set_payload(String::new())
+        .expect("revision is available");
     assert!(state.complete_preview(empty.revision(), evaluate_preview(&empty)));
     assert_eq!(
         state.validation_message().as_deref(),
@@ -146,7 +194,9 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     );
     assert!(!state.exports_enabled());
 
-    let over_limit = state.set_payload("x".repeat(4097));
+    let over_limit = state
+        .set_payload("x".repeat(4097))
+        .expect("revision is available");
     assert!(state.complete_preview(over_limit.revision(), evaluate_preview(&over_limit)));
     assert_eq!(
         state.validation_message().as_deref(),
@@ -154,7 +204,9 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     );
     assert!(!state.exports_enabled());
 
-    let over_capacity = state.set_payload("x".repeat(100));
+    let over_capacity = state
+        .set_payload("x".repeat(100))
+        .expect("revision is available");
     assert!(state.complete_preview(over_capacity.revision(), evaluate_preview(&over_capacity),));
     assert_eq!(
         state.validation_message().as_deref(),
@@ -162,7 +214,9 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     );
     assert!(!state.exports_enabled());
 
-    let internal = state.set_payload("valid".to_owned());
+    let internal = state
+        .set_payload("valid".to_owned())
+        .expect("revision is available");
     assert!(state.complete_preview(internal.revision(), Err(WorkflowFailure::Internal)));
     assert_eq!(
         state.validation_message().as_deref(),
@@ -174,7 +228,9 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
 #[test]
 fn control_characters_add_a_deterministic_caution_without_changing_valid_text() {
     let mut state = WorkflowState::new(ProfileId::Inline);
-    let request = state.set_payload("line one\nline two\t".to_owned());
+    let request = state
+        .set_payload("line one\nline two\t".to_owned())
+        .expect("revision is available");
     assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
 
     assert_eq!(state.payload(), "line one\nline two\t");
@@ -188,8 +244,12 @@ fn control_characters_add_a_deterministic_caution_without_changing_valid_text() 
 #[test]
 fn stale_preview_results_cannot_replace_the_latest_value() {
     let mut state = WorkflowState::new(ProfileId::Print);
-    let stale = state.set_payload("old".to_owned());
-    let latest = state.set_payload("n".repeat(200));
+    let stale = state
+        .set_payload("old".to_owned())
+        .expect("revision is available");
+    let latest = state
+        .set_payload("n".repeat(200))
+        .expect("revision is available");
     assert!(!state.exports_enabled());
 
     assert!(state.complete_preview(latest.revision(), evaluate_preview(&latest)));
