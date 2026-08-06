@@ -17,6 +17,8 @@ pub struct FixtureManifest {
     schema_version: u8,
     decoder: DecoderProvenance,
     fixtures: Vec<Fixture>,
+    #[serde(default)]
+    algorithm_fixtures: Vec<AlgorithmFixture>,
 }
 
 impl FixtureManifest {
@@ -38,6 +40,11 @@ impl FixtureManifest {
     #[must_use]
     pub fn fixtures(&self) -> &[Fixture] {
         &self.fixtures
+    }
+
+    #[must_use]
+    pub fn algorithm_fixtures(&self) -> &[AlgorithmFixture] {
+        &self.algorithm_fixtures
     }
 
     #[must_use]
@@ -75,6 +82,147 @@ impl FixtureManifest {
                 )));
             }
             fixture.verify(root)?;
+        }
+        for fixture in &self.algorithm_fixtures {
+            if !ids.insert(fixture.id.as_str()) {
+                return Err(VerificationError::new(format!(
+                    "duplicate fixture id {}",
+                    fixture.id
+                )));
+            }
+            fixture.verify(root)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AlgorithmFixture {
+    id: String,
+    synthetic: bool,
+    artifact_file: PathBuf,
+    artifact_sha256: String,
+    standard_topic: String,
+    scope: String,
+    generation_command: String,
+    sources: Vec<AlgorithmSource>,
+    local_verification: Vec<String>,
+    verification: VerificationState,
+}
+
+impl AlgorithmFixture {
+    fn verify(&self, root: &Path) -> Result<(), VerificationError> {
+        const COMMAND: &str = "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check";
+
+        require_nonempty("algorithm fixture id", &self.id)?;
+        if !self.synthetic {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {} must explicitly declare synthetic data",
+                self.id
+            )));
+        }
+        require_nonempty("algorithm standard topic", &self.standard_topic)?;
+        require_nonempty("algorithm fixture scope", &self.scope)?;
+        if self.generation_command != COMMAND {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {} has an unpinned generation command",
+                self.id
+            )));
+        }
+        verify_hash(
+            root,
+            &self.artifact_file,
+            &self.artifact_sha256,
+            "algorithm fixture",
+            &self.id,
+        )?;
+        if self.sources.len() != 2 {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {} requires two independent generators",
+                self.id
+            )));
+        }
+        let mut oracles = HashSet::new();
+        for source in &self.sources {
+            source.verify(&self.id, &self.artifact_sha256, COMMAND)?;
+            if !oracles.insert(source.oracle) {
+                return Err(VerificationError::new(format!(
+                    "algorithm fixture {} does not identify two independent generators",
+                    self.id
+                )));
+            }
+        }
+        if self.local_verification.is_empty() {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {} requires local invariant or reference coverage",
+                self.id
+            )));
+        }
+        for evidence in &self.local_verification {
+            require_nonempty("local algorithm verification", evidence)?;
+        }
+        self.verification.verify(&self.id)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AlgorithmSource {
+    oracle: Oracle,
+    tool: String,
+    version: String,
+    source_url: String,
+    symbols: Vec<String>,
+    command: String,
+    observed_artifact_sha256: String,
+}
+
+impl AlgorithmSource {
+    fn verify(
+        &self,
+        fixture_id: &str,
+        artifact_sha256: &str,
+        expected_command: &str,
+    ) -> Result<(), VerificationError> {
+        let pinned = self.oracle.provenance();
+        let expected_source_url = match self.oracle {
+            Oracle::Nayuki => {
+                "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py"
+            }
+            Oracle::PythonQrcode => {
+                "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py"
+            }
+        };
+        if self.tool != pinned.tool
+            || self.version != pinned.version
+            || self.source_url != expected_source_url
+            || self.command != expected_command
+        {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {fixture_id} source {} does not match pinned provenance",
+                pinned.cli_name
+            )));
+        }
+        if self.symbols.is_empty() {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {fixture_id} source {} requires exact symbols",
+                pinned.cli_name
+            )));
+        }
+        for symbol in &self.symbols {
+            require_nonempty("algorithm source symbol", symbol)?;
+        }
+        verify_sha256_text(
+            &self.observed_artifact_sha256,
+            "source algorithm artifact",
+            fixture_id,
+        )?;
+        if self.observed_artifact_sha256 != artifact_sha256 {
+            return Err(VerificationError::new(format!(
+                "algorithm fixture {fixture_id} source {} disagrees with the accepted artifact",
+                pinned.cli_name
+            )));
         }
         Ok(())
     }

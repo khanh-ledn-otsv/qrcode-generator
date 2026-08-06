@@ -1,8 +1,10 @@
 use proptest::prelude::*;
+use qr_core::Version;
 use qr_core::reed_solomon::{
     ReedSolomonError, SUPPORTED_ECC_CODEWORD_COUNTS, divide, generate_error_correction,
     generator_polynomial, multiply,
 };
+use qr_core::tables::{ErrorCorrection, lookup};
 
 #[test]
 fn field_zero_inverse_and_known_product_are_exact() {
@@ -40,6 +42,29 @@ fn every_qr_generator_and_remainder_matches_dual_oracle_fixtures() {
     observed_degrees.sort_unstable();
     observed_degrees.dedup();
     assert_eq!(observed_degrees, SUPPORTED_ECC_CODEWORD_COUNTS);
+}
+
+#[test]
+fn supported_degrees_are_derived_from_all_standard_table_rows() {
+    let mut table_degrees = Vec::new();
+    for version_number in Version::MIN..=Version::MAX {
+        let version = Version::new(version_number).expect("loop uses QR versions");
+        for ecc in [
+            ErrorCorrection::Low,
+            ErrorCorrection::Medium,
+            ErrorCorrection::Quartile,
+            ErrorCorrection::High,
+        ] {
+            table_degrees.push(
+                lookup(version, ecc)
+                    .expect("every QR table row exists")
+                    .ecc_codewords_per_block(),
+            );
+        }
+    }
+    table_degrees.sort_unstable();
+    table_degrees.dedup();
+    assert_eq!(table_degrees, SUPPORTED_ECC_CODEWORD_COUNTS);
 }
 
 fn decode_hex(value: &str) -> Vec<u8> {
@@ -82,7 +107,12 @@ fn every_field_product_and_quotient_agrees_with_polynomial_arithmetic() {
 
 #[test]
 fn malformed_requests_return_typed_errors_without_mutating_input() {
-    assert_eq!(divide(1, 0), Err(ReedSolomonError::DivisionByZero));
+    let division_error = divide(1, 0).expect_err("division by zero is invalid");
+    assert_eq!(division_error, ReedSolomonError::DivisionByZero);
+    assert_eq!(
+        division_error.to_string(),
+        "cannot divide a GF(256) value by zero"
+    );
     for requested in [0, 1, 6, 8, 29, 31, u8::MAX] {
         assert_eq!(
             generator_polynomial(requested),
@@ -100,7 +130,43 @@ fn malformed_requests_return_typed_errors_without_mutating_input() {
             maximum_total_codewords: 255,
         })
     );
+    assert_eq!(
+        generate_error_correction(&data, 7)
+            .expect_err("oversized block is invalid")
+            .to_string(),
+        "Reed–Solomon block has 249 data and 7 error-correction codewords, exceeding 255 total codewords"
+    );
+    assert_eq!(
+        generator_polynomial(8)
+            .expect_err("unsupported degree is invalid")
+            .to_string(),
+        "QR error-correction codeword count must be one of [7, 10, 13, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30], got 8"
+    );
     assert_eq!(data, unchanged);
+}
+
+#[test]
+fn field_block_length_boundaries_are_exact_for_every_supported_degree() {
+    for degree in SUPPORTED_ECC_CODEWORD_COUNTS {
+        let maximum_data_codewords = usize::from(u8::MAX - degree);
+        let accepted = vec![0xA5; maximum_data_codewords];
+        assert_eq!(
+            generate_error_correction(&accepted, degree)
+                .expect("exact field-sized block is accepted")
+                .len(),
+            usize::from(degree)
+        );
+
+        let rejected = vec![0xA5; maximum_data_codewords + 1];
+        assert!(matches!(
+            generate_error_correction(&rejected, degree),
+            Err(ReedSolomonError::BlockTooLong {
+                data_codewords,
+                ecc_codewords,
+                maximum_total_codewords: 255,
+            }) if data_codewords == maximum_data_codewords + 1 && ecc_codewords == degree
+        ));
+    }
 }
 
 fn slow_multiply(mut left: u8, mut right: u8) -> u8 {

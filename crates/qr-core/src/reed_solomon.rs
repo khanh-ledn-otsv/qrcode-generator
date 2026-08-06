@@ -5,7 +5,8 @@
 //! and algorithm vectors are public-corroborated, non-normative evidence from
 //! Nayuki QR Code Generator 1.8.0 (`reed_solomon_*`) and python-qrcode 8.2
 //! (`Polynomial`, `gexp`, and `glog`). See
-//! `docs/research/qr-public-source-provenance.md`.
+//! `docs/research/qr-public-source-provenance.md` and the accepted
+//! `qr-reed-solomon-vectors` entry in `tests/fixtures/manifest.json`.
 
 use std::error::Error;
 use std::fmt;
@@ -78,12 +79,19 @@ pub fn generate_error_correction(
 
     let mut remainder = vec![0_u8; usize::from(codeword_count)];
     for &data_codeword in data {
-        let factor = data_codeword ^ remainder[0];
+        let first =
+            remainder
+                .first()
+                .copied()
+                .ok_or(ReedSolomonError::UnsupportedCodewordCount {
+                    requested: codeword_count,
+                })?;
+        let factor = data_codeword ^ first;
         remainder.rotate_left(1);
         if let Some(last) = remainder.last_mut() {
             *last = 0;
         }
-        for (value, coefficient) in remainder.iter_mut().zip(generator[1..].iter().copied()) {
+        for (value, coefficient) in remainder.iter_mut().zip(generator.iter().copied().skip(1)) {
             *value ^= multiply(coefficient, factor);
         }
     }

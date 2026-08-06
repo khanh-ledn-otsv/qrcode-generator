@@ -85,5 +85,55 @@
         "notes": "Nayuki and python-qrcode matrices and recorded SHA-256 hashes agree byte-for-byte."
       }
     }
+  ],
+  "algorithm_fixtures": [
+    {
+      "id": "qr-reed-solomon-vectors",
+      "synthetic": true,
+      "artifact_file": "reed_solomon.csv",
+      "artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1",
+      "standard_topic": "ISO/IEC 18004:2024 error-correction codeword generation; clause mapping pending audit",
+      "scope": "All 13 QR generator degrees and synthetic blocks; mode, ECI, version, ECC level, and mask are not individually applicable",
+      "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "version": "1.8.0",
+          "source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "symbols": [
+            "_reed_solomon_compute_divisor",
+            "_reed_solomon_compute_remainder",
+            "_reed_solomon_multiply"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
+          "observed_artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1"
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "version": "8.2",
+          "source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+          "symbols": [
+            "Polynomial",
+            "gexp",
+            "glog"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
+          "observed_artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1"
+        }
+      ],
+      "local_verification": [
+        "Exhaustive optimized-versus-polynomial GF(256) multiplication and division checks",
+        "Independent slow generator construction and polynomial long-division property tests",
+        "Generator-degree derivation from all 160 validated QR table rows"
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "ticket-06-dual-oracle-implementation-review",
+        "verified_at": "2026-08-06",
+        "notes": "Both pinned encoders agree exactly for all generator and remainder vectors; local references cover field arithmetic and polynomial division. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
+      }
+    }
   ]
 }

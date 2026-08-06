@@ -67,7 +67,9 @@ the complete CSV diff before accepting it.
 Reed–Solomon generator and remainder vectors are checked for every QR ECC
 degree against Nayuki's `reed_solomon_*` functions and python-qrcode's
 `Polynomial`/`gexp`/`glog` implementation. The fixture includes leading and
-trailing zero blocks plus the maximum table-defined QR data block:
+trailing zero blocks plus the maximum table-defined QR data block. Its accepted
+provenance, artifact hash, source files/symbols, and local-reference coverage
+are recorded as `qr-reed-solomon-vectors` in `tests/fixtures/manifest.json`:
 
 ```sh
 uv run --project tests/oracles --locked python \
