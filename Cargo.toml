@@ -22,6 +22,7 @@ publish = false
 
 [workspace.dependencies]
 leptos = { version = "=0.8.20", features = ["csr"] }
+png = { version = "=0.18.1", default-features = false }
 qr-core = { version = "=0.1.0", path = "crates/qr-core" }
 qr-render = { version = "=0.1.0", path = "crates/qr-render" }
 serde = "=1.0.229"

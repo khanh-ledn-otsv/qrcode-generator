@@ -9,12 +9,17 @@ publish.workspace = true
 path = "src/lib.rs"
 
 [dependencies]
+png.workspace = true
 qr-core.workspace = true
 
-[dev-dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 fixture-tool = { path = "../../tools/fixture-tool" }
 proptest = "=1.11.0"
 resvg = { version = "=0.48.1", default-features = false }
 roxmltree = "=0.21.1"
 sha2.workspace = true
 tempfile = "=3.27.0"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+sha2.workspace = true
+wasm-bindgen-test = "=0.3.76"

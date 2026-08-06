@@ -4,6 +4,7 @@
 
 mod geometry;
 mod model;
+mod png;
 mod profile;
 mod svg;
 
@@ -16,6 +17,7 @@ pub use model::{
     MAX_RGBA_BUFFER_BYTES, ModuleDimensions, ModulePoint, PixelPoint, PngPlacement, RenderCell,
     RenderError, RenderModel, RenderOptions, Rgba, SvgPlacement,
 };
+pub use png::render_png;
 pub use profile::{OutputProfile, ProfileError, ProfileId, SUPPORTED_PROFILES};
 pub use qr_core::{Version, VersionError};
 pub use svg::render_svg;

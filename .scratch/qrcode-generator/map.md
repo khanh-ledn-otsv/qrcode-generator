@@ -34,6 +34,10 @@
   production exporter emits compact deterministic safe SVG with exact logical
   placement; parsed all-profile/version structure, independent rasterization,
   and pinned ZXing decode prove the artifact boundary.
+- [Ticket 14](issues/14-export-safe-png-artifacts.md): A pinned direct PNG
+  exporter paints checked RGBA rectangles, emits deterministic metadata-free
+  artifacts, matches a native/WASM hash contract, and passes parsed-pixel plus
+  pinned ZXing decode gates across every supported profile and version.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
