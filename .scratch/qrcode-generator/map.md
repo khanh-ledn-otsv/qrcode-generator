@@ -17,6 +17,10 @@
   encoded as one deterministic Numeric, Alphanumeric, or Byte segment with
   UTF-8 ECI 26 when required, first-fit version selection, typed failures, and
   fully padded data codewords.
+- [Ticket 08](issues/08-build-classified-function-matrices.md): Checked matrix
+  construction classifies every function region for all 40 versions, validates
+  reservations and finalization, and is covered by exact all-version invariants
+  plus dual-oracle readable fixtures for Versions 1, 2, 7, and 40.
 
 ## Notes
 

@@ -115,13 +115,44 @@ fn builder_rejects_invalid_reservations_and_incomplete_finalization() {
     assert_eq!(
         builder.reserve(0, 0, ModuleKind::Data),
         Err(MatrixError::InvalidReservation {
+            x: 0,
+            y: 0,
             kind: ModuleKind::Data,
         })
     );
     assert_eq!(
-        builder.finish(),
-        Err(MatrixError::Incomplete { unwritten: 441 })
+        builder.reserve(0, 0, ModuleKind::Format),
+        Err(MatrixError::InvalidReservation {
+            x: 0,
+            y: 0,
+            kind: ModuleKind::Format,
+        })
     );
+    assert_eq!(
+        builder.reserve(0, 0, ModuleKind::Version),
+        Err(MatrixError::InvalidReservation {
+            x: 0,
+            y: 0,
+            kind: ModuleKind::Version,
+        })
+    );
+    assert_eq!(builder.reserve(8, 0, ModuleKind::Format), Ok(()));
+    assert_eq!(
+        builder.write(9, 9, Module::new(false, ModuleKind::Format)),
+        Err(MatrixError::InvalidReservation {
+            x: 9,
+            y: 9,
+            kind: ModuleKind::Format,
+        })
+    );
+    assert_eq!(
+        builder.finish(),
+        Err(MatrixError::Incomplete { unwritten: 440 })
+    );
+
+    let mut version_seven =
+        MatrixBuilder::new(Version::new(7).expect("version 7 is valid")).expect("builder exists");
+    assert_eq!(version_seven.reserve(34, 0, ModuleKind::Version), Ok(()));
 }
 
 #[test]
@@ -174,6 +205,131 @@ fn every_version_is_complete_and_leaves_exactly_the_raw_data_region() {
         );
         assert_eq!(matrix.module(matrix.size(), 0), None);
         assert_eq!(matrix.module(0, matrix.size()), None);
+
+        let size = matrix.size();
+        for (origin_x, origin_y) in [(0, 0), (size - 7, 0), (0, size - 7)] {
+            for offset_y in 0..7 {
+                for offset_x in 0..7 {
+                    let dark = offset_x == 0
+                        || offset_x == 6
+                        || offset_y == 0
+                        || offset_y == 6
+                        || ((2..=4).contains(&offset_x) && (2..=4).contains(&offset_y));
+                    assert_eq!(
+                        matrix.module(origin_x + offset_x, origin_y + offset_y),
+                        Some(Module::new(dark, ModuleKind::Finder))
+                    );
+                }
+            }
+        }
+        for offset in 0..8 {
+            assert_eq!(
+                matrix.module(7, offset),
+                Some(Module::new(false, ModuleKind::Separator))
+            );
+            assert_eq!(
+                matrix.module(size - 8, offset),
+                Some(Module::new(false, ModuleKind::Separator))
+            );
+            assert_eq!(
+                matrix.module(7, size - 1 - offset),
+                Some(Module::new(false, ModuleKind::Separator))
+            );
+        }
+        for offset in 0..7 {
+            assert_eq!(
+                matrix.module(offset, 7),
+                Some(Module::new(false, ModuleKind::Separator))
+            );
+            assert_eq!(
+                matrix.module(size - 1 - offset, 7),
+                Some(Module::new(false, ModuleKind::Separator))
+            );
+            assert_eq!(
+                matrix.module(offset, size - 8),
+                Some(Module::new(false, ModuleKind::Separator))
+            );
+        }
+
+        for (center_x, center_y) in info.alignment_pattern_positions() {
+            for offset_y in 0..5_u16 {
+                for offset_x in 0..5_u16 {
+                    let dark = offset_x == 0
+                        || offset_x == 4
+                        || offset_y == 0
+                        || offset_y == 4
+                        || (offset_x == 2 && offset_y == 2);
+                    assert_eq!(
+                        matrix.module(
+                            u16::from(center_x) - 2 + offset_x,
+                            u16::from(center_y) - 2 + offset_y,
+                        ),
+                        Some(Module::new(dark, ModuleKind::Alignment))
+                    );
+                }
+            }
+        }
+
+        let mut expected_timing_count = 0;
+        for coordinate in 8..size - 8 {
+            for (x, y) in [(coordinate, 6), (6, coordinate)] {
+                let module = matrix.module(x, y).expect("timing coordinate is in bounds");
+                if module.kind() != ModuleKind::Alignment {
+                    assert_eq!(module, Module::new(coordinate % 2 == 0, ModuleKind::Timing));
+                    expected_timing_count += 1;
+                }
+            }
+        }
+        assert_eq!(count(ModuleKind::Timing), expected_timing_count);
+
+        for coordinate in 0..=5 {
+            assert_eq!(
+                matrix.module(8, coordinate),
+                Some(Module::new(false, ModuleKind::Format))
+            );
+            assert_eq!(
+                matrix.module(coordinate, 8),
+                Some(Module::new(false, ModuleKind::Format))
+            );
+        }
+        for (x, y) in [(8, 7), (8, 8), (7, 8)] {
+            assert_eq!(
+                matrix.module(x, y),
+                Some(Module::new(false, ModuleKind::Format))
+            );
+        }
+        for offset in 0..8 {
+            assert_eq!(
+                matrix.module(size - 1 - offset, 8),
+                Some(Module::new(false, ModuleKind::Format))
+            );
+        }
+        for offset in 0..7 {
+            assert_eq!(
+                matrix.module(8, size - 1 - offset),
+                Some(Module::new(false, ModuleKind::Format))
+            );
+        }
+        assert_eq!(
+            matrix.module(8, size - 8),
+            Some(Module::new(true, ModuleKind::Dark))
+        );
+
+        if version_number >= 7 {
+            let start = size - 11;
+            for offset in 0..6 {
+                for band in 0..3 {
+                    assert_eq!(
+                        matrix.module(start + band, offset),
+                        Some(Module::new(false, ModuleKind::Version))
+                    );
+                    assert_eq!(
+                        matrix.module(offset, start + band),
+                        Some(Module::new(false, ModuleKind::Version))
+                    );
+                }
+            }
+        }
     }
 }
 

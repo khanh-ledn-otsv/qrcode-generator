@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import pathlib
+from collections.abc import Callable
 from unittest.mock import patch
 
 
@@ -15,7 +16,6 @@ COMMAND = (
     "tests/support/verify_function_matrices.py --check"
 )
 VERSIONS = (1, 2, 7, 40)
-STABLE_VALUE_KINDS = {"finder", "separator", "timing", "alignment", "dark"}
 
 
 def require_pin(distribution: str, version: str) -> None:
@@ -24,32 +24,77 @@ def require_pin(distribution: str, version: str) -> None:
         raise RuntimeError(f"expected {distribution} {version}, got {actual}")
 
 
-def alignment_centers(version: int) -> tuple[int, ...]:
-    from qrcodegen import QrCode
-    import qrcode.util
-
-    code = object.__new__(QrCode)
-    code._version = version
-    code._size = 17 + 4 * version
-    nayuki = tuple(code._get_alignment_pattern_positions())
-    python_qrcode = tuple(qrcode.util.PATTERN_POSITION_TABLE[version - 1])
-    if nayuki != python_qrcode:
-        raise ValueError(f"Version {version} alignment-center disagreement")
-    return nayuki
+def normalize(kind: str, dark: bool) -> tuple[str, bool]:
+    if kind in {"format", "version"}:
+        return kind, False
+    return kind, dark
 
 
-def nayuki_function_state(version: int) -> tuple[set[tuple[int, int]], dict[tuple[int, int], bool]]:
+def nayuki_classified_state(version: int) -> dict[tuple[int, int], tuple[str, bool]]:
     from qrcodegen import QrCode
 
-    coordinates: set[tuple[int, int]] = set()
-    original = QrCode._set_function_module
+    classified: dict[tuple[int, int], tuple[str, bool]] = {}
+    context: list[tuple[str, int, int] | None] = [None]
+    original_set = QrCode._set_function_module
+    original_finder = QrCode._draw_finder_pattern
+    original_alignment = QrCode._draw_alignment_pattern
+    original_format = QrCode._draw_format_bits
+    original_version = QrCode._draw_version
+
+    def with_context(
+        value: tuple[str, int, int], action: Callable[..., None], self, *args
+    ) -> None:
+        previous = context[0]
+        context[0] = value
+        try:
+            action(self, *args)
+        finally:
+            context[0] = previous
+
+    def finder(self, x: int, y: int) -> None:
+        with_context(("finder", x, y), original_finder, self, x, y)
+
+    def alignment(self, x: int, y: int) -> None:
+        with_context(("alignment", x, y), original_alignment, self, x, y)
+
+    def format_bits(self, mask: int) -> None:
+        with_context(("format", 0, 0), original_format, self, mask)
+
+    def version_bits(self) -> None:
+        with_context(("version", 0, 0), original_version, self)
 
     def record(self, x: int, y: int, dark: bool) -> None:
-        coordinates.add((x, y))
-        original(self, x, y, dark)
+        active = context[0]
+        if active is None:
+            kind = "timing"
+        elif active[0] == "finder":
+            _, center_x, center_y = active
+            kind = (
+                "finder"
+                if abs(x - center_x) <= 3 and abs(y - center_y) <= 3
+                else "separator"
+            )
+        elif active[0] == "format" and (x, y) == (8, self._size - 8):
+            kind = "dark"
+        else:
+            kind = active[0]
+        value = normalize(kind, dark)
+        previous = classified.get((x, y))
+        if previous is not None and previous[0] != kind and previous[0] != "timing":
+            raise ValueError(
+                f"Version {version} Nayuki changed kind at ({x}, {y}): {previous[0]} to {kind}"
+            )
+        classified[(x, y)] = value
+        original_set(self, x, y, dark)
 
-    with patch.object(QrCode, "_set_function_module", record):
-        code = QrCode.encode_segments(
+    with (
+        patch.object(QrCode, "_set_function_module", record),
+        patch.object(QrCode, "_draw_finder_pattern", finder),
+        patch.object(QrCode, "_draw_alignment_pattern", alignment),
+        patch.object(QrCode, "_draw_format_bits", format_bits),
+        patch.object(QrCode, "_draw_version", version_bits),
+    ):
+        QrCode.encode_segments(
             [],
             QrCode.Ecc.LOW,
             minversion=version,
@@ -57,13 +102,12 @@ def nayuki_function_state(version: int) -> tuple[set[tuple[int, int]], dict[tupl
             mask=0,
             boostecl=False,
         )
-    values = {(x, y): code.get_module(x, y) for x, y in coordinates}
-    return coordinates, values
+    return classified
 
 
-def python_qrcode_function_state(
+def python_qrcode_classified_state(
     version: int,
-) -> tuple[set[tuple[int, int]], dict[tuple[int, int], bool]]:
+) -> dict[tuple[int, int], tuple[str, bool]]:
     import qrcode
 
     code = qrcode.QRCode(
@@ -75,131 +119,72 @@ def python_qrcode_function_state(
     size = 17 + 4 * version
     code.modules_count = size
     code.modules = [[None] * size for _ in range(size)]
-    code.setup_position_probe_pattern(0, 0)
-    code.setup_position_probe_pattern(size - 7, 0)
-    code.setup_position_probe_pattern(0, size - 7)
-    code.setup_position_adjust_pattern()
-    code.setup_timing_pattern()
-    code.setup_type_info(False, 0)
+    classified: dict[tuple[int, int], tuple[str, bool]] = {}
+
+    def capture(kind: str, action: Callable[[], None]) -> set[tuple[int, int]]:
+        before = set(classified)
+        action()
+        added = {
+            (x, y)
+            for y, row in enumerate(code.modules)
+            for x, module in enumerate(row)
+            if module is not None and (x, y) not in before
+        }
+        for x, y in added:
+            actual_kind = "dark" if kind == "format" and (x, y) == (8, size - 8) else kind
+            classified[(x, y)] = normalize(actual_kind, bool(code.modules[y][x]))
+        return added
+
+    for origin_x, origin_y in ((0, 0), (size - 7, 0), (0, size - 7)):
+        added = capture(
+            "finder",
+            lambda origin_x=origin_x, origin_y=origin_y: code.setup_position_probe_pattern(
+                origin_y, origin_x
+            ),
+        )
+        for x, y in added:
+            if not (origin_x <= x < origin_x + 7 and origin_y <= y < origin_y + 7):
+                classified[(x, y)] = ("separator", False)
+    capture("alignment", code.setup_position_adjust_pattern)
+    capture("timing", code.setup_timing_pattern)
+    capture("format", lambda: code.setup_type_info(False, 0))
     if version >= 7:
-        code.setup_type_number(False)
-    coordinates = {
-        (x, y)
-        for y, row in enumerate(code.modules)
-        for x, module in enumerate(row)
-        if module is not None
-    }
-    values = {(x, y): bool(code.modules[y][x]) for x, y in coordinates}
-    return coordinates, values
+        capture("version", lambda: code.setup_type_number(False))
+    return classified
 
 
-def classified_matrix(version: int) -> list[list[tuple[str, bool, str]]]:
+def classified_matrix(version: int) -> list[list[tuple[str, bool]]]:
+    nayuki = nayuki_classified_state(version)
+    python_qrcode = python_qrcode_classified_state(version)
+    if nayuki != python_qrcode:
+        differing = sorted(
+            coordinate
+            for coordinate in set(nayuki) | set(python_qrcode)
+            if nayuki.get(coordinate) != python_qrcode.get(coordinate)
+        )
+        raise ValueError(
+            f"Version {version} classified function oracle disagreement at {differing[:10]}"
+        )
     size = 17 + 4 * version
-    cells: list[list[tuple[str, bool, str] | None]] = [
-        [None for _ in range(size)] for _ in range(size)
+    return [
+        [nayuki.get((x, y), ("data", False)) for x in range(size)]
+        for y in range(size)
     ]
 
-    def write(x: int, y: int, dark: bool, kind: str, glyph: str) -> None:
-        if not (0 <= x < size and 0 <= y < size):
-            raise ValueError(f"Version {version} out-of-bounds fixture coordinate ({x}, {y})")
-        if cells[y][x] is not None:
-            raise ValueError(f"Version {version} duplicate fixture coordinate ({x}, {y})")
-        cells[y][x] = (glyph.upper() if dark else glyph.lower(), dark, kind)
 
-    def finder(origin_x: int, origin_y: int) -> None:
-        for offset_y in range(7):
-            for offset_x in range(7):
-                dark = (
-                    offset_x in (0, 6)
-                    or offset_y in (0, 6)
-                    or (2 <= offset_x <= 4 and 2 <= offset_y <= 4)
-                )
-                write(origin_x + offset_x, origin_y + offset_y, dark, "finder", "f")
-
-    finder(0, 0)
-    finder(size - 7, 0)
-    finder(0, size - 7)
-    for offset in range(8):
-        write(7, offset, False, "separator", "s")
-        write(size - 8, offset, False, "separator", "s")
-        write(7, size - 1 - offset, False, "separator", "s")
-    for offset in range(7):
-        write(offset, 7, False, "separator", "s")
-        write(size - 1 - offset, 7, False, "separator", "s")
-        write(offset, size - 8, False, "separator", "s")
-
-    centers = alignment_centers(version)
-    final_center = centers[-1] if centers else None
-    for center_y in centers:
-        for center_x in centers:
-            if (center_x == 6 and center_y in (6, final_center)) or (
-                center_x == final_center and center_y == 6
-            ):
-                continue
-            for offset_y in range(-2, 3):
-                for offset_x in range(-2, 3):
-                    dark = (
-                        abs(offset_x) == 2
-                        or abs(offset_y) == 2
-                        or (offset_x == 0 and offset_y == 0)
-                    )
-                    write(center_x + offset_x, center_y + offset_y, dark, "alignment", "a")
-
-    for coordinate in range(8, size - 8):
-        dark = coordinate % 2 == 0
-        if cells[6][coordinate] is None:
-            write(coordinate, 6, dark, "timing", "t")
-        if cells[coordinate][6] is None:
-            write(6, coordinate, dark, "timing", "t")
-
-    for coordinate in range(6):
-        write(8, coordinate, False, "format", "r")
-        write(coordinate, 8, False, "format", "r")
-    write(8, 7, False, "format", "r")
-    write(8, 8, False, "format", "r")
-    write(7, 8, False, "format", "r")
-    for offset in range(8):
-        write(size - 1 - offset, 8, False, "format", "r")
-    for offset in range(7):
-        write(8, size - 1 - offset, False, "format", "r")
-
-    if version >= 7:
-        start = size - 11
-        for offset in range(6):
-            for band in range(3):
-                write(start + band, offset, False, "version", "v")
-                write(offset, start + band, False, "version", "v")
-
-    write(8, size - 8, True, "dark", "d")
-    for y in range(size):
-        for x in range(size):
-            if cells[y][x] is None:
-                cells[y][x] = (".", False, "data")
-    return [[cell for cell in row if cell is not None] for row in cells]
-
-
-def verify_oracles(version: int, matrix: list[list[tuple[str, bool, str]]]) -> None:
-    expected_coordinates = {
-        (x, y)
-        for y, row in enumerate(matrix)
-        for x, (_, _, kind) in enumerate(row)
-        if kind != "data"
+def glyph(cell: tuple[str, bool]) -> str:
+    kind, dark = cell
+    symbols = {
+        "data": ".",
+        "finder": "F" if dark else "f",
+        "separator": "s",
+        "timing": "T" if dark else "t",
+        "alignment": "A" if dark else "a",
+        "format": "r",
+        "version": "v",
+        "dark": "D",
     }
-    nayuki_coordinates, nayuki_values = nayuki_function_state(version)
-    python_coordinates, python_values = python_qrcode_function_state(version)
-    if nayuki_coordinates != python_coordinates:
-        raise ValueError(f"Version {version} function-coordinate oracle disagreement")
-    if expected_coordinates != nayuki_coordinates:
-        raise ValueError(f"Version {version} classified function-coordinate disagreement")
-    for y, row in enumerate(matrix):
-        for x, (_, expected_dark, kind) in enumerate(row):
-            if kind in STABLE_VALUE_KINDS:
-                if nayuki_values[(x, y)] != expected_dark:
-                    raise ValueError(f"Version {version} Nayuki value disagreement at ({x}, {y})")
-                if python_values[(x, y)] != expected_dark:
-                    raise ValueError(
-                        f"Version {version} python-qrcode value disagreement at ({x}, {y})"
-                    )
+    return symbols[kind]
 
 
 def render_fixture() -> str:
@@ -215,9 +200,8 @@ def render_fixture() -> str:
     ]
     for version in VERSIONS:
         matrix = classified_matrix(version)
-        verify_oracles(version, matrix)
         lines.append(f"version={version} size={17 + 4 * version}")
-        lines.extend("".join(cell[0] for cell in row) for row in matrix)
+        lines.extend("".join(glyph(cell) for cell in row) for row in matrix)
         lines.append("end")
     return "\n".join(lines) + "\n"
 

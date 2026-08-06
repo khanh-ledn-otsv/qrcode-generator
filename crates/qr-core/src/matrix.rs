@@ -80,7 +80,7 @@ pub enum MatrixError {
     DimensionOverflow { size: u16 },
     OutOfBounds { x: u16, y: u16, size: u16 },
     DoubleWrite { x: u16, y: u16 },
-    InvalidReservation { kind: ModuleKind },
+    InvalidReservation { x: u16, y: u16, kind: ModuleKind },
     Incomplete { unwritten: usize },
 }
 
@@ -103,8 +103,11 @@ impl fmt::Display for MatrixError {
             Self::DoubleWrite { x, y } => {
                 write!(formatter, "matrix coordinate ({x}, {y}) was written twice")
             }
-            Self::InvalidReservation { kind } => {
-                write!(formatter, "module kind {kind:?} cannot be reserved")
+            Self::InvalidReservation { x, y, kind } => {
+                write!(
+                    formatter,
+                    "module kind {kind:?} cannot be reserved at ({x}, {y})"
+                )
             }
             Self::Incomplete { unwritten } => {
                 write!(formatter, "matrix has {unwritten} unwritten modules")
@@ -145,6 +148,17 @@ impl MatrixBuilder {
     }
 
     pub fn write(&mut self, x: u16, y: u16, module: Module) -> Result<(), MatrixError> {
+        if matches!(module.kind(), ModuleKind::Format | ModuleKind::Version) {
+            return Err(MatrixError::InvalidReservation {
+                x,
+                y,
+                kind: module.kind(),
+            });
+        }
+        self.write_module(x, y, module)
+    }
+
+    fn write_module(&mut self, x: u16, y: u16, module: Module) -> Result<(), MatrixError> {
         let index = checked_index(self.size, x, y).ok_or(MatrixError::OutOfBounds {
             x,
             y,
@@ -166,10 +180,10 @@ impl MatrixBuilder {
     }
 
     pub fn reserve(&mut self, x: u16, y: u16, kind: ModuleKind) -> Result<(), MatrixError> {
-        if !matches!(kind, ModuleKind::Format | ModuleKind::Version) {
-            return Err(MatrixError::InvalidReservation { kind });
+        if !is_valid_reservation(self.size, x, y, kind) {
+            return Err(MatrixError::InvalidReservation { x, y, kind });
         }
-        self.write(x, y, Module::new(false, kind))
+        self.write_module(x, y, Module::new(false, kind))
     }
 
     pub fn finish(self) -> Result<ModuleMatrix, MatrixError> {
@@ -242,6 +256,28 @@ fn checked_index(size: u16, x: u16, y: u16) -> Option<usize> {
     usize::from(y)
         .checked_mul(usize::from(size))
         .and_then(|row| row.checked_add(usize::from(x)))
+}
+
+fn is_valid_reservation(size: u16, x: u16, y: u16, kind: ModuleKind) -> bool {
+    match kind {
+        ModuleKind::Format => {
+            (x == 8 && (y <= 5 || y == 7 || y == 8 || y >= size - 7))
+                || (y == 8 && (x <= 5 || x == 7 || x >= size - 8))
+        }
+        ModuleKind::Version if size >= 45 => {
+            let start = size - 11;
+            ((start..=start + 2).contains(&x) && y <= 5)
+                || ((start..=start + 2).contains(&y) && x <= 5)
+        }
+        ModuleKind::Data
+        | ModuleKind::Remainder
+        | ModuleKind::Finder
+        | ModuleKind::Separator
+        | ModuleKind::Timing
+        | ModuleKind::Alignment
+        | ModuleKind::Version
+        | ModuleKind::Dark => false,
+    }
 }
 
 fn write_finder(
