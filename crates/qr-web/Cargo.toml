@@ -13,4 +13,4 @@ path = "src/main.rs"
 leptos.workspace = true
 qr-core.workspace = true
 qr-render.workspace = true
-web-sys = { workspace = true, features = ["ClipboardEvent", "DataTransfer", "Event", "HtmlTextAreaElement", "InputEvent"] }
+web-sys = { workspace = true, features = ["ClipboardEvent", "DataTransfer", "DragEvent", "Event", "HtmlTextAreaElement", "InputEvent"] }

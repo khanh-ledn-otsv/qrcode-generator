@@ -80,6 +80,30 @@ impl TextAreaBuffer {
         self.raw = updated;
         Ok(())
     }
+
+    pub(crate) fn raw_text_for_display_range(
+        &self,
+        start_utf16: u32,
+        end_utf16: u32,
+    ) -> Result<String, TextAreaError> {
+        if start_utf16 > end_utf16 {
+            return Err(TextAreaError::InvalidCoordinate);
+        }
+        let start_byte = raw_byte_at_display_utf16(&self.raw, start_utf16)
+            .ok_or(TextAreaError::InvalidCoordinate)?;
+        let end_byte = raw_byte_at_display_utf16(&self.raw, end_utf16)
+            .ok_or(TextAreaError::InvalidCoordinate)?;
+        let raw = self
+            .raw
+            .get(start_byte..end_byte)
+            .ok_or(TextAreaError::InvalidCoordinate)?;
+        let mut selected = String::new();
+        selected
+            .try_reserve(raw.len())
+            .map_err(|_| TextAreaError::AllocationFailure)?;
+        selected.push_str(raw);
+        Ok(selected)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

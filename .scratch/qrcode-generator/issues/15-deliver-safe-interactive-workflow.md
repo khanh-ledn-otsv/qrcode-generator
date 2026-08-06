@@ -26,8 +26,8 @@ byte counts, keyboard-native profile radios, cancellable 250 ms preview work,
 deterministic SVG preview, capacity/geometry diagnostics, associated
 validation, and deterministic control-character caution.
 
-Twelve native state tests cover all acceptance transitions, raw line-ending
-preservation, and profile contracts. Verification passed: `cargo fmt --check`, `cargo check`, `cargo
+Thirteen native state tests cover all acceptance transitions, raw line-ending
+preservation (including paste and internal drag selections), and profile contracts. Verification passed: `cargo fmt --check`, `cargo check`, `cargo
 test`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo check
 --target wasm32-unknown-unknown`, and `NO_COLOR=true trunk build --release`.
 Interactive desktop/mobile browser inspection could not run because no browser

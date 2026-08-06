@@ -67,6 +67,19 @@ fn raw_paste_replaces_a_textarea_selection_without_normalizing_line_endings() {
 }
 
 #[test]
+fn internal_drag_reads_the_exact_raw_text_for_the_display_selection() {
+    let mut state = WorkflowState::new(ProfileId::Content);
+    state
+        .replace_display_range(0, 0, "a\r\nb\rc")
+        .expect("synthetic payload should fit the input limit");
+
+    assert_eq!(
+        state.raw_text_for_display_range(1, 3).as_deref(),
+        Ok("\r\nb")
+    );
+}
+
+#[test]
 fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     let mut state = WorkflowState::new(ProfileId::Inline);
     let request = state

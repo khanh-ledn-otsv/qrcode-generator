@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
-use leptos::web_sys::{ClipboardEvent, Event, HtmlTextAreaElement, InputEvent};
+use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_core::tables::ErrorCorrection;
 use qr_render::{ProfileId, SUPPORTED_PROFILES};
 use qr_web::workflow::{
@@ -89,35 +89,56 @@ fn App() -> impl IntoView {
                             aria-describedby="payload-counts payload-validation payload-caution"
                             aria-invalid=move || state.with(|value| value.validation_message().is_some())
                             prop:value=move || state.with(WorkflowState::textarea_value)
+                            on:dragstart=move |event: DragEvent| {
+                                let target = event
+                                    .target()
+                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok());
+                                let selection = target.as_ref().and_then(textarea_selection);
+                                let transfer = event.data_transfer();
+                                let raw = selection.map(|(start, end)| {
+                                    state.with(|value| value.raw_text_for_display_range(start, end))
+                                });
+                                if let (Some(transfer), Some(Ok(raw))) = (transfer, raw)
+                                    && transfer.set_data("text/plain", &raw).is_ok()
+                                {
+                                    return;
+                                }
+                                event.prevent_default();
+                                pending_edit_start.set(None);
+                                reject_raw_input_failure(state, pending_timer, target.as_ref());
+                            }
                             on:beforeinput=move |event: InputEvent| {
                                 let target = event
                                     .target()
                                     .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok());
-                                let selection = target.as_ref().and_then(|target| {
-                                    target
-                                        .selection_start()
-                                        .ok()
-                                        .flatten()
-                                        .zip(target.selection_end().ok().flatten())
-                                });
+                                let selection = target.as_ref().and_then(textarea_selection);
                                 if matches!(
                                     event.input_type().as_str(),
                                     "insertFromDrop" | "insertFromPaste"
-                                ) && let Some(raw) = event
-                                    .data_transfer()
-                                    .and_then(|transfer| transfer.get_data("text/plain").ok())
-                                    && let (Some(target), Some((start, end))) = (target, selection)
-                                {
+                                ) {
                                     event.prevent_default();
                                     pending_edit_start.set(None);
-                                    apply_raw_textarea_insertion(
-                                        state,
-                                        pending_timer,
-                                        &target,
-                                        start,
-                                        end,
-                                        &raw,
-                                    );
+                                    let raw = event
+                                        .data_transfer()
+                                        .and_then(|transfer| transfer.get_data("text/plain").ok());
+                                    if let (Some(raw), Some(target), Some((start, end))) =
+                                        (raw, target.as_ref(), selection)
+                                    {
+                                        apply_raw_textarea_insertion(
+                                            state,
+                                            pending_timer,
+                                            target,
+                                            start,
+                                            end,
+                                            &raw,
+                                        );
+                                    } else {
+                                        reject_raw_input_failure(
+                                            state,
+                                            pending_timer,
+                                            target.as_ref(),
+                                        );
+                                    }
                                     return;
                                 }
                                 let start = selection.map(|(start, _)| start);
@@ -152,33 +173,33 @@ fn App() -> impl IntoView {
                                 }
                             }
                             on:paste=move |event: ClipboardEvent| {
-                                let Some(clipboard) = event.clipboard_data() else {
-                                    return;
-                                };
-                                let Ok(pasted) = clipboard.get_data("text/plain") else {
-                                    return;
-                                };
-                                let Some(target) = event
-                                    .target()
-                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok())
-                                else {
-                                    return;
-                                };
-                                let (Ok(Some(start)), Ok(Some(end))) =
-                                    (target.selection_start(), target.selection_end())
-                                else {
-                                    return;
-                                };
                                 event.prevent_default();
                                 pending_edit_start.set(None);
-                                apply_raw_textarea_insertion(
-                                    state,
-                                    pending_timer,
-                                    &target,
-                                    start,
-                                    end,
-                                    &pasted,
-                                );
+                                let target = event
+                                    .target()
+                                    .and_then(|target| target.dyn_into::<HtmlTextAreaElement>().ok());
+                                let selection = target.as_ref().and_then(textarea_selection);
+                                let pasted = event
+                                    .clipboard_data()
+                                    .and_then(|clipboard| clipboard.get_data("text/plain").ok());
+                                if let (Some(pasted), Some(target), Some((start, end))) =
+                                    (pasted, target.as_ref(), selection)
+                                {
+                                    apply_raw_textarea_insertion(
+                                        state,
+                                        pending_timer,
+                                        target,
+                                        start,
+                                        end,
+                                        &pasted,
+                                    );
+                                } else {
+                                    reject_raw_input_failure(
+                                        state,
+                                        pending_timer,
+                                        target.as_ref(),
+                                    );
+                                }
                             }
                         ></textarea>
 
@@ -299,6 +320,29 @@ fn apply_raw_textarea_insertion(
             _ = target.set_selection_range(caret, caret);
         }
         schedule_preview(state, pending_timer, request);
+    }
+}
+
+fn textarea_selection(target: &HtmlTextAreaElement) -> Option<(u32, u32)> {
+    target
+        .selection_start()
+        .ok()
+        .flatten()
+        .zip(target.selection_end().ok().flatten())
+}
+
+fn reject_raw_input_failure(
+    state: RwSignal<WorkflowState>,
+    pending_timer: RwSignal<Option<TimeoutHandle>>,
+    target: Option<&HtmlTextAreaElement>,
+) {
+    if let Some(handle) = pending_timer.get_untracked() {
+        handle.clear();
+    }
+    pending_timer.set(None);
+    state.update(WorkflowState::reject_internal_failure);
+    if let Some(target) = target {
+        target.set_value(&state.with(WorkflowState::textarea_value));
     }
 }
 

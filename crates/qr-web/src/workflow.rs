@@ -274,6 +274,20 @@ impl WorkflowState {
         self.begin_preview()
     }
 
+    /// Returns the exact raw text represented by a textarea display selection.
+    ///
+    /// Browser textareas project CRLF and lone CR as LF. Drag operations must
+    /// therefore source selected text here instead of from the DOM value.
+    pub fn raw_text_for_display_range(
+        &self,
+        start_utf16: u32,
+        end_utf16: u32,
+    ) -> Result<String, WorkflowFailure> {
+        self.payload
+            .raw_text_for_display_range(start_utf16, end_utf16)
+            .map_err(|_| WorkflowFailure::Internal)
+    }
+
     pub fn select_profile(
         &mut self,
         profile_id: ProfileId,
