@@ -28,11 +28,12 @@ QR facts. Warning severity, live validation, fieldsets, keyboard operation,
 visible focus, and download-disabled descriptions are programmatic and do not
 move focus.
 
-Fourteen native state tests and five WASM boundary tests cover deterministic
+Fourteen native state tests and four WASM boundary tests cover deterministic
 artifacts, typed Blob failure, exact Blob bytes/MIME, URL revocation, repeated
-resource release, control-character artifacts, and debounce disposal. Ten
-Playwright scenarios run at desktop and mobile Chromium widths (20 project
-cases), including axe, mode/UTF-8/boundary behavior, fixed download hashes,
-pinned ZXing-C++ decode, responsive layout, keyboard focus, and post-load
-network/privacy interception. Production HTML carries a same-origin content
-security policy and uses no external runtime asset.
+generation and resource release, and control-character artifacts. Eleven
+Playwright scenarios run at desktop and mobile Chromium widths (22 project
+cases), including browser-page debounce disposal, axe, mode/UTF-8/boundary
+behavior, fixed download hashes and dimensions, mandatory pinned ZXing-C++
+decode, responsive layout, keyboard focus, and post-load network/privacy
+interception. Production HTML carries a same-origin content security policy and
+uses no external runtime asset.

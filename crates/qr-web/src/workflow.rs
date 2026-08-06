@@ -1,6 +1,7 @@
 //! Plain-Rust state transitions for the interactive QR workflow.
 
 use qr_core::encoding::EncodingError;
+use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
@@ -105,7 +106,7 @@ impl PreviewRequest {
 pub struct Diagnostics {
     mode: DataMode,
     ecc: ErrorCorrection,
-    mask: u8,
+    mask: MaskId,
     maximum_version: Version,
     selected_version: Version,
     used_data_bits: u32,
@@ -133,7 +134,7 @@ impl Diagnostics {
     }
 
     #[must_use]
-    pub const fn mask(self) -> u8 {
+    pub const fn mask(self) -> MaskId {
         self.mask
     }
 
@@ -528,7 +529,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         diagnostics: Diagnostics {
             mode: encoded.mode(),
             ecc: encoded.ecc(),
-            mask: encoded.mask().number(),
+            mask: encoded.mask(),
             maximum_version: profile.maximum_version(),
             selected_version: encoded.version(),
             used_data_bits: encoded.data_bits_used(),

@@ -128,7 +128,7 @@ fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text
 
     let diagnostics = preview.diagnostics();
     assert_eq!(diagnostics.mode(), DataMode::Byte);
-    assert!(diagnostics.mask() <= 7);
+    assert!(diagnostics.mask().number() <= 7);
     assert_eq!(diagnostics.quiet_zone_modules(), 4);
     assert_eq!(diagnostics.module_scale(), 8);
     assert_eq!(diagnostics.rendered_symbol_side_pixels(), 232);

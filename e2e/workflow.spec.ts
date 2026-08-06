@@ -43,6 +43,18 @@ test("distinguishes the input-limit boundary and keeps exports disabled", async 
   await expect(page.getByRole("alert")).toHaveAttribute("aria-live", "polite");
 });
 
+test("disposing the page with pending debounce work initializes cleanly", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+
+  await page.getByLabel("Text to encode").fill("pending preview");
+  await page.reload();
+
+  await expect(page.getByLabel("Text to encode")).toHaveValue("");
+  await expect(page.getByTestId("download-svg")).toBeDisabled();
+  expect(pageErrors).toEqual([]);
+});
+
 test("profile controls work by keyboard and layouts fit desktop and mobile widths", async ({ page }) => {
   await enterPayload(page, "responsive profile");
   const content = page.getByRole("radio", { name: /Content/ });

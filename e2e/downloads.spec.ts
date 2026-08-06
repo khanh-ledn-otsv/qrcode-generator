@@ -7,6 +7,9 @@ import { expect, test } from "@playwright/test";
 
 import { SAFE_PAYLOAD, enterPayload, sha256 } from "./helpers";
 
+const ZXING_COMMIT = "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825";
+const ZXING_VERSION = "ZXingReader version 3.0.2";
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await enterPayload(page, SAFE_PAYLOAD);
@@ -26,9 +29,14 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
 
   const svg = await readFile(await svgDownload.path());
   const png = await readFile(await pngDownload.path());
-  expect(svg.toString("utf8")).toMatch(/^<svg /);
-  expect(svg.toString("utf8")).not.toContain(SAFE_PAYLOAD);
+  const svgText = svg.toString("utf8");
+  expect(svgText).toMatch(/^<svg /);
+  expect(svgText).toMatch(/\bwidth="120"/);
+  expect(svgText).toMatch(/\bheight="120"/);
+  expect(svgText).not.toContain(SAFE_PAYLOAD);
   expect(png.subarray(0, 8)).toEqual(Buffer.from("89504e470d0a1a0a", "hex"));
+  expect(png.readUInt32BE(16)).toBe(360);
+  expect(png.readUInt32BE(20)).toBe(360);
   expect(await sha256(svg)).toBe(
     "271ca0e86f33cfd9c8febdd031447ba5c9088947d5aa94f65f4de064019b8080",
   );
@@ -37,10 +45,22 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   );
 });
 
-test("downloaded PNG independently decodes when the pinned reader is installed", async ({ page }) => {
+test("downloaded PNG independently decodes with the pinned reader", async ({ page }) => {
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");
-  test.skip(!existsSync(reader), "requires the manifest-pinned ZXing-C++ reader");
+  expect(
+    existsSync(reader),
+    "build the manifest-pinned ZXing-C++ reader documented in tests/oracles/README.md",
+  ).toBe(true);
+
+  const commit = spawnSync("git", ["-C", source, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  });
+  expect(commit.status, commit.stderr).toBe(0);
+  expect(commit.stdout.trim()).toBe(ZXING_COMMIT);
+  const version = spawnSync(reader, ["-version"], { encoding: "utf8" });
+  expect(version.status, version.stderr).toBe(0);
+  expect(version.stdout.trim()).toBe(ZXING_VERSION);
 
   const [download] = await Promise.all([
     page.waitForEvent("download"),

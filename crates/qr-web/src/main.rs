@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_render::{ProfileId, SUPPORTED_PROFILES};
-use qr_web::debounce::{BrowserTimeout, DebounceTimer};
+use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
 use qr_web::workflow::{
     ArtifactKind, PreviewRequest, WorkflowFailure, WorkflowState, ecc_label, evaluate_preview,
@@ -12,12 +12,12 @@ use qr_web::workflow::{
 };
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
-type DebounceSignal = RwSignal<DebounceTimer, leptos::reactive::owner::LocalStorage>;
+type DebounceSignal = RwSignal<DebounceTimer>;
 
 #[component]
 fn App() -> impl IntoView {
     let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
-    let pending_timer = RwSignal::new_local(DebounceTimer::default());
+    let pending_timer = RwSignal::new(DebounceTimer::default());
     let pending_edit_start = RwSignal::new(None::<u32>);
 
     Owner::on_cleanup(move || {
@@ -251,7 +251,7 @@ fn App() -> impl IntoView {
                             <dl class="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 text-sm">
                                 <Diagnostic label="Mode" value=move || diagnostic_value(state, |details| mode_label(details.mode()).to_owned()) />
                                 <Diagnostic label="ECC" value=move || diagnostic_value(state, |details| ecc_label(details.ecc()).to_owned()) />
-                                <Diagnostic label="Mask" value=move || diagnostic_value(state, |details| details.mask().to_string()) />
+                                <Diagnostic label="Mask" value=move || diagnostic_value(state, |details| details.mask().number().to_string()) />
                                 <Diagnostic label="Version" value=move || diagnostic_value(state, |details| format!("V{} / V{} max", details.selected_version().number(), details.maximum_version().number())) />
                                 <Diagnostic label="Data bits" value=move || diagnostic_value(state, |details| format!("{} / {}", details.used_data_bits(), details.available_data_bits())) />
                                 <Diagnostic label="Data codewords" value=move || diagnostic_value(state, |details| details.data_codewords().to_string()) />
@@ -323,12 +323,15 @@ fn schedule_preview(
 ) {
     pending_timer.update(DebounceTimer::cancel);
     let revision = request.revision();
-    match BrowserTimeout::new(PREVIEW_DEBOUNCE, move || {
-        let result = evaluate_preview(&request);
-        state.update(|value| {
-            _ = value.complete_preview(revision, result);
-        });
-    }) {
+    match set_timeout_with_handle(
+        move || {
+            let result = evaluate_preview(&request);
+            state.update(|value| {
+                _ = value.complete_preview(revision, result);
+            });
+        },
+        PREVIEW_DEBOUNCE,
+    ) {
         Ok(handle) => pending_timer.update(|timer| timer.replace(handle)),
         Err(_) => state.update(|value| {
             _ = value.complete_preview(revision, Err(WorkflowFailure::Internal));

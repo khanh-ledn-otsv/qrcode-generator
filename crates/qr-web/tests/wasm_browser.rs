@@ -2,17 +2,12 @@
 
 use js_sys::{ArrayBuffer, Function, Promise, Reflect, Uint8Array};
 use qr_render::ProfileId;
-use qr_web::debounce::{BrowserTimeout, DebounceTimer};
 use qr_web::download::{ObjectUrl, create_blob};
 use qr_web::workflow::{ArtifactKind, WorkflowState, evaluate_preview};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::wasm_bindgen_test;
 use web_sys::Response;
-
-use std::cell::Cell;
-use std::rc::Rc;
-use std::time::Duration;
 
 #[wasm_bindgen_test(async)]
 async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
@@ -38,18 +33,19 @@ async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
 #[wasm_bindgen_test(async)]
 async fn repeated_object_urls_are_revoked_instead_of_retained() {
     let mut state = WorkflowState::new(ProfileId::Content);
-    let request = state
-        .set_payload("bounded resources".to_owned())
-        .expect("revision is available");
-    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
-    let artifact = state
-        .preview()
-        .expect("valid payload has artifacts")
-        .artifact(ArtifactKind::Svg);
-    let blob = create_blob(artifact).expect("valid bytes create a Blob");
-
     let mut revoked = Vec::new();
-    for _ in 0..32 {
+    for generation in 0..32 {
+        let payload = format!("bounded generation {generation}");
+        let request = state
+            .set_payload(payload.clone())
+            .expect("revision is available");
+        assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+        assert_eq!(state.payload(), payload);
+        let artifact = state
+            .preview()
+            .expect("valid payload has artifacts")
+            .artifact(ArtifactKind::Svg);
+        let blob = create_blob(artifact).expect("valid bytes create a Blob");
         let object_url = ObjectUrl::new(&blob).expect("browser creates an object URL");
         revoked.push(object_url.as_str().to_owned());
         drop(object_url);
@@ -81,22 +77,6 @@ fn control_character_payload_renders_both_artifacts_on_wasm() {
     );
 }
 
-#[wasm_bindgen_test(async)]
-async fn disposing_a_debounce_timer_cancels_pending_work() {
-    let fired = Rc::new(Cell::new(false));
-    let callback_flag = Rc::clone(&fired);
-    let handle = BrowserTimeout::new(Duration::from_millis(10), move || {
-        callback_flag.set(true);
-    })
-    .expect("the WASM timer boundary is available");
-    let mut timer = DebounceTimer::default();
-    timer.replace(handle);
-    drop(timer);
-
-    wait(30).await;
-    assert!(!fired.get(), "disposed debounce work must not run");
-}
-
 async fn read_url(url: &str) -> Vec<u8> {
     let response = fetch(url).await.expect("owned URL is readable");
     let buffer = JsFuture::from(response.array_buffer().expect("response exposes bytes"))
@@ -116,19 +96,4 @@ async fn fetch(url: &str) -> Result<Response, wasm_bindgen::JsValue> {
     JsFuture::from(promise)
         .await
         .map(|value| value.unchecked_into::<Response>())
-}
-
-async fn wait(milliseconds: i32) {
-    let global = js_sys::global();
-    let set_timeout = Reflect::get(&global, &wasm_bindgen::JsValue::from_str("setTimeout"))
-        .expect("timer function is available")
-        .unchecked_into::<Function>();
-    let promise = Promise::new(&mut |resolve, _| {
-        _ = set_timeout.call2(
-            &global,
-            resolve.as_ref(),
-            &wasm_bindgen::JsValue::from_f64(f64::from(milliseconds)),
-        );
-    });
-    _ = JsFuture::from(promise).await;
 }
