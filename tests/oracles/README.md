@@ -64,6 +64,16 @@ uv run --project tests/oracles --locked python \
 Use `--write` only when intentionally refreshing the table fixture, then review
 the complete CSV diff before accepting it.
 
+Reed–Solomon generator and remainder vectors are checked for every QR ECC
+degree against Nayuki's `reed_solomon_*` functions and python-qrcode's
+`Polynomial`/`gexp`/`glog` implementation. The fixture includes leading and
+trailing zero blocks plus the maximum table-defined QR data block:
+
+```sh
+uv run --project tests/oracles --locked python \
+  tests/support/verify_reed_solomon.py --check
+```
+
 Review the readable manifest and `0`/`1` matrix diff, then record the reviewer,
 date, notes, and `accepted` state. `fixture-tool verify` rejects pending fixture
 changes.

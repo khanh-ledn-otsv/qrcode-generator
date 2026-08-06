@@ -7,6 +7,7 @@ use std::fmt;
 
 pub mod bit_buffer;
 pub mod encoding;
+pub mod reed_solomon;
 pub mod tables;
 
 /// A QR Code Model 2 symbol version.
