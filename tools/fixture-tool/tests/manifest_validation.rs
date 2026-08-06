@@ -108,8 +108,9 @@ fn accepts_a_provenance_record_for_a_reed_solomon_fixture() {
     let manifest_path = root.join("manifest.json");
     let mut manifest: serde_json::Value =
         serde_json::from_slice(&fs::read(&manifest_path).unwrap()).unwrap();
-    manifest["reed_solomon_fixtures"] = serde_json::json!([{
+    manifest["algorithm_fixtures"] = serde_json::json!([{
         "id": "qr-reed-solomon-vectors",
+        "kind": "reed-solomon",
         "synthetic": true,
         "artifact_file": "reed_solomon.csv",
         "artifact_sha256": sha256(artifact),
@@ -122,9 +123,9 @@ fn accepts_a_provenance_record_for_a_reed_solomon_fixture() {
                 "tool": "Nayuki QR Code Generator",
                 "version": "1.8.0",
                 "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
-                "executed_symbols": ["_reed_solomon_compute_divisor", "_reed_solomon_compute_remainder"],
+                "executed_symbols": ["_reed_solomon_compute_divisor", "_reed_solomon_compute_remainder", "_reed_solomon_multiply"],
                 "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
-                "evidence_symbols": ["reed_solomon_compute_divisor", "reed_solomon_compute_remainder"],
+                "evidence_symbols": ["reed_solomon_compute_divisor", "reed_solomon_compute_remainder", "reed_solomon_multiply"],
                 "command": "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
                 "observed_artifact_sha256": sha256(artifact)
             },
@@ -158,7 +159,7 @@ fn accepts_a_provenance_record_for_a_reed_solomon_fixture() {
     .unwrap();
 
     let manifest = load_and_verify(root).unwrap();
-    assert_eq!(manifest.reed_solomon_fixtures().len(), 1);
+    assert_eq!(manifest.algorithm_fixtures().len(), 1);
 }
 
 #[test]

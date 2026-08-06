@@ -35,16 +35,17 @@ Executable fixtures may use the pinned `qrcodegen==1.8.0` Python distribution,
 which is the same release's official language port, from tagged
 [`python/qrcodegen.py`](https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py).
 Fixture metadata must distinguish that executed source and its underscore-prefixed
-`_reed_solomon_*` symbols from the Rust source/symbols above that provide the
-recorded public-source evidence. Both must remain pinned to release 1.8.0.
+symbols (including `_reed_solomon_*` and `_add_ecc_and_interleave`) from the
+Rust source/symbols above that provide the recorded public-source evidence.
+Both must remain pinned to release 1.8.0.
 
 ### Pinned encoder oracle B: python-qrcode 8.2
 
 Use the tagged sources, recording exact file and symbol:
 
-- [`qrcode/base.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py): `Polynomial` and `RS_BLOCK_TABLE` for independent Reed–Solomon/block-layout results;
+- [`qrcode/base.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py): `Polynomial`, `rs_blocks`, and `RS_BLOCK_TABLE` for independent Reed–Solomon/block-layout results;
 - [`qrcode/main.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py): `makeImpl`, the `setup_*` functions, `map_data`, and `best_mask_pattern` for function patterns, BCH placement, data placement, and mask selection;
-- [`qrcode/util.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py): `BCH_type_info`, `BCH_type_number`, `mask_func`, and `lost_point` for BCH, masks, and the four penalty rules.
+- [`qrcode/util.py`](https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py): `create_bytes` for block construction/interleaving, plus `BCH_type_info`, `BCH_type_number`, `mask_func`, and `lost_point` for BCH, masks, and the four penalty rules.
 
 This project is separately maintained from Nayuki. Agreement is useful corroboration, not proof of standards conformance; shared historical ancestry or the same mistake remains possible.
 

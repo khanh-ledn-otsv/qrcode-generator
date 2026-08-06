@@ -86,9 +86,10 @@
       }
     }
   ],
-  "reed_solomon_fixtures": [
+  "algorithm_fixtures": [
     {
       "id": "qr-reed-solomon-vectors",
+      "kind": "reed-solomon",
       "synthetic": true,
       "artifact_file": "reed_solomon.csv",
       "artifact_sha256": "04358d1e3361bb7160baee241c3b7c3b8bc96ddfe13c0470448e3f205fb233d1",
@@ -145,6 +146,67 @@
         "reviewer": "ticket-06-dual-oracle-implementation-review",
         "verified_at": "2026-08-06",
         "notes": "Both pinned encoders agree exactly for all generator and remainder vectors; local references cover field arithmetic and polynomial division. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
+      }
+    },
+    {
+      "id": "qr-interleaved-codeword-vectors",
+      "kind": "codeword-interleaving",
+      "synthetic": true,
+      "artifact_file": "interleaved_codewords.csv",
+      "artifact_sha256": "bd730052643d45b8659674615f82e188bfb9b350dd8db0fe0f636564f5f494a2",
+      "standard_topic": "ISO/IEC 18004:2024 final-message block construction and interleaving; clause mapping pending audit",
+      "scope": "One-group and two-group short/long block layouts with exact final streams and remainder-bit counts",
+      "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
+      "sources": [
+        {
+          "oracle": "nayuki",
+          "tool": "Nayuki QR Code Generator",
+          "version": "1.8.0",
+          "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+          "executed_symbols": [
+            "_add_ecc_and_interleave"
+          ],
+          "evidence_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+          "evidence_symbols": [
+            "add_ecc_and_interleave"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
+          "observed_artifact_sha256": "bd730052643d45b8659674615f82e188bfb9b350dd8db0fe0f636564f5f494a2"
+        },
+        {
+          "oracle": "python-qrcode",
+          "tool": "python-qrcode",
+          "version": "8.2",
+          "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+          "executed_symbols": [
+            "create_bytes"
+          ],
+          "evidence_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+          "evidence_symbols": [
+            "create_bytes"
+          ],
+          "supporting_source_urls": [
+            "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py"
+          ],
+          "supporting_symbols": [
+            "rs_blocks",
+            "Polynomial",
+            "gexp"
+          ],
+          "command": "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
+          "observed_artifact_sha256": "bd730052643d45b8659674615f82e188bfb9b350dd8db0fe0f636564f5f494a2"
+        }
+      ],
+      "local_verification": [
+        "Independent test-only de-interleaving reconstructs every data and error-correction block",
+        "Generated meta-test exercises all 160 validated version/ECC table rows",
+        "Exact output length and remainder-bit count are checked for every row"
+      ],
+      "verification": {
+        "state": "accepted",
+        "reviewer": "ticket-07-dual-oracle-implementation-review",
+        "verified_at": "2026-08-06",
+        "notes": "Both pinned encoders agree exactly for one-group and two-group short/long interleaved streams. Public-corroborated, non-normative pending a complete ISO/IEC 18004:2024 audit."
       }
     }
   ]

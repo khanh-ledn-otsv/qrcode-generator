@@ -18,7 +18,7 @@ pub struct FixtureManifest {
     decoder: DecoderProvenance,
     fixtures: Vec<Fixture>,
     #[serde(default)]
-    reed_solomon_fixtures: Vec<ReedSolomonFixture>,
+    algorithm_fixtures: Vec<AlgorithmFixture>,
 }
 
 impl FixtureManifest {
@@ -43,8 +43,8 @@ impl FixtureManifest {
     }
 
     #[must_use]
-    pub fn reed_solomon_fixtures(&self) -> &[ReedSolomonFixture] {
-        &self.reed_solomon_fixtures
+    pub fn algorithm_fixtures(&self) -> &[AlgorithmFixture] {
+        &self.algorithm_fixtures
     }
 
     #[must_use]
@@ -83,7 +83,7 @@ impl FixtureManifest {
             }
             fixture.verify(root)?;
         }
-        for fixture in &self.reed_solomon_fixtures {
+        for fixture in &self.algorithm_fixtures {
             if !ids.insert(fixture.id.as_str()) {
                 return Err(VerificationError::new(format!(
                     "duplicate fixture id {}",
@@ -98,69 +98,70 @@ impl FixtureManifest {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct ReedSolomonFixture {
+pub struct AlgorithmFixture {
     id: String,
+    kind: AlgorithmKind,
     synthetic: bool,
     artifact_file: PathBuf,
     artifact_sha256: String,
     standard_topic: String,
     scope: String,
     generation_command: String,
-    sources: Vec<ReedSolomonSource>,
+    sources: Vec<AlgorithmSource>,
     local_verification: Vec<String>,
     verification: VerificationState,
 }
 
-impl ReedSolomonFixture {
+impl AlgorithmFixture {
     fn verify(&self, root: &Path) -> Result<(), VerificationError> {
-        const COMMAND: &str = "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check";
+        let policy = self.kind.policy();
 
-        require_nonempty("Reed–Solomon fixture id", &self.id)?;
+        require_nonempty("algorithm fixture id", &self.id)?;
         if !self.synthetic {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {} must explicitly declare synthetic data",
-                self.id
+                "{} fixture {} must explicitly declare synthetic data",
+                policy.label, self.id
             )));
         }
-        require_nonempty("Reed–Solomon standard topic", &self.standard_topic)?;
-        require_nonempty("Reed–Solomon fixture scope", &self.scope)?;
-        if self.generation_command != COMMAND {
+        require_nonempty("algorithm standard topic", &self.standard_topic)?;
+        require_nonempty("algorithm fixture scope", &self.scope)?;
+        if self.generation_command != policy.command {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {} has an unpinned generation command",
-                self.id
+                "{} fixture {} has an unpinned generation command",
+                policy.label, self.id
             )));
         }
         verify_hash(
             root,
             &self.artifact_file,
             &self.artifact_sha256,
-            "Reed–Solomon fixture",
+            policy.label,
             &self.id,
         )?;
         if self.sources.len() != 2 {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {} requires two independent generators",
-                self.id
+                "{} fixture {} requires two independent generators",
+                policy.label, self.id
             )));
         }
         let mut oracles = HashSet::new();
         for source in &self.sources {
-            source.verify(&self.id, &self.artifact_sha256, COMMAND)?;
+            source.verify(&self.id, &self.artifact_sha256, policy)?;
             if !oracles.insert(source.oracle) {
                 return Err(VerificationError::new(format!(
-                    "Reed–Solomon fixture {} does not identify two independent generators",
-                    self.id
+                    "{} fixture {} does not identify two independent generators",
+                    policy.label, self.id
                 )));
             }
         }
         if self.local_verification.is_empty() {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {} requires local invariant or reference coverage",
-                self.id
+                "{} fixture {} requires local invariant or reference coverage",
+                policy.label, self.id
             )));
         }
         for evidence in &self.local_verification {
-            require_nonempty("local Reed–Solomon verification", evidence)?;
+            require_nonempty("local algorithm verification", evidence)?;
         }
         self.verification.verify(&self.id)
     }
@@ -168,7 +169,7 @@ impl ReedSolomonFixture {
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ReedSolomonSource {
+struct AlgorithmSource {
     oracle: Oracle,
     tool: String,
     version: String,
@@ -176,50 +177,55 @@ struct ReedSolomonSource {
     executed_symbols: Vec<String>,
     evidence_source_url: String,
     evidence_symbols: Vec<String>,
+    #[serde(default)]
+    supporting_source_urls: Vec<String>,
+    #[serde(default)]
+    supporting_symbols: Vec<String>,
     command: String,
     observed_artifact_sha256: String,
 }
 
-impl ReedSolomonSource {
+impl AlgorithmSource {
     fn verify(
         &self,
         fixture_id: &str,
         artifact_sha256: &str,
-        expected_command: &str,
+        policy: AlgorithmPolicy,
     ) -> Result<(), VerificationError> {
         let pinned = self.oracle.provenance();
-        let (expected_executed_source_url, expected_evidence_source_url) = match self.oracle {
-            Oracle::Nayuki => (
-                "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
-                "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
-            ),
-            Oracle::PythonQrcode => (
-                "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
-                "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
-            ),
-        };
+        let expected = policy.source(self.oracle);
         if self.tool != pinned.tool
             || self.version != pinned.version
-            || self.executed_source_url != expected_executed_source_url
-            || self.evidence_source_url != expected_evidence_source_url
-            || self.command != expected_command
+            || self.executed_source_url != expected.executed_source_url
+            || self.executed_symbols != expected.executed_symbols
+            || self.evidence_source_url != expected.evidence_source_url
+            || self.evidence_symbols != expected.evidence_symbols
+            || self.supporting_source_urls != expected.supporting_source_urls
+            || self.supporting_symbols != expected.supporting_symbols
+            || self.command != policy.command
         {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {fixture_id} source {} does not match pinned provenance",
-                pinned.cli_name
+                "{} fixture {fixture_id} source {} does not match pinned provenance",
+                policy.label, pinned.cli_name
             )));
         }
         if self.executed_symbols.is_empty() || self.evidence_symbols.is_empty() {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {fixture_id} source {} requires exact symbols",
-                pinned.cli_name
+                "{} fixture {fixture_id} source {} requires exact symbols",
+                policy.label, pinned.cli_name
             )));
         }
         for symbol in &self.executed_symbols {
-            require_nonempty("Reed–Solomon executed source symbol", symbol)?;
+            require_nonempty("algorithm executed source symbol", symbol)?;
         }
         for symbol in &self.evidence_symbols {
-            require_nonempty("Reed–Solomon evidence source symbol", symbol)?;
+            require_nonempty("algorithm evidence source symbol", symbol)?;
+        }
+        for source_url in &self.supporting_source_urls {
+            require_nonempty("algorithm supporting source URL", source_url)?;
+        }
+        for symbol in &self.supporting_symbols {
+            require_nonempty("algorithm supporting source symbol", symbol)?;
         }
         verify_sha256_text(
             &self.observed_artifact_sha256,
@@ -228,12 +234,101 @@ impl ReedSolomonSource {
         )?;
         if self.observed_artifact_sha256 != artifact_sha256 {
             return Err(VerificationError::new(format!(
-                "Reed–Solomon fixture {fixture_id} source {} disagrees with the accepted artifact",
-                pinned.cli_name
+                "{} fixture {fixture_id} source {} disagrees with the accepted artifact",
+                policy.label, pinned.cli_name
             )));
         }
         Ok(())
     }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum AlgorithmKind {
+    ReedSolomon,
+    CodewordInterleaving,
+}
+
+impl AlgorithmKind {
+    const fn policy(self) -> AlgorithmPolicy {
+        match self {
+            Self::ReedSolomon => AlgorithmPolicy {
+                label: "Reed–Solomon",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_reed_solomon.py --check",
+                nayuki_executed_symbols: &[
+                    "_reed_solomon_compute_divisor",
+                    "_reed_solomon_compute_remainder",
+                    "_reed_solomon_multiply",
+                ],
+                nayuki_evidence_symbols: &[
+                    "reed_solomon_compute_divisor",
+                    "reed_solomon_compute_remainder",
+                    "reed_solomon_multiply",
+                ],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                python_symbols: &["Polynomial", "gexp", "glog"],
+                python_supporting_source_urls: &[],
+                python_supporting_symbols: &[],
+            },
+            Self::CodewordInterleaving => AlgorithmPolicy {
+                label: "codeword-interleaving",
+                command: "uv run --project tests/oracles --locked python tests/support/verify_interleaved_codewords.py --check",
+                nayuki_executed_symbols: &["_add_ecc_and_interleave"],
+                nayuki_evidence_symbols: &["add_ecc_and_interleave"],
+                python_source_url: "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+                python_symbols: &["create_bytes"],
+                python_supporting_source_urls: &[
+                    "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/base.py",
+                ],
+                python_supporting_symbols: &["rs_blocks", "Polynomial", "gexp"],
+            },
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct AlgorithmPolicy {
+    label: &'static str,
+    command: &'static str,
+    nayuki_executed_symbols: &'static [&'static str],
+    nayuki_evidence_symbols: &'static [&'static str],
+    python_source_url: &'static str,
+    python_symbols: &'static [&'static str],
+    python_supporting_source_urls: &'static [&'static str],
+    python_supporting_symbols: &'static [&'static str],
+}
+
+impl AlgorithmPolicy {
+    const fn source(self, oracle: Oracle) -> AlgorithmSourcePolicy {
+        match oracle {
+            Oracle::Nayuki => AlgorithmSourcePolicy {
+                executed_source_url: "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+                executed_symbols: self.nayuki_executed_symbols,
+                evidence_source_url: "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/rust/src/lib.rs",
+                evidence_symbols: self.nayuki_evidence_symbols,
+                supporting_source_urls: &[],
+                supporting_symbols: &[],
+            },
+            Oracle::PythonQrcode => AlgorithmSourcePolicy {
+                executed_source_url: self.python_source_url,
+                executed_symbols: self.python_symbols,
+                evidence_source_url: self.python_source_url,
+                evidence_symbols: self.python_symbols,
+                supporting_source_urls: self.python_supporting_source_urls,
+                supporting_symbols: self.python_supporting_symbols,
+            },
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct AlgorithmSourcePolicy {
+    executed_source_url: &'static str,
+    executed_symbols: &'static [&'static str],
+    evidence_source_url: &'static str,
+    evidence_symbols: &'static [&'static str],
+    supporting_source_urls: &'static [&'static str],
+    supporting_symbols: &'static [&'static str],
 }
 
 #[derive(Debug, Deserialize)]

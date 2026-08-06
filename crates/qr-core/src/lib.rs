@@ -6,6 +6,7 @@ use std::error::Error;
 use std::fmt;
 
 pub mod bit_buffer;
+pub mod codeword_stream;
 pub mod encoding;
 pub mod reed_solomon;
 pub mod tables;
