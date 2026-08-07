@@ -4,16 +4,27 @@ import { expect, test } from "@playwright/test";
 
 import { SAFE_PAYLOAD, enterPayload } from "./helpers";
 
-test("generation, configuration, and download leak no payload or external request", async ({
-  page,
-}) => {
+test("payload, logo, configuration, and downloads make no runtime request", async ({ page }) => {
   const consoleMessages: string[] = [];
   page.on("console", (message) => consoleMessages.push(message.text()));
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(request.url()));
   await page.goto("/");
   const initialUrl = page.url();
   const initialTitle = await page.title();
-  const requests: string[] = [];
-  page.on("request", (request) => requests.push(request.url()));
+  const initialHistoryLength = await page.evaluate(() => history.length);
+  const bootstrapRequests = requests.splice(0);
+  const localOrigin = new URL(initialUrl).origin;
+  expect(
+    bootstrapRequests.map((requestUrl) => {
+      const request = new URL(requestUrl);
+      expect(request.origin).toBe(localOrigin);
+      expect(request.pathname).toMatch(
+        /^(?:\/$|\/favicon\.ico$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$)/,
+      );
+      return request.pathname;
+    }),
+  ).not.toHaveLength(0);
 
   await enterPayload(page, SAFE_PAYLOAD);
   await page.getByText("Print", { exact: true }).click();
@@ -39,11 +50,21 @@ test("generation, configuration, and download leak no payload or external reques
       elements.flatMap((element) => Array.from(element.attributes, (attribute) => attribute.value)),
     );
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
+
+  await page.getByText("Opaque white", { exact: true }).click();
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();
+  const [pngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
+  expect(pngDownload.suggestedFilename()).toBe("qr-code.png");
+  expect(requests).toEqual([]);
   expect(
     await page.evaluate(() => ({
       local: Object.keys(localStorage),
       session: Object.keys(sessionStorage),
       historyLength: history.length,
     })),
-  ).toEqual({ local: [], session: [], historyLength: 2 });
+  ).toEqual({ local: [], session: [], historyLength: initialHistoryLength });
 });

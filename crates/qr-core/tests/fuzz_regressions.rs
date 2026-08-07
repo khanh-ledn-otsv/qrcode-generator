@@ -6,19 +6,19 @@ use qr_core::{EciAssignment, EncodeError, EncodeRequest, Version, encode};
 fn committed_fuzz_regressions_replay_intended_paths_without_panics() {
     let cases = [
         (
-            include_bytes!("../../../fuzz/corpus/encode/empty").as_slice(),
+            include_bytes!("../../../fuzz/corpus/encode_utf8/empty").as_slice(),
             None,
         ),
         (
-            include_bytes!("../../../fuzz/corpus/encode/numeric_boundary").as_slice(),
+            include_bytes!("../../../fuzz/corpus/encode_utf8/numeric_boundary").as_slice(),
             Some((DataMode::Numeric, None)),
         ),
         (
-            include_bytes!("../../../fuzz/corpus/encode/utf8_eci").as_slice(),
+            include_bytes!("../../../fuzz/corpus/encode_utf8/utf8_eci").as_slice(),
             Some((DataMode::Byte, Some(EciAssignment::Utf8))),
         ),
         (
-            include_bytes!("../../../fuzz/corpus/encode/byte_mode").as_slice(),
+            include_bytes!("../../../fuzz/corpus/encode_utf8/byte_mode").as_slice(),
             Some((DataMode::Byte, None)),
         ),
     ];

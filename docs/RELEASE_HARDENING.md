@@ -104,3 +104,6 @@ Release evidence is incomplete until the owner also records the named physical
 device, scanner, printer, stock/material, 25 mm and 30 mm print, and placement
 matrix required by `TESTING_STRATEGY.md`. Those manual results are deliberately
 not fabricated by repository automation.
+
+Use [`RELEASE_READINESS.md`](RELEASE_READINESS.md) for the final clean-build,
+browser, manual-evidence, exception, and sign-off gate.

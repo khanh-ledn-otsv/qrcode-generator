@@ -392,6 +392,10 @@ fn App() -> impl IntoView {
                             <p class="mt-1 text-sm leading-6 text-slate-600">
                                 "Files use fixed private filenames and contain no payload metadata."
                             </p>
+                            <div data-testid="release-guidance" class="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                                <p>"Choose SVG first when resizing or preparing print output. Place printed codes at 25–30 mm or larger."</p>
+                                <p class="mt-2">"Transparent output and logo output need extra validation. Test the final artifact with the actual camera, scanner, screen, print material, and placement environment before distribution."</p>
+                            </div>
                             <div class="mt-5 grid gap-3 sm:grid-cols-2">
                                 <button
                                     type="button"

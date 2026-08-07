@@ -185,3 +185,15 @@ test("offers only square and rounded data modules with standard square finders",
     /a\.25\.25/,
   );
 });
+
+test("explains export, physical sizing, and placement validation before generation", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const guidance = page.getByTestId("release-guidance");
+  await expect(guidance).toContainText("Choose SVG first");
+  await expect(guidance).toContainText("25–30 mm or larger");
+  await expect(guidance).toContainText("Transparent output and logo output need extra validation");
+  await expect(guidance).toContainText("actual camera, scanner, screen, print material");
+});

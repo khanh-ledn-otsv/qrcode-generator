@@ -31,7 +31,7 @@ if [[ "$(wasm-bindgen-test-runner --version 2>/dev/null || true)" != "wasm-bindg
   cargo install --locked --force wasm-bindgen-cli --version 0.2.126
 fi
 
-corepack pnpm exec playwright install chromium
+corepack pnpm exec playwright install chromium firefox webkit
 
 zxing_source="${repository_root}/tests/oracles/zxing-cpp"
 zxing_commit="8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825"

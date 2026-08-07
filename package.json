@@ -31,6 +31,7 @@
     "release:miri": "cargo +nightly miri test -p qr-core && cargo +nightly miri test -p qr-render --lib && cargo +nightly miri test -p qr-render --test profile_geometry --test render_model",
     "release:mutation": "bash scripts/verify-mutations.sh",
     "release:performance": "cargo bench -p qr-render --bench encode_render",
+    "release:readiness": "bash scripts/release-readiness.sh",
     "release:size-attribution": "cargo bloat --release --package qr-web --target wasm32-unknown-unknown --crates",
     "verify": "pnpm run check && pnpm run test"
   },
