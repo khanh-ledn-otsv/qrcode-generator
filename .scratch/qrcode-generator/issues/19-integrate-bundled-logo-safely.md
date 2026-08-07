@@ -11,7 +11,7 @@
 - [x] Opaque white remains the default QR background and required logo knockout so the symbol keeps normal dark-on-light polarity. Existing no-logo transparency may remain available as a caution, but logo mode always uses opaque white and never transparency.
 - [x] Enabling the logo switches to ECC H before version fitting and recalculates capacity and diagnostics.
 - [x] Logo geometry is calculated after H-level version fitting in QR-module coordinates. It is never sized from the profile canvas alone, because each profile can select multiple matrix sizes.
-- [x] Treat the SVG's complete declared `1000×602` view box as the source logo box so its supplied clear space is preserved. Scale it uniformly without clipping, stretching, or independently repositioning its paths, and place an opaque-white knockout behind the complete box.
+- [x] Keep the SVG's supplied geometry unchanged, but render it uniformly through the reviewed `180 180 640 240` presentation box so intrinsic asset whitespace does not make the visible lettermark illegible. Do not clip, stretch, or independently reposition its paths, and place an opaque-white knockout behind the complete presentation box.
 - [x] The knockout provides at least one full QR module of clear space on every side of the source logo box. Its edges snap outward to module boundaries; rounding may enlarge the knockout but must never reduce the clear space.
 - [x] Keep the logo box plus knockout at or below 40% of the selected matrix width. Do not derive an occlusion allowance from ECC H's nominal recovery percentage; the compiled dimensions must pass the independent artifact decode gate.
 - [x] Prefer exact visual centering. If the centered candidate intersects a protected function module, use a documented deterministic nearest-safe module-grid placement (stable tie-break order) or reject logo mode; never erase a central alignment pattern merely to keep the artwork centered.
@@ -26,6 +26,6 @@
 
 ## Answer
 
-Resolved on 2026-08-07. Release 1 now emits only `#BD0F72` QR modules. Logo mode refits at ECC H, locks the background/knockout to opaque white, and uses a compiled version-aware policy that preserves the complete ONE source box and avoids every protected function module with deterministic nearest-safe placement.
+Resolved on 2026-08-07. Release 1 now emits only `#BD0F72` QR modules. Logo mode refits at ECC H, locks the background/knockout to opaque white, and uses a compiled version-aware policy that renders unchanged ONE geometry through a trimmed presentation box and avoids every protected function module with deterministic nearest-safe placement.
 
 The generated [placement policy](../../../docs/generated/logo-placement-policy.md) records all 38 profile/version rows. Every row is valid and passed the manifest-pinned ZXing-C++ gate for both production PNG and independently rasterized production SVG. Structural tests cover sanitization, embedding, aspect ratio, knockout/quiet-zone geometry, deterministic artifacts, and absence of black output.

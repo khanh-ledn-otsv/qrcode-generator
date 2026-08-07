@@ -35,8 +35,10 @@ pub(crate) fn bundled_logo_body() -> Result<&'static str, RenderError> {
         .ok_or(RenderError::RenderFailure)
 }
 
-const SOURCE_VIEW_BOX_WIDTH: u32 = 1_000;
-const SOURCE_VIEW_BOX_HEIGHT: u32 = 602;
+const SOURCE_VIEW_BOX_LEFT: u32 = 180;
+const SOURCE_VIEW_BOX_TOP: u32 = 180;
+const SOURCE_VIEW_BOX_WIDTH: u32 = 640;
+const SOURCE_VIEW_BOX_HEIGHT: u32 = 240;
 const MODULE_UNITS: u32 = 1_000;
 
 // Largest source-box widths that passed the committed H-level profile/version
@@ -193,8 +195,9 @@ pub(crate) fn calculate_logo_placement(
     let source_width = source_width_modules
         .checked_mul(MODULE_UNITS)
         .ok_or(RenderError::DimensionOverflow)?;
-    let source_height = source_width_modules
+    let source_height = source_width
         .checked_mul(SOURCE_VIEW_BOX_HEIGHT)
+        .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
         .ok_or(RenderError::DimensionOverflow)?;
     let centered_left = matrix_width
         .checked_mul(MODULE_UNITS)
@@ -412,6 +415,11 @@ fn point_in_polygon(x: f64, y: f64, points: &[(f64, f64)]) -> bool {
 }
 
 #[must_use]
-pub(crate) const fn source_view_box() -> (u32, u32) {
-    (SOURCE_VIEW_BOX_WIDTH, SOURCE_VIEW_BOX_HEIGHT)
+pub(crate) const fn source_view_box() -> (u32, u32, u32, u32) {
+    (
+        SOURCE_VIEW_BOX_LEFT,
+        SOURCE_VIEW_BOX_TOP,
+        SOURCE_VIEW_BOX_WIDTH,
+        SOURCE_VIEW_BOX_HEIGHT,
+    )
 }

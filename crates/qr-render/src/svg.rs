@@ -108,7 +108,7 @@ fn write_logo(
     let logo_body = bundled_logo_body()?;
     write!(
         svg,
-        "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"0 0 1000 602\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\">{logo_body}</svg>",
+        "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"180 180 640 240\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\">{logo_body}</svg>",
         decimal_thousandths(source_x),
         decimal_thousandths(source_y),
         decimal_thousandths(source.width_thousandths()),

@@ -45,7 +45,7 @@ fn bundled_logo_is_the_sanitized_magenta_one_lettermark() {
 }
 
 #[test]
-fn logo_artifacts_embed_the_complete_source_box_over_an_opaque_white_knockout() {
+fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() {
     let encoded = encode(EncodeRequest {
         text: "logo",
         ecc: ErrorCorrection::High,
@@ -63,7 +63,7 @@ fn logo_artifacts_embed_the_complete_source_box_over_an_opaque_white_knockout() 
     assert!(svg.contains("data-role=\"logo-knockout\""));
     assert!(svg.contains("fill=\"#ffffff\""));
     assert!(svg.contains("data-role=\"bundled-logo\""));
-    assert!(svg.contains("viewBox=\"0 0 1000 602\""));
+    assert!(svg.contains("viewBox=\"180 180 640 240\""));
     assert!(svg.contains("preserveAspectRatio=\"xMidYMid meet\""));
 
     let source_document = roxmltree::Document::parse(BUNDLED_LOGO_SVG).unwrap();

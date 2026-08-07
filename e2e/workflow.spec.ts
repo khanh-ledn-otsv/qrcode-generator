@@ -143,6 +143,22 @@ test("logo mode refits at ECC H and requires opaque white", async ({ page }) => 
     return renderedLogo.width.baseVal.value / outerSvg.viewBox.baseVal.width;
   });
   expect(sourceWidthRatio).toBeGreaterThanOrEqual(0.18);
+
+  const visibleArtworkCoverage = await renderedLogos.first().evaluate((renderedLogo) => {
+    if (!(renderedLogo instanceof SVGSVGElement)) return { width: 0, height: 0 };
+    const shapes = [...renderedLogo.querySelectorAll<SVGGraphicsElement>("path, polygon")];
+    const boxes = shapes.map((shape) => shape.getBBox());
+    const left = Math.min(...boxes.map((box) => box.x));
+    const top = Math.min(...boxes.map((box) => box.y));
+    const right = Math.max(...boxes.map((box) => box.x + box.width));
+    const bottom = Math.max(...boxes.map((box) => box.y + box.height));
+    return {
+      width: (right - left) / renderedLogo.viewBox.baseVal.width,
+      height: (bottom - top) / renderedLogo.viewBox.baseVal.height,
+    };
+  });
+  expect(visibleArtworkCoverage.width).toBeGreaterThanOrEqual(0.9);
+  expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
 });
 
 test("offers only square and rounded data modules with standard square finders", async ({

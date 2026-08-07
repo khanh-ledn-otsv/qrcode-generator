@@ -46,8 +46,8 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
                     <= (knockout.top().get() + knockout.height().get()) * 1_000 - 1_000
             );
             assert_eq!(
-                source.width_thousandths() * 602,
-                source.height_thousandths() * 1_000
+                source.width_thousandths() * 240,
+                source.height_thousandths() * 640
             );
 
             let mut obscured = 0_u32;

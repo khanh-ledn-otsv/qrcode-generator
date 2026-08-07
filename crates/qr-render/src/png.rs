@@ -114,14 +114,16 @@ fn render_logo(
     let y_start = source_top_pixels.floor() as u32;
     let x_end = (source_left_pixels + source_width_pixels).ceil() as u32;
     let y_end = (source_top_pixels + source_height_pixels).ceil() as u32;
-    let (view_box_width, view_box_height) = source_view_box();
+    let (view_box_left, view_box_top, view_box_width, view_box_height) = source_view_box();
     let canvas_width = u64::from(dimensions.width().get());
     for y in y_start..y_end {
         for x in x_start..x_end {
-            let source_x = (f64::from(x) + 0.5 - source_left_pixels) * f64::from(view_box_width)
-                / source_width_pixels;
-            let source_y = (f64::from(y) + 0.5 - source_top_pixels) * f64::from(view_box_height)
-                / source_height_pixels;
+            let source_x = f64::from(view_box_left)
+                + (f64::from(x) + 0.5 - source_left_pixels) * f64::from(view_box_width)
+                    / source_width_pixels;
+            let source_y = f64::from(view_box_top)
+                + (f64::from(y) + 0.5 - source_top_pixels) * f64::from(view_box_height)
+                    / source_height_pixels;
             if !logo_contains_source_point(source_x, source_y) {
                 continue;
             }
