@@ -4,6 +4,37 @@ use crate::RenderError;
 
 pub const BUNDLED_LOGO_SVG: &str = include_str!("../../../assets/RGB-one-lettermark-magenta.svg");
 
+// PNG rendering uses a compact, compiled hit test for this exact sanitized SVG.
+// Pinning the bundled bytes makes an asset edit fail at compile time until that
+// geometry has been deliberately regenerated and independently audited.
+const BUNDLED_LOGO_FNV1A64: u64 = fnv1a64(BUNDLED_LOGO_SVG.as_bytes());
+const EXPECTED_BUNDLED_LOGO_FNV1A64: u64 = 0xecc8_cea6_484e_3bc8;
+const _: () = assert!(BUNDLED_LOGO_FNV1A64 == EXPECTED_BUNDLED_LOGO_FNV1A64);
+
+const fn fnv1a64(bytes: &[u8]) -> u64 {
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    let mut index = 0;
+    while index < bytes.len() {
+        hash ^= bytes[index] as u64;
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+        index += 1;
+    }
+    hash
+}
+
+pub(crate) fn bundled_logo_body() -> Result<&'static str, RenderError> {
+    let root_end = BUNDLED_LOGO_SVG
+        .find('>')
+        .and_then(|index| index.checked_add(1))
+        .ok_or(RenderError::RenderFailure)?;
+    let close_start = BUNDLED_LOGO_SVG
+        .rfind("</svg>")
+        .ok_or(RenderError::RenderFailure)?;
+    BUNDLED_LOGO_SVG
+        .get(root_end..close_start)
+        .ok_or(RenderError::RenderFailure)
+}
+
 const SOURCE_VIEW_BOX_WIDTH: u32 = 1_000;
 const SOURCE_VIEW_BOX_HEIGHT: u32 = 602;
 const MODULE_UNITS: u32 = 1_000;

@@ -1,3 +1,5 @@
+#[path = "support/high_versions.rs"]
+mod high_versions;
 #[path = "support/raster.rs"]
 mod raster;
 
@@ -11,7 +13,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png, render_svg,
+    APPROVED_DATA_MODULE_STYLES, Background, Foreground, LogoStyle, RenderModel, RenderOptions,
+    Rgba, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 #[test]
@@ -32,14 +35,12 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for version in 1..=profile.maximum_version().number() {
-            let text = payload_for_high_version(version)?;
+            let text = high_versions::payload_for_high_version(version)?;
             let encoded = encode(EncodeRequest {
                 text: &text,
                 ecc: ErrorCorrection::High,
                 max_version: Version::try_from(version)?,
             })?;
-            let options = RenderOptions::safe(profile)?.with_logo(LogoStyle::Bundled)?;
-            let model = RenderModel::new(&encoded, options)?;
             let expected = DecodeExpectation {
                 payload: text.into_bytes(),
                 version: QrVersion::new(version)?,
@@ -47,28 +48,41 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
                 eci_assignment: None,
             };
 
-            let svg = render_svg(&model)?;
-            let dimensions = profile.svg_dimensions();
-            let pixmap =
-                raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
-            let svg_artifact = output
-                .path()
-                .join(format!("logo-svg-{profile_index}-{version}.png"));
-            pixmap.save_png(&svg_artifact)?;
-            if let Err(error) = decoder.inspect_and_compare(&svg_artifact, &expected) {
-                failures.push(format!(
-                    "SVG profile {profile_index} version {version}: {error}"
+            for (style_index, style) in APPROVED_DATA_MODULE_STYLES.into_iter().enumerate() {
+                let options = RenderOptions::approved_with_data_style(
+                    profile,
+                    Foreground::Brand,
+                    Background::Opaque(Rgba::WHITE),
+                    style,
+                )?
+                .with_logo(LogoStyle::Bundled)?;
+                let model = RenderModel::new(&encoded, options)?;
+                let svg = render_svg(&model)?;
+                let dimensions = profile.svg_dimensions();
+                let pixmap = raster::rasterize_svg(
+                    &svg,
+                    dimensions.width().get(),
+                    dimensions.height().get(),
+                )?;
+                let svg_artifact = output.path().join(format!(
+                    "logo-svg-{profile_index}-{version}-{style_index}.png"
                 ));
-            }
+                pixmap.save_png(&svg_artifact)?;
+                if let Err(error) = decoder.inspect_and_compare(&svg_artifact, &expected) {
+                    failures.push(format!(
+                        "SVG profile {profile_index} version {version} style {style_index}: {error}"
+                    ));
+                }
 
-            let png_artifact = output
-                .path()
-                .join(format!("logo-png-{profile_index}-{version}.png"));
-            fs::write(&png_artifact, render_png(&model)?)?;
-            if let Err(error) = decoder.inspect_and_compare(&png_artifact, &expected) {
-                failures.push(format!(
-                    "PNG profile {profile_index} version {version}: {error}"
+                let png_artifact = output.path().join(format!(
+                    "logo-png-{profile_index}-{version}-{style_index}.png"
                 ));
+                fs::write(&png_artifact, render_png(&model)?)?;
+                if let Err(error) = decoder.inspect_and_compare(&png_artifact, &expected) {
+                    failures.push(format!(
+                        "PNG profile {profile_index} version {version} style {style_index}: {error}"
+                    ));
+                }
             }
         }
     }
@@ -78,20 +92,4 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
     } else {
         Err(failures.join("\n").into())
     }
-}
-
-fn payload_for_high_version(version: u8) -> Result<String, Box<dyn Error>> {
-    for length in 1..=1_000 {
-        let text = "a".repeat(length);
-        if encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            max_version: Version::try_from(version)?,
-        })
-        .is_ok_and(|encoded| encoded.version().number() == version)
-        {
-            return Ok(text);
-        }
-    }
-    Err(format!("no byte payload selected H-level version {version}").into())
 }

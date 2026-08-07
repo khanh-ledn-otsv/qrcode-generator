@@ -377,14 +377,14 @@ The following ticket slices are small enough for review and preserve dependency 
 17. Diagnostics, validation, accessibility, and downloads.
 18. Approved color/contrast and transparency previews.
 19. Square/rounded data-module presets with standard square finders.
-20. Bundled gray placeholder logo, knockout, overlap checks, and decode matrix.
+20. Bundled magenta ONE lettermark, knockout, overlap checks, and decode matrix.
 21. Hardening, performance, manual validation, release evidence, and docs.
 
 Tickets 3–11 should generally land sequentially because later code relies on earlier invariants. UI shell work may run in parallel after ticket 2, but export controls must not be presented as functional until the core and safe renderer pass their gates.
 
 ## 10. Owner coordination still needed
 
-The implementation policy, launch presets, ECC behavior, contrast threshold, transparency behavior, styling set, and temporary logo asset are accepted. Access to a licensed complete ISO/IEC 18004:2024 copy remains useful for a later audit but is not an implementation gate under the public-source corroboration policy in section 2.1.
+The implementation policy, launch presets, ECC behavior, contrast threshold, transparency behavior, styling set, and bundled ONE lettermark are accepted. Access to a licensed complete ISO/IEC 18004:2024 copy remains useful for a later audit but is not an implementation gate under the public-source corroboration policy in section 2.1.
 
 Release validation still requires the owner to name the supported browser, iOS/Android device, scanner app, printer, stock/material, and placement environments and to coordinate the physical checks. This blocks only completion of M5/ticket 21, not implementation through M4/ticket 20.
 

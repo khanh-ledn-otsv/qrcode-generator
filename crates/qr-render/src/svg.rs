@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use crate::{Background, DataModuleStyle, RenderError, RenderModel, Rgba};
+use crate::{Background, DataModuleStyle, RenderError, RenderModel, Rgba, logo::bundled_logo_body};
 
 /// Renders the validated model as deterministic, payload-free UTF-8 SVG.
 pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
@@ -105,9 +105,10 @@ fn write_logo(
         .top_thousandths()
         .checked_add(origin.y().get() * 1_000)
         .ok_or(RenderError::DimensionOverflow)?;
+    let logo_body = bundled_logo_body()?;
     write!(
         svg,
-        "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"0 0 1000 602\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\"><path fill=\"#bd0f72\" d=\"M191.6667,192.6667v216.6667h191.6667v-216.6667h-191.6667ZM337.5,367.6667h-100v-133.3333h100v133.3333Z\"/><polygon fill=\"#bd0f72\" points=\"808.3333 234.3333 808.3333 192.6667 641.6667 192.6667 641.6667 409.3333 808.3333 409.3333 808.3333 367.6667 687.5 367.6667 687.5 321.8333 808.3333 321.8333 808.3333 280.1667 687.5 280.1667 687.5 234.3333 808.3333 234.3333\"/><polygon fill=\"#bd0f72\" points=\"566.6667 334.3333 454.1667 192.6667 412.5 192.6667 412.5 409.3333 458.3333 409.3333 458.3333 267.6667 570.8333 409.3333 612.5 409.3333 612.5 192.6667 566.6667 192.6667 566.6667 334.3333\"/></svg>",
+        "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"0 0 1000 602\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\">{logo_body}</svg>",
         decimal_thousandths(source_x),
         decimal_thousandths(source_y),
         decimal_thousandths(source.width_thousandths()),

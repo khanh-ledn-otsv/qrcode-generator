@@ -58,6 +58,7 @@ fn logo_artifacts_embed_the_complete_source_box_over_an_opaque_white_knockout() 
         .unwrap();
     let model = RenderModel::new(&encoded, options).unwrap();
     let svg = render_svg(&model).unwrap();
+    assert_eq!(svg, render_svg(&model).unwrap());
     assert!(!svg.contains("#000000"));
     assert!(svg.contains("data-role=\"logo-knockout\""));
     assert!(svg.contains("fill=\"#ffffff\""));
@@ -65,7 +66,24 @@ fn logo_artifacts_embed_the_complete_source_box_over_an_opaque_white_knockout() 
     assert!(svg.contains("viewBox=\"0 0 1000 602\""));
     assert!(svg.contains("preserveAspectRatio=\"xMidYMid meet\""));
 
+    let source_document = roxmltree::Document::parse(BUNDLED_LOGO_SVG).unwrap();
+    let rendered_document = roxmltree::Document::parse(&svg).unwrap();
+    let rendered_logo = rendered_document
+        .descendants()
+        .find(|node| node.attribute("data-role") == Some("bundled-logo"))
+        .unwrap();
+    let source_shapes = shape_attributes(source_document.root_element());
+    let rendered_shapes = shape_attributes(rendered_logo);
+    assert_eq!(rendered_shapes, source_shapes);
+
+    let placement = model.logo_placement().unwrap();
+    let knockout = placement.knockout_bounds();
+    let matrix_width = u32::from(encoded.version().symbol_size());
+    assert!(knockout.left().get() + knockout.width().get() <= matrix_width);
+    assert!(knockout.top().get() + knockout.height().get() <= matrix_width);
+
     let png = render_png(&model).unwrap();
+    assert_eq!(png, render_png(&model).unwrap());
     let decoder = png::Decoder::new(Cursor::new(png));
     let mut reader = decoder.read_info().unwrap();
     let mut pixels = vec![0; reader.output_buffer_size().unwrap()];
@@ -77,4 +95,33 @@ fn logo_artifacts_embed_the_complete_source_box_over_an_opaque_white_knockout() 
             .chunks_exact(4)
             .any(|pixel| pixel == [189, 15, 114, 255])
     );
+    let row_bytes = usize::try_from(output.width).unwrap() * 4;
+    assert!(
+        pixels[..row_bytes]
+            .chunks_exact(4)
+            .all(|pixel| pixel == [255, 255, 255, 255])
+    );
+    assert!(
+        pixels[pixels.len() - row_bytes..]
+            .chunks_exact(4)
+            .all(|pixel| pixel == [255, 255, 255, 255])
+    );
+}
+
+fn shape_attributes(root: roxmltree::Node<'_, '_>) -> Vec<(String, String, String)> {
+    root.descendants()
+        .filter_map(|node| match node.tag_name().name() {
+            "path" => Some((
+                "path".to_owned(),
+                node.attribute("fill")?.to_owned(),
+                node.attribute("d")?.to_owned(),
+            )),
+            "polygon" => Some((
+                "polygon".to_owned(),
+                node.attribute("fill")?.to_owned(),
+                node.attribute("points")?.to_owned(),
+            )),
+            _ => None,
+        })
+        .collect()
 }

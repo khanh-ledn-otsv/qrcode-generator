@@ -1,3 +1,6 @@
+#[path = "support/high_versions.rs"]
+mod high_versions;
+
 use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
@@ -10,7 +13,7 @@ use qr_render::{
 fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
-            let text = payload_for_high_version(version_number);
+            let text = high_versions::payload_for_high_version(version_number).unwrap();
             let encoded = encode(EncodeRequest {
                 text: &text,
                 ecc: ErrorCorrection::High,
@@ -64,22 +67,6 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
             assert_eq!(options.safety(), OutputSafety::Caution);
         }
     }
-}
-
-fn payload_for_high_version(version_number: u8) -> String {
-    for length in 1..=1_000 {
-        let text = "a".repeat(length);
-        if encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            max_version: Version::new(version_number).unwrap(),
-        })
-        .is_ok_and(|encoded| encoded.version().number() == version_number)
-        {
-            return text;
-        }
-    }
-    panic!("no byte payload selected version {version_number}");
 }
 
 #[test]

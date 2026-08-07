@@ -7,7 +7,7 @@ use fixture_tool::{
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_svg};
+use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_svg};
 
 #[test]
 #[ignore = "requires the manifest-pinned ZXing-C++ checkout and reader"]
@@ -65,40 +65,6 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
         }
     }
 
-    for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
-        for version in 1..=profile.maximum_version().number() {
-            let text = payload_for_high_version(version)?;
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::High,
-                max_version: Version::try_from(version)?,
-            })?;
-            let options = RenderOptions::safe(profile)?.with_logo(LogoStyle::Bundled)?;
-            let model = RenderModel::new(&encoded, options)?;
-            let svg = render_svg(&model)?;
-            let dimensions = profile.svg_dimensions();
-            let pixmap =
-                raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
-            let artifact = output.path().join(format!(
-                "svg-logo-profile-{profile_index}-version-{version}.png"
-            ));
-            pixmap.save_png(&artifact)?;
-            decoder
-                .inspect_and_compare(
-                    &artifact,
-                    &DecodeExpectation {
-                        payload: text.into_bytes(),
-                        version: QrVersion::new(version)?,
-                        ecc: FixtureEcc::H,
-                        eci_assignment: None,
-                    },
-                )
-                .map_err(|error| {
-                    format!("logo SVG profile {profile_index} version {version}: {error}")
-                })?;
-        }
-    }
-
     for case in styling::approved_decode_cases()? {
         let model = RenderModel::new(&case.encoded, case.options)?;
         let svg = render_svg(&model)?;
@@ -132,21 +98,6 @@ fn payload_for_version(version: u8, _case_index: usize) -> String {
     "a".repeat(length)
 }
 
-fn payload_for_high_version(version: u8) -> Result<String, Box<dyn Error>> {
-    for length in 1..=1_000 {
-        let text = "a".repeat(length);
-        if encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            max_version: Version::try_from(version)?,
-        })
-        .is_ok_and(|encoded| encoded.version().number() == version)
-        {
-            return Ok(text);
-        }
-    }
-    Err(format!("no byte payload selected H-level version {version}").into())
-}
 #[path = "support/raster.rs"]
 mod raster;
 #[path = "support/styling.rs"]

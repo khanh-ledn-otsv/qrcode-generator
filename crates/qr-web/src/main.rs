@@ -123,7 +123,7 @@ fn App() -> impl IntoView {
                         "Create a safe QR code"
                     </h1>
                     <p class="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
-                        "Your text stays in this browser. Choose an output profile and the QR code will refit automatically at error correction M."
+                        "Your text stays in this browser. Standard output refits at error correction M; logo output refits at H."
                     </p>
                 </header>
 
@@ -601,8 +601,9 @@ fn logo_label(style: LogoStyle, placement: Option<qr_render::LogoPlacement>) -> 
     match (style, placement) {
         (LogoStyle::None, _) => "None".to_owned(),
         (LogoStyle::Bundled, Some(placement)) => format!(
-            "ONE lettermark · {} data/remainder modules obscured",
-            placement.obscured_modules()
+            "ONE lettermark · {} data · {} remainder modules obscured",
+            placement.obscured_data_modules(),
+            placement.obscured_remainder_modules()
         ),
         (LogoStyle::Bundled, None) => "Unavailable".to_owned(),
     }

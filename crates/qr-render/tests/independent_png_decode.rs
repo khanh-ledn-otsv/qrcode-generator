@@ -14,9 +14,7 @@ use fixture_tool::{
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{
-    Background, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
-};
+use qr_render::{Background, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 
 #[test]
 #[ignore = "requires the manifest-pinned ZXing-C++ checkout and reader"]
@@ -67,36 +65,6 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
                     format!("plain PNG profile {profile_index} version {version}: {error}")
                 })?;
             case_index += 1;
-        }
-    }
-
-    for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
-        for version in 1..=profile.maximum_version().number() {
-            let text = payload_for_high_version(version)?;
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::High,
-                max_version: Version::try_from(version)?,
-            })?;
-            let options = RenderOptions::safe(profile)?.with_logo(LogoStyle::Bundled)?;
-            let model = RenderModel::new(&encoded, options)?;
-            let artifact = output.path().join(format!(
-                "png-logo-profile-{profile_index}-version-{version}.png"
-            ));
-            fs::write(&artifact, render_png(&model)?)?;
-            decoder
-                .inspect_and_compare(
-                    &artifact,
-                    &DecodeExpectation {
-                        payload: text.into_bytes(),
-                        version: QrVersion::new(version)?,
-                        ecc: FixtureEcc::H,
-                        eci_assignment: None,
-                    },
-                )
-                .map_err(|error| {
-                    format!("logo PNG profile {profile_index} version {version}: {error}")
-                })?;
         }
     }
 
@@ -163,20 +131,4 @@ fn composite_on_white(source: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
 fn payload_for_version(version: u8, _case_index: usize) -> String {
     let length = versions::first_byte_length(version);
     "a".repeat(length)
-}
-
-fn payload_for_high_version(version: u8) -> Result<String, Box<dyn Error>> {
-    for length in 1..=1_000 {
-        let text = "a".repeat(length);
-        if encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            max_version: Version::try_from(version)?,
-        })
-        .is_ok_and(|encoded| encoded.version().number() == version)
-        {
-            return Ok(text);
-        }
-    }
-    Err(format!("no byte payload selected H-level version {version}").into())
 }
