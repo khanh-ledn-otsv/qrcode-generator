@@ -198,3 +198,16 @@ const fn logarithm_table() -> [u8; 256] {
     }
     logarithms
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{EXPONENTS, LOGARITHMS, exponent_table, logarithm_table};
+
+    #[test]
+    fn generated_field_tables_match_the_compile_time_constants() {
+        let exponent_generator: fn() -> [u8; 510] = exponent_table;
+        let logarithm_generator: fn() -> [u8; 256] = logarithm_table;
+        assert_eq!(std::hint::black_box(exponent_generator)(), EXPONENTS);
+        assert_eq!(std::hint::black_box(logarithm_generator)(), LOGARITHMS);
+    }
+}

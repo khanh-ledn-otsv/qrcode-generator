@@ -114,6 +114,34 @@ fn invalid_profiles_return_specific_errors() {
     assert_eq!(
         OutputProfile::try_new(
             ProfileId::Inline,
+            PixelDimensions::square(0),
+            PixelDimensions::square(0),
+            Version::try_from(1).unwrap(),
+        ),
+        Err(ProfileError::DimensionsMustBePositive)
+    );
+    assert_eq!(
+        OutputProfile::try_new(
+            ProfileId::Inline,
+            PixelDimensions::new(90, 91),
+            PixelDimensions::square(270),
+            Version::try_from(1).unwrap(),
+        ),
+        Err(ProfileError::DimensionsMustBeSquare)
+    );
+    assert_eq!(
+        OutputProfile::try_new(
+            ProfileId::Inline,
+            PixelDimensions::square(40),
+            PixelDimensions::square(120),
+            Version::try_from(1).unwrap(),
+        ),
+        Err(ProfileError::MaximumVersionScaleBelowSix)
+    );
+
+    assert_eq!(
+        OutputProfile::try_new(
+            ProfileId::Inline,
             base,
             incorrect_png,
             Version::try_from(5).unwrap(),

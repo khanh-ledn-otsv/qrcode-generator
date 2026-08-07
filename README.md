@@ -54,7 +54,12 @@ cargo fuzz run encode -- -runs=10000
 printf %s 'synthetic diagnostic input' | cargo run -p qr-core --example diagnostics
 ```
 
+Extended coverage, mutation, fuzz, Miri, dependency, performance, adverse-image,
+compressed-bundle, and release-evidence commands are documented in
+[`docs/RELEASE_HARDENING.md`](docs/RELEASE_HARDENING.md).
+
 ## Documentation
 
 - [Development plan](docs/DEVELOPMENT_PLAN.md)
 - [Testing strategy](docs/TESTING_STRATEGY.md)
+- [Release hardening](docs/RELEASE_HARDENING.md)

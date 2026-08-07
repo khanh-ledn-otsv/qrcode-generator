@@ -10,10 +10,32 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "=0.4.13"
 qr-core = { path = "../crates/qr-core" }
+qr-render = { path = "../crates/qr-render" }
 
 [[bin]]
 name = "encode"
 path = "fuzz_targets/encode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "reed_solomon"
+path = "fuzz_targets/reed_solomon.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "matrix_build"
+path = "fuzz_targets/matrix_build.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_png"
+path = "fuzz_targets/render_png.rs"
 test = false
 doc = false
 bench = false

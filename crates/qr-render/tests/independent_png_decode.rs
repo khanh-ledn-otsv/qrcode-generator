@@ -1,8 +1,11 @@
+#[allow(dead_code)]
 #[path = "support/styling.rs"]
 mod styling;
+#[allow(dead_code)]
 #[path = "support/versions.rs"]
 mod versions;
 
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
 use std::io::Cursor;
@@ -31,6 +34,8 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
         manifest.decoder().source_commit(),
     );
     let output = tempfile::tempdir()?;
+    let mut matrix_outcomes = Vec::new();
+    let mut decoded_matrix_labels = HashSet::new();
 
     let mut case_index = 0;
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
@@ -69,6 +74,8 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
     }
 
     for case in styling::approved_decode_cases()? {
+        let label = case.label.clone();
+        let safety = safety_label(case.options.safety());
         let model = RenderModel::new(&case.encoded, case.options)?;
         let png = render_png(&model)?;
         let effective_png = match case.options.background() {
@@ -85,7 +92,7 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
                 &DecodeExpectation {
                     payload: case.payload,
                     version: QrVersion::new(case.encoded.version().number())?,
-                    ecc: FixtureEcc::M,
+                    ecc: fixture_ecc(case.ecc),
                     eci_assignment: case
                         .eci_assignment
                         .map(EciAssignment::try_from)
@@ -93,8 +100,90 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
                 },
             )
             .map_err(|error| format!("approved PNG case {}: {error}", case.label))?;
+        if !label.contains("transition-version-") {
+            decoded_matrix_labels.insert(label.clone());
+            matrix_outcomes.push(serde_json::json!({
+                "id": label,
+                "format": "png",
+                "profile_index": case.tuple.profile_index,
+                "foreground_index": case.tuple.foreground_index,
+                "background_index": case.tuple.background_index,
+                "module_style_index": case.tuple.style_index,
+                "function_style_index": case.tuple.function_style_index,
+                "finder_style_index": case.tuple.finder_index,
+                "logo_state_index": case.tuple.logo_index,
+                "payload_class": case.payload_class.label(),
+                "safety": safety,
+                "outcome": "decoded",
+            }));
+        }
+    }
+
+    let records = styling::approved_combination_records()?;
+    let expected_renderable = records
+        .iter()
+        .filter(|record| record.outcome.is_renderable())
+        .count();
+    if decoded_matrix_labels.len() != expected_renderable {
+        return Err(format!(
+            "decoded {} approved PNG matrix rows; expected {expected_renderable}",
+            decoded_matrix_labels.len()
+        )
+        .into());
+    }
+    for record in records {
+        if let Some(error) = record.outcome.expected_error() {
+            matrix_outcomes.push(serde_json::json!({
+                "id": record.label(),
+                "format": "png",
+                "profile_index": record.tuple.profile_index,
+                "foreground_index": record.tuple.foreground_index,
+                "background_index": record.tuple.background_index,
+                "module_style_index": record.tuple.style_index,
+                "function_style_index": record.tuple.function_style_index,
+                "finder_style_index": record.tuple.finder_index,
+                "logo_state_index": record.tuple.logo_index,
+                "payload_class": record.payload_class.label(),
+                "safety": null,
+                "outcome": "expected-invalid",
+                "error": error.to_string(),
+            }));
+        }
+    }
+    matrix_outcomes.sort_by(|left, right| left["id"].as_str().cmp(&right["id"].as_str()));
+    if let Some(evidence_dir) = std::env::var_os("QR_RELEASE_EVIDENCE_DIR") {
+        let configured = Path::new(&evidence_dir);
+        let evidence_dir = if configured.is_absolute() {
+            configured.to_path_buf()
+        } else {
+            workspace.join(configured)
+        };
+        fs::create_dir_all(&evidence_dir)?;
+        fs::write(
+            evidence_dir.join("approved-output-matrix.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "rows": matrix_outcomes,
+            }))?,
+        )?;
     }
     Ok(())
+}
+
+const fn safety_label(safety: qr_render::OutputSafety) -> &'static str {
+    match safety {
+        qr_render::OutputSafety::Safe => "safe",
+        qr_render::OutputSafety::Caution => "caution",
+    }
+}
+
+fn fixture_ecc(ecc: ErrorCorrection) -> FixtureEcc {
+    match ecc {
+        ErrorCorrection::Low => FixtureEcc::L,
+        ErrorCorrection::Medium => FixtureEcc::M,
+        ErrorCorrection::Quartile => FixtureEcc::Q,
+        ErrorCorrection::High => FixtureEcc::H,
+    }
 }
 
 fn composite_on_white(source: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {

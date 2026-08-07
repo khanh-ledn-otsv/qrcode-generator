@@ -797,3 +797,62 @@ fn reserve_version_regions(builder: &mut MatrixBuilder) -> Result<(), MatrixErro
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        InformationError, MaskId, Module, ModuleKind, PlacementError, build_function_matrix,
+        finalize_information, place_data, write_finder, write_information_module, write_separators,
+    };
+    use crate::Version;
+    use crate::codeword_stream::{CodewordStreamRequest, construct};
+    use crate::tables::{ErrorCorrection, lookup};
+
+    fn version_one_stream() -> crate::codeword_stream::InterleavedCodewords {
+        let version = Version::new(1).expect("version 1 is valid");
+        let row = lookup(version, ErrorCorrection::Medium).expect("version 1-M table exists");
+        let data = vec![0; usize::from(row.data_codewords())];
+        construct(CodewordStreamRequest {
+            version,
+            ecc: ErrorCorrection::Medium,
+            data_codewords: &data,
+        })
+        .expect("version 1-M stream builds")
+    }
+
+    #[test]
+    fn private_corruption_guards_return_typed_errors() {
+        assert!(!MaskId(8).applies(0, 0));
+
+        let version = Version::new(1).expect("version 1 is valid");
+        let mut matrix = build_function_matrix(version).expect("function matrix builds");
+        matrix.modules.push(Module::new(false, ModuleKind::Data));
+        assert!(matches!(
+            place_data(matrix, &version_one_stream(), MaskId(0)),
+            Err(PlacementError::StreamLengthMismatch { .. })
+        ));
+
+        let mut matrix = build_function_matrix(version).expect("function matrix builds");
+        assert!(matches!(
+            write_information_module(&mut matrix, 0, 0, false, ModuleKind::Format),
+            Err(InformationError::OwnershipMismatch { .. })
+        ));
+
+        let placed =
+            place_data(matrix, &version_one_stream(), MaskId(0)).expect("data placement succeeds");
+        let finalized = finalize_information(placed).expect("information finalization succeeds");
+        assert_eq!(
+            finalize_information(finalized),
+            Err(InformationError::AlreadyFinalized)
+        );
+
+        let mut builder = super::MatrixBuilder::new(version).expect("matrix builder initializes");
+        assert!(write_finder(&mut builder, 20, 20).is_err());
+
+        let mut builder = super::MatrixBuilder::new(version).expect("matrix builder initializes");
+        builder
+            .write(7, 20, Module::new(false, ModuleKind::Separator))
+            .expect("collision coordinate is in bounds");
+        assert!(write_separators(&mut builder).is_err());
+    }
+}

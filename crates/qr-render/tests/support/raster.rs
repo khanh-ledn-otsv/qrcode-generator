@@ -9,9 +9,11 @@ pub fn rasterize_svg(
     let mut pixmap =
         resvg::tiny_skia::Pixmap::new(width, height).ok_or("could not allocate SVG pixmap")?;
     pixmap.fill(resvg::tiny_skia::Color::WHITE);
+    let scale_x = width as f32 / tree.size().width();
+    let scale_y = height as f32 / tree.size().height();
     resvg::render(
         &tree,
-        resvg::tiny_skia::Transform::identity(),
+        resvg::tiny_skia::Transform::from_scale(scale_x, scale_y),
         &mut pixmap.as_mut(),
     );
     Ok(pixmap)

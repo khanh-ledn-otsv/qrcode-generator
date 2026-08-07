@@ -57,6 +57,11 @@
   foreground; the sanitized ONE lettermark is compile-time embedded behind an
   opaque-white, function-safe knockout selected by deterministic H-level module
   geometry, with all profile/version rows passing pinned SVG and PNG decoding.
+- [Ticket 20](issues/20-harden-approved-output-combinations.md): A generated
+  192-row matrix records all approved output/payload combinations and typed
+  rejections, while deterministic adverse decoding, quantitative coverage and
+  mutation gates, fuzz/Miri/dependency commands, and reproducible performance,
+  allocation, artifact, and compressed-WASM baselines form the release evidence.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.

@@ -8,15 +8,23 @@ publish.workspace = true
 [lib]
 path = "src/lib.rs"
 
+[[bench]]
+name = "encode_render"
+harness = false
+
 [dependencies]
 png.workspace = true
 qr-core.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 fixture-tool = { path = "../../tools/fixture-tool" }
+criterion = "=0.8.2"
+image = { version = "=0.25.10", default-features = false, features = ["jpeg", "png"] }
 proptest = "=1.11.0"
 resvg = { version = "=0.48.1", default-features = false }
 roxmltree = "=0.21.1"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 sha2.workspace = true
 tempfile = "=3.27.0"
 

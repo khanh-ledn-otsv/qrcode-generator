@@ -1014,6 +1014,8 @@ impl ZxingDecoder {
             "-formats",
             "QRCode",
             "-single",
+            "-binarizer",
+            "fixed",
             "-mode",
             "eci",
             artifact
@@ -1024,15 +1026,19 @@ impl ZxingDecoder {
             "-formats",
             "QRCode",
             "-single",
+            "-binarizer",
+            "fixed",
             "-bytes",
             artifact
                 .to_str()
                 .ok_or_else(|| VerificationError::new("artifact path is not valid UTF-8"))?,
         ])?;
         if raw_bytes != expected.payload {
-            return Err(VerificationError::new(
-                "decoded bytes do not match the expected payload",
-            ));
+            return Err(VerificationError::new(format!(
+                "decoded byte length {} does not match the expected {}-byte payload",
+                raw_bytes.len(),
+                expected.payload.len()
+            )));
         }
 
         let format = metadata_value(&metadata, "Format")?;

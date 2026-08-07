@@ -19,6 +19,18 @@
     "test:python": "uv run --project tests/oracles --locked python -m unittest discover -s tests/support -p 'test_*.py'",
     "test:rust": "cargo test",
     "test:wasm": "cargo test -p qr-web --target wasm32-unknown-unknown --lib && cargo test -p qr-web --target wasm32-unknown-unknown --test wasm_browser",
+    "test:approved": "cargo test -p qr-render --test approved_combinations --test resource_baselines --test adverse_transforms",
+    "test:decode": "QR_RELEASE_EVIDENCE_DIR=target/release-evidence cargo test -p qr-render --test independent_png_decode --test independent_svg_decode --test logo_decode -- --ignored",
+    "test:adverse:decode": "QR_RELEASE_EVIDENCE_DIR=target/release-evidence cargo test -p qr-render --test adverse_transforms -- --ignored",
+    "release:bundle": "bash scripts/verify-bundle-size.sh",
+    "release:coverage": "bash scripts/verify-coverage.sh",
+    "release:dependencies": "cargo audit && cargo tree --workspace --duplicates",
+    "release:evidence": "bash scripts/release-evidence.sh",
+    "release:fuzz": "cargo fuzz run encode -- -max_total_time=3600 && cargo fuzz run reed_solomon -- -max_total_time=3600 && cargo fuzz run matrix_build -- -max_total_time=3600 && cargo fuzz run render_png -- -max_total_time=3600",
+    "release:miri": "cargo +nightly miri test -p qr-core && cargo +nightly miri test -p qr-render --lib && cargo +nightly miri test -p qr-render --test profile_geometry --test render_model",
+    "release:mutation": "bash scripts/verify-mutations.sh",
+    "release:performance": "cargo bench -p qr-render --bench encode_render",
+    "release:size-attribution": "cargo bloat --release --package qr-web --target wasm32-unknown-unknown --crates",
     "verify": "pnpm run check && pnpm run test"
   },
   "devDependencies": {

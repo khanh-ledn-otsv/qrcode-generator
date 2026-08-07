@@ -40,7 +40,7 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
             }
             let model = RenderModel::new(&encoded, RenderOptions::safe(profile)?)?;
             let svg = render_svg(&model)?;
-            let dimensions = profile.svg_dimensions();
+            let dimensions = profile.png_dimensions();
             let pixmap =
                 raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
             let artifact = output
@@ -68,7 +68,7 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
     for case in styling::approved_decode_cases()? {
         let model = RenderModel::new(&case.encoded, case.options)?;
         let svg = render_svg(&model)?;
-        let dimensions = case.options.profile().svg_dimensions();
+        let dimensions = case.options.profile().png_dimensions();
         let pixmap =
             raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
         let artifact = output
@@ -81,7 +81,7 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
                 &DecodeExpectation {
                     payload: case.payload,
                     version: QrVersion::new(case.encoded.version().number())?,
-                    ecc: FixtureEcc::M,
+                    ecc: fixture_ecc(case.ecc),
                     eci_assignment: case
                         .eci_assignment
                         .map(EciAssignment::try_from)
@@ -93,6 +93,15 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
     Ok(())
 }
 
+fn fixture_ecc(ecc: ErrorCorrection) -> FixtureEcc {
+    match ecc {
+        ErrorCorrection::Low => FixtureEcc::L,
+        ErrorCorrection::Medium => FixtureEcc::M,
+        ErrorCorrection::Quartile => FixtureEcc::Q,
+        ErrorCorrection::High => FixtureEcc::H,
+    }
+}
+
 fn payload_for_version(version: u8, _case_index: usize) -> String {
     let length = versions::first_byte_length(version);
     "a".repeat(length)
@@ -100,7 +109,9 @@ fn payload_for_version(version: u8, _case_index: usize) -> String {
 
 #[path = "support/raster.rs"]
 mod raster;
+#[allow(dead_code)]
 #[path = "support/styling.rs"]
 mod styling;
+#[allow(dead_code)]
 #[path = "support/versions.rs"]
 mod versions;

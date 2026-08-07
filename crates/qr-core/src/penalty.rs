@@ -117,6 +117,7 @@ mod tests {
 
     #[test]
     fn runs_start_at_five_and_grow_one_point_per_module() {
+        assert_eq!(run_penalty(&[]), 0);
         assert_eq!(run_penalty(&[true; 4]), 0);
         assert_eq!(run_penalty(&[true; 5]), 3);
         assert_eq!(run_penalty(&[false; 7]), 5);
@@ -126,6 +127,11 @@ mod tests {
             ]),
             6
         );
+    }
+
+    #[test]
+    fn empty_balance_has_no_penalty() {
+        assert_eq!(balance_penalty(0, 0), 0);
     }
 
     #[test]

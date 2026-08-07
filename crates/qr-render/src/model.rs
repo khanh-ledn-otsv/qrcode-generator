@@ -121,16 +121,22 @@ pub enum FunctionModuleStyle {
     Square,
 }
 
+pub const APPROVED_FUNCTION_MODULE_STYLES: [FunctionModuleStyle; 1] = [FunctionModuleStyle::Square];
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FinderStyle {
     StandardSquare,
 }
+
+pub const APPROVED_FINDERS: [FinderStyle; 1] = [FinderStyle::StandardSquare];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogoStyle {
     None,
     Bundled,
 }
+
+pub const APPROVED_LOGO_STYLES: [LogoStyle; 2] = [LogoStyle::None, LogoStyle::Bundled];
 
 /// Validated rendering choices for the approved safe preset.
 ///

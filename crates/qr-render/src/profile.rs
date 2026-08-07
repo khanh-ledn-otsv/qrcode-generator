@@ -174,3 +174,18 @@ impl fmt::Display for ProfileError {
 }
 
 impl Error for ProfileError {}
+
+#[cfg(test)]
+mod tests {
+    use super::{OutputProfile, ProfileId};
+
+    #[test]
+    fn compiled_profile_constructor_matches_its_arguments() {
+        let constructor: fn(ProfileId, u32, u32, u8) -> OutputProfile = OutputProfile::compiled;
+        let profile = std::hint::black_box(constructor)(ProfileId::Inline, 90, 270, 5);
+        assert_eq!(profile.id(), ProfileId::Inline);
+        assert_eq!(profile.base_dimensions().width().get(), 90);
+        assert_eq!(profile.png_dimensions().width().get(), 270);
+        assert_eq!(profile.maximum_version().number(), 5);
+    }
+}

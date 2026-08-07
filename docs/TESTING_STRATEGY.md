@@ -322,7 +322,11 @@ Parse every generated SVG and assert:
 
 Use `insta` only for normalized semantic snapshots. Exact fixture hashes remain the determinism gate.
 
-Rasterize SVG with pinned `resvg` at the intended dimensions and feed the pixels to ZXing-C++. This tests the artifact, not an internal render model shortcut.
+Rasterize SVG with pinned `resvg` at the profile's 3× export density and feed
+the pixels to ZXing-C++. Structural tests independently enforce its base
+`width`/`height`; export-density rasterization keeps the Version 13 vector above
+the decoder's minimum pixel density. This tests the artifact, not an internal
+render model shortcut.
 
 ### 6.3 PNG artifact tests
 
@@ -569,6 +573,10 @@ Test defensive resource limits explicitly:
 - signed evidence report mapping every acceptance criterion to tests and results.
 
 Repository-owned automation and publishing are intentionally deferred and are not specified here.
+
+The repository-owned local command surface and machine-readable evidence layout
+for these suites is now specified in [`RELEASE_HARDENING.md`](RELEASE_HARDENING.md).
+Publishing and hosted CI remain owner-managed.
 
 ## 13. Flake and failure policy
 

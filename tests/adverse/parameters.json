@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "seed": 20260807,
+  "transforms": [
+    { "id": "blur-r0.35", "kind": "blur", "sigma": 0.35 },
+    { "id": "scale-80-percent", "kind": "scaling", "percent": 80 },
+    { "id": "jpeg-q92", "kind": "jpeg", "quality": 92 },
+    { "id": "rotate-0.5-degrees", "kind": "rotation", "degrees": 0.5 },
+    { "id": "perspective-1-percent", "kind": "perspective", "top_inset_percent": 1, "bottom_inset_percent": 0 },
+    { "id": "contrast-minus-8", "kind": "contrast", "delta": -8.0 },
+    { "id": "brightness-plus-6", "kind": "brightness", "delta": 6 },
+    { "id": "light-gray-background", "kind": "background", "rgba": [245, 245, 245, 255] },
+    { "id": "dot-gain-radius-1", "kind": "dot_gain", "radius": 1 },
+    { "id": "ink-loss-period-997", "kind": "ink_loss", "period": 997 },
+    { "id": "grayscale-luma", "kind": "grayscale" }
+  ]
+}
