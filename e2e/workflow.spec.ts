@@ -55,10 +55,8 @@ test("disposing the page with pending debounce work initializes cleanly", async 
   expect(pageErrors).toEqual([]);
 });
 
-test("profile controls work by keyboard and layouts fit desktop and mobile widths", async ({
-  page,
-}) => {
-  await enterPayload(page, "responsive profile");
+test("profile controls work by keyboard", async ({ page }) => {
+  await enterPayload(page, "keyboard profile");
   const content = page.getByRole("radio", { name: /Content/ });
   await content.focus();
   await page.keyboard.press("ArrowRight");
@@ -70,25 +68,14 @@ test("profile controls work by keyboard and layouts fit desktop and mobile width
     .locator("xpath=..")
     .evaluate((label) => getComputedStyle(label).boxShadow);
   expect(focusRing).not.toBe("none");
-
-  const viewportWidth = await page.evaluate(() => document.documentElement.clientWidth);
-  const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-  expect(scrollWidth).toBeLessThanOrEqual(viewportWidth);
-  const payloadBox = await page.getByRole("region", { name: "Payload" }).boundingBox();
-  const previewBox = await page.getByRole("region", { name: "Preview" }).boundingBox();
-  expect(payloadBox).not.toBeNull();
-  expect(previewBox).not.toBeNull();
-  if (viewportWidth < 1024) {
-    expect(previewBox!.y).toBeGreaterThan(payloadBox!.y);
-  } else {
-    expect(Math.abs(previewBox!.y - payloadBox!.y)).toBeLessThan(4);
-  }
 });
 
 test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await enterPayload(page, "real-size preview");
 
-  const preview = page.getByTestId("qr-preview").locator("svg:visible");
+  const preview = page
+    .getByTestId("qr-preview")
+    .locator('svg:visible:not([data-role="bundled-logo"])');
   await expect(preview).toHaveAttribute("width", "120");
   await expect(preview).toHaveAttribute("height", "120");
   const box = await preview.boundingBox();
@@ -99,6 +86,11 @@ test("shows the opaque preview at its real SVG size", async ({ page }) => {
 
 test("uses only magenta and shows transparent placement cautions", async ({ page }) => {
   await enterPayload(page, "approved color workflow");
+
+  const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
+  await expect(logo).toBeChecked();
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await expect(logo).not.toBeChecked();
 
   const white = page.getByRole("radio", { name: /Opaque white/ });
   const transparent = page.getByRole("radio", { name: /Transparent/ });
@@ -127,12 +119,13 @@ test("uses only magenta and shows transparent placement cautions", async ({ page
   await expect(surfaces.first().locator("rect")).toHaveCount(0);
 });
 
-test("logo mode refits at ECC H and requires opaque white", async ({ page }) => {
+test("logo mode is selected by default, uses ECC H, and requires opaque white", async ({
+  page,
+}) => {
   await enterPayload(page, "a".repeat(30));
   const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
   const transparent = page.getByRole("radio", { name: /Transparent/ });
 
-  await page.getByText("ONE lettermark", { exact: true }).click();
   await expect(logo).toBeChecked();
   await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
   await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");

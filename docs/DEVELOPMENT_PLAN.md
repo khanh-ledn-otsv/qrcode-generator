@@ -4,7 +4,7 @@
 **Repository state reviewed:** 2026-08-05  
 **Plan status:** Ready to implement under the recorded oracle policy below
 
-The detailed test architecture, selected libraries, quality gates, fuzz/mutation budgets, and browser matrix are defined in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md). That document is part of this development plan rather than optional follow-up guidance.
+The detailed test architecture, selected libraries, quality gates, fuzz/mutation budgets, and desktop Chromium gate are defined in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md). That document is part of this development plan rather than optional follow-up guidance.
 
 ## 1. Review outcome
 
@@ -94,6 +94,7 @@ These release-1 defaults use the approved ONE treatment:
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
 - Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
+- The bundled logo option is selected by default. Users may turn it off to restore ECC M and transparent-background availability.
 - Exact centering is mandatory. If the centered artwork or knockout intersects an alignment or other protected module, logo geometry is rejected rather than shifted. The compiled dimensions and generated evidence are recorded in [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - If geometry is unsafe for the selected version, logo mode is disabled with a reason. The encoder must not force a larger version merely to create logo space.
 
@@ -110,8 +111,7 @@ These are implementation interpretations until merged back into the product spec
 5. **Remainder bits:** Capacity tables and placement must explicitly include the standard remainder-bit count per version. Every non-function matrix cell must be assigned once, including remainder bits.
 6. **Input safety:** Plain text is allowed; URL syntax is not required. The UI may identify likely URLs, but it must not rewrite them. Empty input and over-limit input are invalid. Control characters receive a caution unless product policy later forbids them.
 7. **External network calls:** Production HTML must not request Google Fonts or other remote UI assets. Bundle approved assets or use the system font stack.
-8. **Performance targets:** Track encoder and renderer distributions on a stable local machine without enforcing a bundle-size gate or wall-clock correctness assertion.
-9. **Print guidance:** The 160 px value is a design canvas, not a physical-size guarantee. Export remains SVG-first and the UI displays “place at 25–30 mm or larger; validate for the actual environment.”
+8. **Print guidance:** The 160 px value is a design canvas, not a physical-size guarantee. Export remains SVG-first and the UI displays “place at 25–30 mm or larger; validate for the actual environment.”
 
 ## 4. Target architecture
 
@@ -241,7 +241,6 @@ Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon cra
 - `roxmltree` for SVG structure and security assertions.
 - `image` for adverse-condition test transforms only.
 - `insta` for normalized semantic snapshots, never as the primary matrix oracle.
-- `criterion` for performance benchmarks without flaky wall-clock unit assertions.
 - ZXing-C++ as the primary independent decode oracle.
 - `quirc` as a second decoder for representative raster cases where its text/ECI behavior is applicable.
 - Nayuki QR Code Generator 1.8.0 and `python-qrcode` 8.2 create development fixtures only after owner approval. Their explicit-version/mask outputs are compared, not linked into production or copied as implementation source. Segno 1.6.6 was evaluated and rejected for this role after its byte-aligned padding output disagreed with Nayuki; the rejected matrix was not committed.
@@ -312,7 +311,6 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 - Implement safe-preset consolidated SVG output.
 - Implement direct RGBA and deterministic PNG serialization.
 - Add quiet-zone, centering, integer-scale, dimensions, determinism, and decode tests.
-- Prototype renderer performance and record actual baselines.
 
 **Exit:** safe SVG/PNG outputs for every profile and allowed version satisfy geometry assertions and decode gates; maximum versions retain 6 px/module.
 
@@ -325,7 +323,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 - SVG and PNG Blob downloads with fixed safe filenames.
 - Export disabled on invalid state; errors do not expose payloads to logs or DOM metadata.
 
-**Exit:** the complete safe-preset workflow works offline in supported desktop/mobile browsers and passes keyboard/screen-reader smoke tests.
+**Exit:** the complete safe-preset workflow works offline in desktop Chromium and passes keyboard smoke tests.
 
 ### M4 — Approved branding and logo (1.5–3.5 weeks, risk: high)
 
@@ -339,7 +337,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 ### M5 — Release hardening (1–2 weeks, risk: medium)
 
-- Run sustained fuzzing, dependency/license review, and performance profiling.
+- Run sustained fuzzing and dependency/license review.
 - Execute adverse raster transformations with documented thresholds.
 - Complete the release runbook, user guidance, and local production-build privacy inspection.
 
@@ -377,7 +375,7 @@ The following ticket slices are small enough for review and preserve dependency 
 18. Approved color/contrast and transparency previews.
 19. Square data modules with standard square finders.
 20. Bundled magenta ONE lettermark, knockout, overlap checks, and decode matrix.
-21. Hardening, performance, automated release evidence, and docs.
+21. Hardening, automated release evidence, and docs.
 
 Tickets 3–11 should generally land sequentially because later code relies on earlier invariants. UI shell work may run in parallel after ticket 2, but export controls must not be presented as functional until the core and safe renderer pass their gates.
 

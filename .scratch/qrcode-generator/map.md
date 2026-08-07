@@ -40,12 +40,13 @@
   pinned ZXing decode gates across every supported profile and version.
 - [Ticket 15](issues/15-deliver-safe-interactive-workflow.md): A plain-Rust,
   revisioned workflow state machine owns exact payload/profile fitting and
-  validation, while a responsive Leptos view schedules cancellable preview
+  validation, while the Leptos view schedules cancellable preview
   work and exposes safe fixed-ECC diagnostics without allowing stale results.
 - [Ticket 16](issues/16-complete-downloads-accessibility-and-privacy.md): Ready
   previews own deterministic SVG/PNG downloads with bounded browser resources;
   complete payload-free diagnostics and accessible states are backed by native,
-  WASM, axe, privacy-interception, hash, responsive, and pinned-decode tests.
+  WASM, privacy-interception, hash, and pinned-decode tests; browser release
+  coverage is now desktop Chromium only.
 - [Ticket 17](issues/17-add-approved-color-and-transparency.md): The contrast and
   transparency infrastructure validates compiled appearance choices, placement
   cautions, and generated structural/deterministic/pinned-decode coverage.
@@ -59,8 +60,9 @@
 - [Ticket 20](issues/20-harden-approved-output-combinations.md): A generated
   96-row matrix records all approved output/payload combinations and typed
   rejections, while deterministic adverse decoding, quantitative coverage and
-  mutation gates, fuzz/Miri/dependency commands, and reproducible performance,
-  allocation, and artifact baselines form the release evidence.
+  mutation gates, fuzz/Miri/dependency commands, and reproducible allocation
+  and artifact baselines form the release evidence; performance benchmarks were
+  subsequently removed.
 - [Ticket 21](issues/21-validate-release-readiness.md): The automated release
   gate proves reproducible build hashes, zero-retry browser workflows, privacy,
   downloads, approved artifacts, and guidance; manual product checks are kept
@@ -68,6 +70,24 @@
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
+
+## Planned work
+
+- [Ticket 22](issues/22-centralize-deterministic-symbol-glyphs.md) centralizes
+  visible glyph classification without changing current artifacts and is the
+  ready frontier for the branded-appearance effort.
+- [Ticket 23](issues/23-approve-decode-backed-branded-geometry.md) selects the
+  decode-backed dot, function-pattern, minimum-version, and logo geometry; it
+  is blocked by Ticket 22.
+- [Ticket 24](issues/24-render-compact-dots-with-square-finders.md) ships compact
+  dots with prominent square finders and is blocked by Ticket 23.
+- [Ticket 25](issues/25-select-branded-minimum-version-in-logo-mode.md) carries
+  checked minimum-version selection through logo mode and is blocked by Ticket
+  23.
+- [Ticket 26](issues/26-enlarge-exactly-centered-one-logo.md) enlarges the exact
+  centered ONE logo and is blocked by Tickets 24 and 25.
+- [Ticket 27](issues/27-harden-complete-branded-output-matrix.md) completes the
+  automated branded-output evidence and is blocked by Ticket 26.
 
 ## Fog
 

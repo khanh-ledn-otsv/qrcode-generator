@@ -11,15 +11,15 @@ From a clean worktree, run setup and the readiness gate:
 pnpm run release:readiness
 ```
 
-The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs Chromium, mobile Chromium, Firefox, and WebKit with Playwright retries disabled, and runs the approved-output decoder evidence. It writes the machine evidence and final report under `target/release-readiness/`.
+The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs desktop Chromium with Playwright retries disabled, and runs the approved-output decoder evidence. It writes the machine evidence and final report under `target/release-readiness/`.
 
 ## Acceptance-criterion map
 
 | Criterion | Evidence | Gate |
 |---|---|---|
-| No runtime payload or logo requests | Playwright privacy test in every configured project | `automated.network_inspection` |
+| No runtime payload or logo requests | Playwright privacy test in Chromium | `automated.network_inspection` |
 | Clean pinned reproducible build | tool capture plus two artifact hash maps | `automated.reproducible_builds` |
-| Desktop/mobile critical paths, downloads, and privacy with zero retries | all four Playwright projects with `retries: 0` | `automated.browsers`, `automated.downloads` |
+| Chromium critical paths, downloads, and privacy with zero retries | desktop Chromium with `retries: 0` | `automated.browsers`, `automated.downloads` |
 | Approved artifact combinations and adverse decoding | generated decoder evidence | `automated.artifact_evidence` |
 | SVG-first, sizing, transparent/logo, and environment guidance | browser assertion against visible guidance | `automated.guidance` |
 

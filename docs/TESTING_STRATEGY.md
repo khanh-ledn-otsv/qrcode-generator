@@ -33,7 +33,6 @@ All test tools must be pinned in manifests, lockfiles, or documented local tool 
 | `serde` + `serde_json` | fixture tooling | Reads a strict fixture manifest with source provenance and expected metadata. Production profile constants do not require JSON. |
 | `sha2` | fixture tooling | Records artifact hashes and detects accidental golden changes. |
 | `tempfile` | integration tests | Isolates generated artifacts and decoder subprocess inputs. |
-| `criterion` | native benchmarks | Tracks encoder and renderer performance distributions outside correctness tests. Benchmarks do not use wall-clock assertions in ordinary unit tests. |
 
 Pin `proptest` to the reviewed 1.11.x line initially. Pin all other crate versions when M0 creates the workspace; do not use unconstrained `*` or floating Git revisions.
 
@@ -53,7 +52,7 @@ Start with the currently reviewed `cargo-llvm-cov` 0.8.x line, then pin exact ve
 
 | Tool | Scope |
 |---|---|
-| Playwright Test | End-to-end testing in Chromium, Firefox, and WebKit; viewport/device emulation; download verification; keyboard interaction; screenshots only where visual review is useful. |
+| Playwright Test | End-to-end testing in desktop Chromium; download verification; keyboard interaction; screenshots only where visual review is useful. |
 
 Use TypeScript only in `e2e/`. Keep business logic and expected QR calculations in Rust fixtures rather than duplicating the encoder in test JavaScript.
 
@@ -126,8 +125,6 @@ e2e/
 fuzz/
 ├── fuzz_targets/
 └── corpus/
-benches/
-└── encode_render.rs
 ```
 
 Test support code must be reusable but must not contain a second hand-written copy of production QR rules. Expected results come from committed provenance fixtures, independent tools, legally usable standards material, or simple invariants.
@@ -394,7 +391,7 @@ Run browser tests for:
 - debounce timers and disposal;
 - repeated generation without leaked object URLs or unbounded retained buffers.
 
-Run these locally in headless Chromium, and add Firefox where the harness supports it before release.
+Run these locally in headless desktop Chromium.
 
 ### 7.3 Playwright end-to-end suite
 
@@ -409,10 +406,9 @@ Test through the user-visible UI:
 - keyboard-only operation and visible focus;
 - rapid typing/debounce with latest-value wins;
 - SVG and PNG downloads, filenames, dimensions, hashes, and independent decode;
-- reload and back/forward behavior if state persistence is added;
-- responsive layouts at supported desktop and mobile viewports.
+- reload and back/forward behavior if state persistence is added.
 
-Run Chromium during feature verification. Run Chromium, Firefox, and WebKit during release hardening. Playwright projects use pinned browser binaries matching the pinned Playwright version.
+Run desktop Chromium during feature verification and release hardening. The Playwright project uses the pinned Chromium binary matching the pinned Playwright version.
 
 ### 7.4 Privacy and security behavior
 
@@ -503,19 +499,7 @@ Run `cargo-mutants` on changed critical files during focused verification and on
 
 Do not add broad mutation exclusions simply to meet the threshold.
 
-## 11. Performance and resource tests
-
-Use Criterion to benchmark:
-
-- mode selection and fit calculation;
-- Version 1, profile ceilings, and Version 40 encoding;
-- each mask candidate and total mask selection;
-- safe SVG generation;
-- safe PNG generation at all four canvas sizes;
-- logo overlap analysis;
-- full request-to-artifact path.
-
-Report median and tail distributions and track them over time. Correctness tests use generous hang/allocation guards, not millisecond assertions. Run performance comparisons in a stable local environment and investigate regressions.
+## 11. Resource tests
 
 Test defensive resource limits explicitly:
 
@@ -540,8 +524,8 @@ Test defensive resource limits explicitly:
 
 - full property case count and approved branding tuples;
 - exhaustive profile/version geometry and independent decoding;
-- Chromium, Firefox, and WebKit browser tests;
-- coverage, mutation, Miri, adverse-image, and performance checks as applicable.
+- desktop Chromium browser tests;
+- coverage, mutation, Miri, and adverse-image checks as applicable.
 
 ### Release validation
 
@@ -583,7 +567,7 @@ A feature change is incomplete unless reviewers can answer yes to the applicable
 - Would mutation testing detect reversed comparisons and altered constants?
 - Are privacy and logging effects tested?
 - Are fixture changes provenance-recorded and human-reviewable?
-- Are performance/allocation bounds affected?
+- Are allocation bounds affected?
 
 ## 15. Testing implementation order
 
@@ -597,7 +581,7 @@ A feature change is incomplete unless reviewers can answer yes to the applicable
 8. Add profile-exhaustive geometry and safe-style decode tests.
 9. Add native web-state tests, WASM browser tests, then Playwright E2E.
 10. Generate the branding tuple matrix from approved configuration.
-11. Add adverse transforms, documented fuzz budgets, Miri, and performance tracking.
+11. Add adverse transforms, documented fuzz budgets, and Miri.
 12. Produce the automated release evidence report.
 
 ## 16. References checked

@@ -407,7 +407,7 @@ impl WorkflowState {
         Self {
             payload: TextAreaBuffer::new(String::new()),
             profile_id,
-            logo_enabled: false,
+            logo_enabled: true,
             foreground: Foreground::Brand,
             background: Background::Opaque(Rgba::WHITE),
             revision: Revision(0),

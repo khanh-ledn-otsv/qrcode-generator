@@ -38,10 +38,10 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.readUInt32BE(16)).toBe(360);
   expect(png.readUInt32BE(20)).toBe(360);
   expect(await sha256(svg)).toBe(
-    "25ce72a4028cfe0aedc855d4cd63df074957a5438b968a774b64a0c556678dae",
+    "a8dc6100c283cd85472fee4c1c22563617a177cbe00f272276a30cffd27179f6",
   );
   expect(await sha256(png)).toBe(
-    "63eff460c478c84b3703e003a580feee9770ea5ba94178ded78a8e64cea41f9b",
+    "e22c0b1ea70e0c9c8d0b82d93351fa6f2f66a163677c4ca8820b5710ad59cbff",
   );
 });
 

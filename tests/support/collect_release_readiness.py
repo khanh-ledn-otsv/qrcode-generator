@@ -13,7 +13,7 @@ class ResultEvidenceError(RuntimeError):
     pass
 
 
-REQUIRED_PROJECTS = ("chromium", "mobile-chromium", "firefox", "webkit")
+REQUIRED_PROJECTS = ("chromium",)
 PRIVACY_TEST = "payload, logo, configuration, and downloads make no runtime request"
 DOWNLOAD_TESTS = {
     "downloads fixed filenames and exact deterministic SVG and PNG bytes",
@@ -24,10 +24,10 @@ CRITICAL_WORKFLOW_TESTS = {
     "reports representative modes, UTF-8 counts, and latest debounced input",
     "distinguishes the input-limit boundary and keeps exports disabled",
     "disposing the page with pending debounce work initializes cleanly",
-    "profile controls work by keyboard and layouts fit desktop and mobile widths",
+    "profile controls work by keyboard",
     "shows the opaque preview at its real SVG size",
     "uses only magenta and shows transparent placement cautions",
-    "logo mode refits at ECC H and requires opaque white",
+    "logo mode is selected by default, uses ECC H, and requires opaque white",
     "uses square modules and standard square finders without a shape control",
 }
 

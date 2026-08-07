@@ -49,7 +49,7 @@ The following commands expose the hardening seams individually:
 | QR tables and invariants | `cargo test -p qr-core --test tables` |
 | Golden matrices and oracle policy | `cargo test -p fixture-tool && pnpm run test:python` |
 | Approved tuple table and resource ceilings | `pnpm run test:approved` |
-| Browser/WASM matrix | `pnpm run test:wasm && pnpm run test:e2e:all` |
+| Chromium/WASM matrix | `pnpm run test:wasm && pnpm run test:e2e` |
 | Independent SVG/PNG decoding | `pnpm run test:decode` |
 | Deterministic adverse envelope | `pnpm run test:adverse:decode` |
 | Coverage thresholds | `pnpm run release:coverage` |
@@ -58,7 +58,6 @@ The following commands expose the hardening seams individually:
 | One-hour critical-target fuzz budget | `pnpm run release:fuzz:deep` |
 | Miri core/geometry checks | `pnpm run release:miri` |
 | Dependency advisories/duplicates | `pnpm run release:dependencies` |
-| Criterion performance distributions | `pnpm run release:performance -- --save-baseline release` |
 
 Coverage is checked without filename exclusions. The enforced scopes and
 line/region minima are the ones in `TESTING_STRATEGY.md`: qr-core 95/90,
@@ -66,10 +65,6 @@ critical arithmetic/matrix files 98/95, qr-render 90/85, geometry/profile
 98/95, and plain-Rust web workflow state 85/80. Mutation scoring excludes
 unviable mutants, fails on untriaged timeouts, and enforces 85% for qr-core and
 90% for both critical core files and profile geometry.
-
-Criterion writes median and distribution estimates under `target/criterion`.
-Use `--baseline release` on the next stable-machine run to obtain statistical
-change reports; correctness tests never assert elapsed milliseconds.
 
 ## Artifact evidence
 

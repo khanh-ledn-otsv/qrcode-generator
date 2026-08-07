@@ -2,6 +2,22 @@ use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_render::{Background, ContrastRatio, Foreground, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
 
+fn state_without_logo(profile_id: ProfileId) -> WorkflowState {
+    let mut state = WorkflowState::new(profile_id);
+    state
+        .set_logo_enabled(false)
+        .expect("initial logo selection can be disabled");
+    state
+}
+
+#[test]
+fn bundled_logo_is_selected_by_default() {
+    let state = WorkflowState::new(ProfileId::Content);
+
+    assert!(state.logo_enabled());
+    assert_eq!(state.background(), Background::Opaque(Rgba::WHITE));
+}
+
 #[test]
 fn payload_entry_preserves_text_and_reports_character_and_byte_counts() {
     let mut state = WorkflowState::new(ProfileId::Inline);
@@ -81,7 +97,7 @@ fn internal_drag_reads_the_exact_raw_text_for_the_display_selection() {
 
 #[test]
 fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = state_without_logo(ProfileId::Inline);
     let request = state
         .set_payload("hello".to_owned())
         .expect("revision is available");
@@ -112,7 +128,7 @@ fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
 
 #[test]
 fn approved_brand_and_transparency_selections_update_artifacts_and_safety() {
-    let mut state = WorkflowState::new(ProfileId::Content);
+    let mut state = state_without_logo(ProfileId::Content);
     let payload = state
         .set_payload("approved appearance".to_owned())
         .expect("revision is available");
@@ -159,7 +175,7 @@ fn approved_brand_and_transparency_selections_update_artifacts_and_safety() {
 #[test]
 fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text() {
     let sensitive = "private!";
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = state_without_logo(ProfileId::Inline);
     let request = state
         .set_payload(sensitive.to_owned())
         .expect("revision is available");
@@ -209,7 +225,7 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
     ];
 
     for (profile_id, maximum_version, svg_side, png_side, is_print) in cases {
-        let mut state = WorkflowState::new(profile_id);
+        let mut state = state_without_logo(profile_id);
         let request = state
             .set_payload("hello".to_owned())
             .expect("revision is available");
@@ -229,7 +245,7 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
 
 #[test]
 fn profile_changes_refit_without_changing_safe_ecc() {
-    let mut state = WorkflowState::new(ProfileId::Content);
+    let mut state = state_without_logo(ProfileId::Content);
     let payload_request = state
         .set_payload("a".repeat(90))
         .expect("revision is available");
@@ -272,7 +288,7 @@ fn profile_changes_refit_without_changing_safe_ecc() {
 
 #[test]
 fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
-    let mut state = WorkflowState::new(ProfileId::Print);
+    let mut state = state_without_logo(ProfileId::Print);
     let safe_request = state
         .set_payload("a".repeat(30))
         .expect("revision is available");
@@ -323,7 +339,7 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
 
 #[test]
 fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = state_without_logo(ProfileId::Inline);
 
     let empty = state
         .set_payload(String::new())
@@ -400,7 +416,7 @@ fn textarea_mapping_failure_invalidates_pending_work_and_exports() {
 
 #[test]
 fn control_characters_add_a_deterministic_caution_without_changing_valid_text() {
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = state_without_logo(ProfileId::Inline);
     let request = state
         .set_payload("line one\nline two\t".to_owned())
         .expect("revision is available");
@@ -416,7 +432,7 @@ fn control_characters_add_a_deterministic_caution_without_changing_valid_text() 
 
 #[test]
 fn stale_preview_results_cannot_replace_the_latest_value() {
-    let mut state = WorkflowState::new(ProfileId::Print);
+    let mut state = state_without_logo(ProfileId::Print);
     let stale = state
         .set_payload("old".to_owned())
         .expect("revision is available");

@@ -10,7 +10,7 @@
 - [x] Diagnostics explain mode, version, ECC, mask, bit capacity, geometry, warnings, and export-disabled reasons without exposing payload text in metadata or accessible preview labels.
 - [x] Semantic groups, programmatic labels, visible focus, keyboard operation, live validation, and warning severity work without relying on color alone or stealing focus.
 - [x] Browser-boundary tests cover Blob errors, URL revocation, debounce disposal, repeated generation, and bounded retained resources without panic.
-- [x] End-to-end tests cover representative modes, UTF-8, boundaries, downloads, hashes, independent decode, and responsive layouts.
+- [x] Chromium end-to-end tests cover representative modes, UTF-8, boundaries, downloads, hashes, and independent decode.
 - [x] Runtime request interception proves that generation, preview, configuration, and download cause no external request or payload leakage through URLs, history, title, filenames, console, storage, DOM metadata, or exported artifacts.
 
 ## Answer
@@ -30,10 +30,10 @@ move focus.
 
 Fourteen native state tests and four WASM boundary tests cover deterministic
 artifacts, typed Blob failure, exact Blob bytes/MIME, URL revocation, repeated
-generation and resource release, and control-character artifacts. Eleven
-Playwright scenarios run at desktop and mobile Chromium widths (22 project
-cases), including browser-page debounce disposal, axe, mode/UTF-8/boundary
-behavior, fixed download hashes and dimensions, mandatory pinned ZXing-C++
-decode, responsive layout, keyboard focus, and post-load network/privacy
-interception. Production HTML carries a same-origin content security policy and
-uses no external runtime asset.
+generation and resource release, and control-character artifacts. Chromium
+scenarios cover browser-page debounce disposal, mode/UTF-8/boundary behavior,
+fixed download hashes and dimensions, mandatory pinned ZXing-C++ decode,
+keyboard focus, and post-load network/privacy interception. Production HTML
+carries a same-origin content security policy and uses no external runtime
+asset. Automated accessibility and responsive-layout assertions were later
+removed by owner direction.

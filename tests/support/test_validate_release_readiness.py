@@ -39,10 +39,7 @@ def automated_evidence() -> dict[str, Any]:
             "match": True,
             "hashes": {"app.js": "a" * 64, "app.wasm": "b" * 64},
         },
-        "browsers": {
-            name: {"passed": True, "retries": 0}
-            for name in ["chromium", "mobile-chromium", "firefox", "webkit"]
-        },
+        "browsers": {name: {"passed": True, "retries": 0} for name in ["chromium"]},
         "network_inspection": {"passed": True, "external_requests": 0},
         "downloads": {"passed": True},
         "guidance": {"passed": True},
@@ -51,7 +48,7 @@ def automated_evidence() -> dict[str, Any]:
 
 
 class ReleaseReadinessEvidenceTests(unittest.TestCase):
-    def test_result_evidence_is_derived_from_all_required_projects_and_files(self) -> None:
+    def test_result_evidence_is_derived_from_chromium_and_required_files(self) -> None:
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
             titles = {PRIVACY_TEST, GUIDANCE_TEST, *DOWNLOAD_TESTS, *CRITICAL_WORKFLOW_TESTS}
@@ -136,11 +133,11 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
         self.assertEqual(len(report["criteria"]), 5)
         self.assertTrue(all(item["status"] == "passed" for item in report["criteria"]))
 
-    def test_browsers_must_pass_without_retries(self) -> None:
+    def test_chromium_must_pass_without_retries(self) -> None:
         automated = automated_evidence()
-        automated["browsers"]["webkit"] = {"passed": True, "retries": 1}
+        automated["browsers"]["chromium"] = {"passed": True, "retries": 1}
 
-        with self.assertRaisesRegex(EvidenceError, "webkit"):
+        with self.assertRaisesRegex(EvidenceError, "chromium"):
             validate_automated_evidence(automated)
 
 

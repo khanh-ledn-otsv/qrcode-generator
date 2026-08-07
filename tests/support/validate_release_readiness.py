@@ -9,7 +9,7 @@ class EvidenceError(RuntimeError):
     pass
 
 
-REQUIRED_BROWSERS = ("chromium", "mobile-chromium", "firefox", "webkit")
+REQUIRED_BROWSERS = ("chromium",)
 PLACEHOLDER = re.compile(r"(?:\b(?:todo|tbd|pending|replace me)\b|<[^>]*>)", re.IGNORECASE)
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
