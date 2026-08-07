@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use crate::{Background, RenderError, RenderModel, Rgba};
+use crate::{Background, DataModuleStyle, RenderError, RenderModel, Rgba};
 
 /// Renders the validated model as deterministic, payload-free UTF-8 SVG.
 pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
@@ -12,7 +12,7 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
 
     let dark_modules = model.cells().filter(|cell| cell.module().is_dark()).count();
     let estimated_path_bytes = dark_modules
-        .checked_mul(20)
+        .checked_mul(96)
         .ok_or(RenderError::DimensionOverflow)?;
     let estimated_bytes = estimated_path_bytes
         .checked_add(256)
@@ -49,7 +49,15 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
         let y = u32::from(cell.y())
             .checked_add(origin.y().get())
             .ok_or(RenderError::DimensionOverflow)?;
-        write!(svg, "M{x} {y}h1v1h-1z").map_err(|_| RenderError::RenderFailure)?;
+        if model.options().data_module_style() == DataModuleStyle::Rounded && !cell.is_protected() {
+            write!(
+                svg,
+                "M{x}.25 {y}h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25v-.5a.25.25 0 0 1 .25-.25z"
+            )
+            .map_err(|_| RenderError::RenderFailure)?;
+        } else {
+            write!(svg, "M{x} {y}h1v1h-1z").map_err(|_| RenderError::RenderFailure)?;
+        }
     }
     svg.push_str("\"/></svg>");
     Ok(svg)

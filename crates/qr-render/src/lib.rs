@@ -13,10 +13,10 @@ pub use geometry::{
     PixelDimensions, SymbolGeometry,
 };
 pub use model::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, BrandableCell, ContrastRatio,
-    DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle, LogoStyle,
-    MAX_RGBA_BUFFER_BYTES, ModuleDimensions, ModulePoint, OutputSafety, PixelPoint, PngPlacement,
-    RenderCell, RenderError, RenderModel, RenderOptions, Rgba, SvgPlacement,
+    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
+    BrandableCell, ContrastRatio, DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle,
+    LogoStyle, MAX_RGBA_BUFFER_BYTES, ModuleDimensions, ModulePoint, OutputSafety, PixelPoint,
+    PngPlacement, RenderCell, RenderError, RenderModel, RenderOptions, Rgba, SvgPlacement,
 };
 pub use png::render_png;
 pub use profile::{OutputProfile, ProfileError, ProfileId, SUPPORTED_PROFILES};

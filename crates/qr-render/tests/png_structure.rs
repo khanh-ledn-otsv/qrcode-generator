@@ -5,11 +5,12 @@ mod versions;
 
 use std::io::Cursor;
 
+use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions,
-    SUPPORTED_PROFILES, render_png,
+    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
+    DataModuleStyle, Foreground, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png,
 };
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -171,6 +172,83 @@ fn approved_png_color_background_profile_tuples_are_structural_and_deterministic
                     assert!(pixels.chunks_exact(4).any(|pixel| pixel == [0, 0, 0, 0]));
                     assert!(pixels.chunks_exact(4).any(|pixel| pixel[3] == u8::MAX));
                 }
+            }
+        }
+    }
+}
+
+#[test]
+fn rounded_png_uses_final_pixel_coverage_only_inside_dark_data_cells() {
+    let encoded = encoded_qr_at_version(1);
+    let options = RenderOptions::approved_with_data_style(
+        SUPPORTED_PROFILES[1],
+        Foreground::Black,
+        Background::Opaque(Rgba::WHITE),
+        DataModuleStyle::Rounded,
+    )
+    .unwrap();
+    let model = RenderModel::new(&encoded, options).unwrap();
+    let first = render_png(&model).unwrap();
+    assert_eq!(first, render_png(&model).unwrap());
+    let (width, height, pixels) = decode_rgba(&first);
+    assert_eq!(width, SUPPORTED_PROFILES[1].png_dimensions().width().get());
+    assert_eq!(height, width);
+
+    let placement = model.png_placement();
+    let origin_x = placement.matrix_origin().x().get();
+    let origin_y = placement.matrix_origin().y().get();
+    let scale = placement.module_scale().get();
+    let mut saw_partial_coverage = false;
+
+    for cell in model.cells() {
+        let cell_x = origin_x + u32::from(cell.x()) * scale;
+        let cell_y = origin_y + u32::from(cell.y()) * scale;
+        for local_y in 0..scale {
+            for local_x in 0..scale {
+                let offset =
+                    usize::try_from(((cell_y + local_y) * width + cell_x + local_x) * 4).unwrap();
+                let pixel = &pixels[offset..offset + 4];
+                if !cell.module().is_dark() {
+                    assert_eq!(pixel, [255, 255, 255, 255]);
+                } else if matches!(
+                    cell.module().kind(),
+                    ModuleKind::Data | ModuleKind::Remainder
+                ) {
+                    assert_eq!(pixel[3], 255);
+                    assert_eq!(pixel[0], pixel[1]);
+                    assert_eq!(pixel[1], pixel[2]);
+                    saw_partial_coverage |= pixel[0] > 0 && pixel[0] < 255;
+                } else {
+                    assert_eq!(pixel, [0, 0, 0, 255]);
+                }
+            }
+        }
+    }
+    assert!(saw_partial_coverage);
+}
+
+#[test]
+fn every_approved_data_style_has_deterministic_png_geometry_coverage() {
+    let encoded = encoded_qr_at_version(1);
+    for profile in SUPPORTED_PROFILES {
+        for style in APPROVED_DATA_MODULE_STYLES {
+            let options = RenderOptions::approved_with_data_style(
+                profile,
+                Foreground::Black,
+                Background::Transparent,
+                style,
+            )
+            .unwrap();
+            let model = RenderModel::new(&encoded, options).unwrap();
+            let first = render_png(&model).unwrap();
+            assert_eq!(first, render_png(&model).unwrap());
+            let (_, _, pixels) = decode_rgba(&first);
+            let has_partial_alpha = pixels
+                .chunks_exact(4)
+                .any(|pixel| pixel[3] > 0 && pixel[3] < 255);
+            match style {
+                DataModuleStyle::Square => assert!(!has_partial_alpha),
+                DataModuleStyle::Rounded => assert!(has_partial_alpha),
             }
         }
     }

@@ -1,5 +1,8 @@
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_render::{Background, ContrastRatio, Foreground, OutputSafety, ProfileId, Rgba};
+use qr_render::{
+    Background, ContrastRatio, DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle,
+    OutputSafety, ProfileId, Rgba,
+};
 use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
 
 #[test]
@@ -154,6 +157,41 @@ fn approved_brand_and_transparency_selections_update_artifacts_and_safety() {
         )
     );
     assert!(state.exports_enabled());
+}
+
+#[test]
+fn rounded_data_selection_changes_geometry_but_keeps_conservative_function_styles() {
+    let mut state = WorkflowState::new(ProfileId::Content);
+    let payload = state
+        .set_payload("approved module styling".to_owned())
+        .expect("revision is available");
+    assert!(state.complete_preview(payload.revision(), evaluate_preview(&payload)));
+    let square = state.preview().unwrap().clone();
+    assert_eq!(state.data_module_style(), DataModuleStyle::Square);
+
+    let rounded = state
+        .select_data_module_style(DataModuleStyle::Rounded)
+        .expect("revision is available");
+    assert!(state.complete_preview(rounded.revision(), evaluate_preview(&rounded)));
+    let rounded = state.preview().unwrap();
+
+    assert_ne!(rounded.svg(), square.svg());
+    assert_ne!(
+        rounded.artifact(ArtifactKind::Png).bytes(),
+        square.artifact(ArtifactKind::Png).bytes()
+    );
+    assert_eq!(
+        rounded.diagnostics().data_module_style(),
+        DataModuleStyle::Rounded
+    );
+    assert_eq!(
+        rounded.diagnostics().function_module_style(),
+        FunctionModuleStyle::Square
+    );
+    assert_eq!(
+        rounded.diagnostics().finder_style(),
+        FinderStyle::StandardSquare
+    );
 }
 
 #[test]

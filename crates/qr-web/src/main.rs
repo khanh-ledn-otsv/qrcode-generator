@@ -4,8 +4,9 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, Foreground, OutputSafety, ProfileId,
-    Rgba, SUPPORTED_PROFILES,
+    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
+    DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle, OutputSafety, ProfileId, Rgba,
+    SUPPORTED_PROFILES,
 };
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
@@ -26,6 +27,13 @@ struct ForegroundPresentation {
 
 #[derive(Clone, Copy)]
 struct BackgroundPresentation {
+    name: &'static str,
+    value: &'static str,
+    description: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct DataModuleStylePresentation {
     name: &'static str,
     value: &'static str,
     description: &'static str,
@@ -112,6 +120,27 @@ fn App() -> impl IntoView {
                 </label>
             }
         });
+    let data_module_style_options = APPROVED_DATA_MODULE_STYLES.map(|data_module_style| {
+        let presentation = data_module_style_presentation(data_module_style);
+        view! {
+            <label class=move || profile_card_class(state.with(|current| current.data_module_style() == data_module_style))>
+                <input
+                    class="peer sr-only"
+                    type="radio"
+                    name="data-module-style"
+                    value=presentation.value
+                    prop:checked=move || state.with(|current| current.data_module_style() == data_module_style)
+                    on:change=move |_| {
+                        if let Some(Ok(request)) = state.try_update(|current| current.select_data_module_style(data_module_style)) {
+                            schedule_preview(state, pending_timer, request);
+                        }
+                    }
+                />
+                <span class="block text-sm font-bold text-slate-950">{presentation.name}</span>
+                <span class="mt-1 block text-xs leading-5 text-slate-600">{presentation.description}</span>
+            </label>
+        }
+    });
 
     view! {
         <main class="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
@@ -287,6 +316,14 @@ fn App() -> impl IntoView {
                             <legend class="text-sm font-semibold text-slate-800">"Background treatment"</legend>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">{background_options}</div>
                         </fieldset>
+
+                        <fieldset class="mt-8">
+                            <legend class="text-sm font-semibold text-slate-800">"Data module shape"</legend>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{data_module_style_options}</div>
+                            <p class="mt-3 text-xs leading-5 text-slate-600">
+                                "Function modules and finder patterns always remain square."
+                            </p>
+                        </fieldset>
                     </section>
 
                     <div class="grid gap-6 lg:sticky lg:top-8">
@@ -352,6 +389,9 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
                                 <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_presentation(details.foreground()).color.to_owned()) />
                                 <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_presentation(details.background()).name.to_owned()) />
+                                <Diagnostic label="Data modules" value=move || diagnostic_value(state, |details| data_module_style_label(details.data_module_style()).to_owned()) />
+                                <Diagnostic label="Function modules" value=move || diagnostic_value(state, |details| function_module_style_label(details.function_module_style()).to_owned()) />
+                                <Diagnostic label="Finders" value=move || diagnostic_value(state, |details| finder_style_label(details.finder_style()).to_owned()) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
                                 <Diagnostic label="Safety" value=move || diagnostic_value(state, |details| safety_label(details.safety()).to_owned()) />
                             </dl>
@@ -545,6 +585,37 @@ fn background_presentation(background: Background) -> BackgroundPresentation {
             value: "unapproved",
             description: "Unavailable",
         },
+    }
+}
+
+fn data_module_style_presentation(style: DataModuleStyle) -> DataModuleStylePresentation {
+    match style {
+        DataModuleStyle::Square => DataModuleStylePresentation {
+            name: "Square",
+            value: "square",
+            description: "Crisp full-cell geometry",
+        },
+        DataModuleStyle::Rounded => DataModuleStylePresentation {
+            name: "Rounded",
+            value: "rounded",
+            description: "Quarter-cell corner radius",
+        },
+    }
+}
+
+fn data_module_style_label(style: DataModuleStyle) -> &'static str {
+    data_module_style_presentation(style).name
+}
+
+const fn function_module_style_label(style: FunctionModuleStyle) -> &'static str {
+    match style {
+        FunctionModuleStyle::Square => "Square",
+    }
+}
+
+const fn finder_style_label(style: FinderStyle) -> &'static str {
+    match style {
+        FinderStyle::StandardSquare => "Standard square",
     }
 }
 

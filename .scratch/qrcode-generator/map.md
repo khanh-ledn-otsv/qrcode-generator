@@ -51,6 +51,10 @@
   backgrounds; typed contrast validation, placement-surface cautions, and
   generated structural/deterministic/pinned-decode coverage enforce all 16
   selectable profile tuples.
+- [Ticket 18](issues/18-add-approved-module-and-finder-styling.md): One compiled
+  style list exposes square and quarter-cell-rounded data modules, while every
+  protected function module and finder remains square; deterministic SVG/PNG
+  geometry and generated pinned-decode coverage enforce the approved set.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.

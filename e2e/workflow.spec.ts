@@ -121,3 +121,28 @@ test("offers only approved colors and shows transparent placement cautions", asy
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(surfaces.first().locator("rect")).toHaveCount(0);
 });
+
+test("offers only square and rounded data modules with standard square finders", async ({
+  page,
+}) => {
+  await enterPayload(page, "approved styling workflow");
+
+  const styles = page.getByRole("group", { name: "Data module shape" }).getByRole("radio");
+  await expect(styles).toHaveCount(2);
+  await expect(page.getByRole("radio", { name: /^Square/ })).toBeChecked();
+  await expect.poll(() => diagnostic(page, "Data modules")).toBe("Square");
+  await expect.poll(() => diagnostic(page, "Function modules")).toBe("Square");
+  await expect.poll(() => diagnostic(page, "Finders")).toBe("Standard square");
+
+  const rounded = page.getByRole("radio", { name: /^Rounded/ });
+  await rounded.focus();
+  await page.keyboard.press("Space");
+  await expect(rounded).toBeChecked();
+  await expect.poll(() => diagnostic(page, "Data modules")).toBe("Rounded");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
+  await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
+    "d",
+    /a\.25\.25/,
+  );
+});

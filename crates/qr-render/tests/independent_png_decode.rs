@@ -12,8 +12,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions,
-    SUPPORTED_PROFILES, render_png,
+    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
+    RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
 };
 
 #[test]
@@ -72,38 +72,42 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
         };
         for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
             for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                let encoded = encode(EncodeRequest {
-                    text: &text,
-                    ecc: ErrorCorrection::Medium,
-                    max_version: profile.maximum_version(),
-                })?;
-                let model = RenderModel::new(
-                    &encoded,
-                    RenderOptions::approved(profile, foreground, background)?,
-                )?;
-                let png = render_png(&model)?;
-                let effective_png = match background {
-                    Background::Transparent => composite_on_white(&png)?,
-                    Background::Opaque(_) => png,
-                };
-                let artifact = output.path().join(format!(
-                    "png-approved-{profile_index}-{foreground_index}-{background_index}.png"
-                ));
-                fs::write(&artifact, effective_png)?;
-                decoder.inspect_and_compare(
-                    &artifact,
-                    &DecodeExpectation {
-                        payload: text.as_bytes().to_vec(),
-                        version: QrVersion::new(encoded.version().number())?,
-                        ecc: FixtureEcc::M,
-                        eci_assignment: None,
-                    },
-                )
-                .map_err(|error| {
-                    format!(
-                        "approved PNG tuple {profile_index}/{foreground_index}/{background_index}: {error}"
+                for (style_index, style) in APPROVED_DATA_MODULE_STYLES.into_iter().enumerate() {
+                    let encoded = encode(EncodeRequest {
+                        text: &text,
+                        ecc: ErrorCorrection::Medium,
+                        max_version: profile.maximum_version(),
+                    })?;
+                    let model = RenderModel::new(
+                        &encoded,
+                        RenderOptions::approved_with_data_style(
+                            profile, foreground, background, style,
+                        )?,
+                    )?;
+                    let png = render_png(&model)?;
+                    let effective_png = match background {
+                        Background::Transparent => composite_on_white(&png)?,
+                        Background::Opaque(_) => png,
+                    };
+                    let artifact = output.path().join(format!(
+                        "png-approved-{profile_index}-{foreground_index}-{background_index}-{style_index}.png"
+                    ));
+                    fs::write(&artifact, effective_png)?;
+                    decoder.inspect_and_compare(
+                        &artifact,
+                        &DecodeExpectation {
+                            payload: text.as_bytes().to_vec(),
+                            version: QrVersion::new(encoded.version().number())?,
+                            ecc: FixtureEcc::M,
+                            eci_assignment: None,
+                        },
                     )
-                })?;
+                    .map_err(|error| {
+                        format!(
+                            "approved PNG tuple {profile_index}/{foreground_index}/{background_index}/{style_index}: {error}"
+                        )
+                    })?;
+                }
             }
         }
     }
@@ -122,9 +126,12 @@ fn composite_on_white(source: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     let output = reader.next_frame(&mut pixels)?;
     pixels.truncate(output.buffer_size());
     for pixel in pixels.chunks_exact_mut(4) {
-        if pixel[3] == 0 {
-            pixel.copy_from_slice(&[255, 255, 255, 255]);
+        let alpha = u16::from(pixel[3]);
+        for channel in &mut pixel[..3] {
+            let composited = u16::from(*channel) * alpha + 255 * (255 - alpha);
+            *channel = u8::try_from((composited + 127) / 255)?;
         }
+        pixel[3] = 255;
     }
 
     let mut composited = Vec::new();

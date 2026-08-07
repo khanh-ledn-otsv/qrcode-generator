@@ -6,10 +6,10 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, ContrastRatio, DataModuleStyle,
-    FinderStyle, Foreground, FunctionModuleStyle, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile,
-    OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
-    Version, render_png, render_svg,
+    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
+    ContrastRatio, DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle, LogoStyle,
+    MAX_RGBA_BUFFER_BYTES, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES, Version, render_png, render_svg,
 };
 
 #[test]
@@ -104,17 +104,50 @@ fn only_approved_combinations_can_be_rendered_and_unsafe_contrast_is_typed() {
 
 #[test]
 fn generated_approved_color_background_profile_matrix_is_complete() {
-    let combinations =
-        SUPPORTED_PROFILES.len() * APPROVED_FOREGROUNDS.len() * APPROVED_BACKGROUNDS.len();
-    assert_eq!(combinations, 16);
+    let combinations = SUPPORTED_PROFILES.len()
+        * APPROVED_FOREGROUNDS.len()
+        * APPROVED_BACKGROUNDS.len()
+        * APPROVED_DATA_MODULE_STYLES.len();
+    assert_eq!(combinations, 32);
 
     for profile in SUPPORTED_PROFILES {
         for foreground in APPROVED_FOREGROUNDS {
             for background in APPROVED_BACKGROUNDS {
-                RenderOptions::approved(profile, foreground, background).unwrap();
+                for data_module_style in APPROVED_DATA_MODULE_STYLES {
+                    let options = RenderOptions::approved_with_data_style(
+                        profile,
+                        foreground,
+                        background,
+                        data_module_style,
+                    )
+                    .unwrap();
+                    assert_eq!(options.data_module_style(), data_module_style);
+                    assert_eq!(options.function_module_style(), FunctionModuleStyle::Square);
+                    assert_eq!(options.finder_style(), FinderStyle::StandardSquare);
+                }
             }
         }
     }
+}
+
+#[test]
+fn rounded_data_style_changes_no_encoded_symbol_decisions() {
+    let encoded = encoded_qr("ROUNDED DATA MODULES");
+    let original = encoded.clone();
+    let options = RenderOptions::approved_with_data_style(
+        SUPPORTED_PROFILES[1],
+        Foreground::Black,
+        Background::Opaque(Rgba::WHITE),
+        DataModuleStyle::Rounded,
+    )
+    .unwrap();
+    let model = RenderModel::new(&encoded, options).unwrap();
+
+    assert_eq!(encoded, original);
+    assert_eq!(model.matrix(), original.modules());
+    assert_eq!(model.version(), original.version());
+    assert_eq!(model.ecc(), original.ecc());
+    assert_eq!(model.mask(), original.mask());
 }
 
 proptest! {
