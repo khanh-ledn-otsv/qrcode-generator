@@ -2,14 +2,12 @@ use std::error::Error;
 use std::path::Path;
 
 use fixture_tool::{
-    DecodeExpectation, ErrorCorrection as FixtureEcc, FixtureManifest, QrVersion, ZxingDecoder,
+    DecodeExpectation, EciAssignment, ErrorCorrection as FixtureEcc, FixtureManifest, QrVersion,
+    ZxingDecoder,
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, RenderModel,
-    RenderOptions, SUPPORTED_PROFILES, render_svg,
-};
+use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_svg};
 
 #[test]
 #[ignore = "requires the manifest-pinned ZXing-C++ checkout and reader"]
@@ -63,54 +61,30 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
         }
     }
 
-    for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
-        let text = if profile_index == 3 {
-            "a".repeat(70)
-        } else {
-            "APPROVED".to_owned()
-        };
-        for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
-            for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                for (style_index, style) in APPROVED_DATA_MODULE_STYLES.into_iter().enumerate() {
-                    let encoded = encode(EncodeRequest {
-                        text: &text,
-                        ecc: ErrorCorrection::Medium,
-                        max_version: profile.maximum_version(),
-                    })?;
-                    let model = RenderModel::new(
-                        &encoded,
-                        RenderOptions::approved_with_data_style(
-                            profile, foreground, background, style,
-                        )?,
-                    )?;
-                    let svg = render_svg(&model)?;
-                    let dimensions = profile.svg_dimensions();
-                    let pixmap = raster::rasterize_svg(
-                        &svg,
-                        dimensions.width().get(),
-                        dimensions.height().get(),
-                    )?;
-                    let artifact = output.path().join(format!(
-                        "svg-approved-{profile_index}-{foreground_index}-{background_index}-{style_index}.png"
-                    ));
-                    pixmap.save_png(&artifact)?;
-                    decoder.inspect_and_compare(
-                        &artifact,
-                        &DecodeExpectation {
-                            payload: text.as_bytes().to_vec(),
-                            version: QrVersion::new(encoded.version().number())?,
-                            ecc: FixtureEcc::M,
-                            eci_assignment: None,
-                        },
-                    )
-                    .map_err(|error| {
-                        format!(
-                            "approved SVG tuple {profile_index}/{foreground_index}/{background_index}/{style_index}: {error}"
-                        )
-                    })?;
-                }
-            }
-        }
+    for case in styling::approved_decode_cases()? {
+        let model = RenderModel::new(&case.encoded, case.options)?;
+        let svg = render_svg(&model)?;
+        let dimensions = case.options.profile().svg_dimensions();
+        let pixmap =
+            raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
+        let artifact = output
+            .path()
+            .join(format!("svg-approved-{}.png", case.label));
+        pixmap.save_png(&artifact)?;
+        decoder
+            .inspect_and_compare(
+                &artifact,
+                &DecodeExpectation {
+                    payload: case.payload,
+                    version: QrVersion::new(case.encoded.version().number())?,
+                    ecc: FixtureEcc::M,
+                    eci_assignment: case
+                        .eci_assignment
+                        .map(EciAssignment::try_from)
+                        .transpose()?,
+                },
+            )
+            .map_err(|error| format!("approved SVG case {}: {error}", case.label))?;
     }
     Ok(())
 }
@@ -122,5 +96,7 @@ fn payload_for_version(version: u8, case_index: usize) -> String {
 }
 #[path = "support/raster.rs"]
 mod raster;
+#[path = "support/styling.rs"]
+mod styling;
 #[path = "support/versions.rs"]
 mod versions;

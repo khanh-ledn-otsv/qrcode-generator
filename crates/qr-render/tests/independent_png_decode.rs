@@ -1,3 +1,5 @@
+#[path = "support/styling.rs"]
+mod styling;
 #[path = "support/versions.rs"]
 mod versions;
 
@@ -7,14 +9,12 @@ use std::io::Cursor;
 use std::path::Path;
 
 use fixture_tool::{
-    DecodeExpectation, ErrorCorrection as FixtureEcc, FixtureManifest, QrVersion, ZxingDecoder,
+    DecodeExpectation, EciAssignment, ErrorCorrection as FixtureEcc, FixtureManifest, QrVersion,
+    ZxingDecoder,
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
-    RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
-};
+use qr_render::{Background, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 
 #[test]
 #[ignore = "requires the manifest-pinned ZXing-C++ checkout and reader"]
@@ -64,52 +64,31 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
         }
     }
 
-    for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
-        let text = if profile_index == 3 {
-            "a".repeat(70)
-        } else {
-            "APPROVED".to_owned()
+    for case in styling::approved_decode_cases()? {
+        let model = RenderModel::new(&case.encoded, case.options)?;
+        let png = render_png(&model)?;
+        let effective_png = match case.options.background() {
+            Background::Transparent => composite_on_white(&png)?,
+            Background::Opaque(_) => png,
         };
-        for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
-            for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                for (style_index, style) in APPROVED_DATA_MODULE_STYLES.into_iter().enumerate() {
-                    let encoded = encode(EncodeRequest {
-                        text: &text,
-                        ecc: ErrorCorrection::Medium,
-                        max_version: profile.maximum_version(),
-                    })?;
-                    let model = RenderModel::new(
-                        &encoded,
-                        RenderOptions::approved_with_data_style(
-                            profile, foreground, background, style,
-                        )?,
-                    )?;
-                    let png = render_png(&model)?;
-                    let effective_png = match background {
-                        Background::Transparent => composite_on_white(&png)?,
-                        Background::Opaque(_) => png,
-                    };
-                    let artifact = output.path().join(format!(
-                        "png-approved-{profile_index}-{foreground_index}-{background_index}-{style_index}.png"
-                    ));
-                    fs::write(&artifact, effective_png)?;
-                    decoder.inspect_and_compare(
-                        &artifact,
-                        &DecodeExpectation {
-                            payload: text.as_bytes().to_vec(),
-                            version: QrVersion::new(encoded.version().number())?,
-                            ecc: FixtureEcc::M,
-                            eci_assignment: None,
-                        },
-                    )
-                    .map_err(|error| {
-                        format!(
-                            "approved PNG tuple {profile_index}/{foreground_index}/{background_index}/{style_index}: {error}"
-                        )
-                    })?;
-                }
-            }
-        }
+        let artifact = output
+            .path()
+            .join(format!("png-approved-{}.png", case.label));
+        fs::write(&artifact, effective_png)?;
+        decoder
+            .inspect_and_compare(
+                &artifact,
+                &DecodeExpectation {
+                    payload: case.payload,
+                    version: QrVersion::new(case.encoded.version().number())?,
+                    ecc: FixtureEcc::M,
+                    eci_assignment: case
+                        .eci_assignment
+                        .map(EciAssignment::try_from)
+                        .transpose()?,
+                },
+            )
+            .map_err(|error| format!("approved PNG case {}: {error}", case.label))?;
     }
     Ok(())
 }
