@@ -1,6 +1,7 @@
 #[path = "support/versions.rs"]
 mod versions;
 
+use proptest::prelude::*;
 use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
@@ -8,7 +9,7 @@ use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, ContrastRatio, DataModuleStyle,
     FinderStyle, Foreground, FunctionModuleStyle, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile,
     OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
-    Version,
+    Version, render_png, render_svg,
 };
 
 #[test]
@@ -76,7 +77,7 @@ fn only_approved_combinations_can_be_rendered_and_unsafe_contrast_is_typed() {
     assert_eq!(
         RenderOptions::try_new(profile, unsafe_gray, Background::Opaque(Rgba::WHITE)),
         Err(RenderError::UnsafeContrast {
-            actual: ContrastRatio::from_hundredths(448),
+            actual: ContrastRatio::from_hundredths(447),
             minimum: ContrastRatio::MINIMUM_OPAQUE,
         })
     );
@@ -87,7 +88,7 @@ fn only_approved_combinations_can_be_rendered_and_unsafe_contrast_is_typed() {
             Background::Opaque(Rgba::WHITE),
         ),
         Err(RenderError::UnsafeContrast {
-            actual: ContrastRatio::from_hundredths(450),
+            actual: ContrastRatio::from_hundredths(449),
             minimum: ContrastRatio::MINIMUM_OPAQUE,
         })
     );
@@ -113,6 +114,40 @@ fn generated_approved_color_background_profile_matrix_is_complete() {
                 RenderOptions::approved(profile, foreground, background).unwrap();
             }
         }
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(64))]
+
+    #[test]
+    fn approved_appearance_preserves_encoding_and_deterministic_artifacts(
+        payload in "[A-Za-z0-9:/._-]{1,80}",
+        profile_index in 0_usize..SUPPORTED_PROFILES.len(),
+        foreground_index in 0_usize..APPROVED_FOREGROUNDS.len(),
+        background_index in 0_usize..APPROVED_BACKGROUNDS.len(),
+    ) {
+        let profile = SUPPORTED_PROFILES[profile_index];
+        let encoded = encode(EncodeRequest {
+            text: &payload,
+            ecc: ErrorCorrection::Medium,
+            max_version: profile.maximum_version(),
+        }).unwrap();
+        let original = encoded.clone();
+        let options = RenderOptions::approved(
+            profile,
+            APPROVED_FOREGROUNDS[foreground_index],
+            APPROVED_BACKGROUNDS[background_index],
+        ).unwrap();
+        let model = RenderModel::new(&encoded, options).unwrap();
+
+        prop_assert_eq!(&encoded, &original);
+        prop_assert_eq!(model.matrix(), original.modules());
+        prop_assert_eq!(model.version(), original.version());
+        prop_assert_eq!(model.ecc(), original.ecc());
+        prop_assert_eq!(model.mask(), original.mask());
+        prop_assert_eq!(render_svg(&model).unwrap(), render_svg(&model).unwrap());
+        prop_assert_eq!(render_png(&model).unwrap(), render_png(&model).unwrap());
     }
 }
 

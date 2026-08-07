@@ -86,7 +86,9 @@ impl ContrastRatio {
 
     fn between(first: Rgba, second: Rgba) -> Self {
         let ratio = contrast_value(first, second);
-        Self((ratio * 100.0).round() as u16)
+        // Floor the displayed measurement so a rejected value just below the
+        // threshold can never be presented as meeting that threshold.
+        Self((ratio * 100.0).floor() as u16)
     }
 }
 

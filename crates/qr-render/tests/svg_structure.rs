@@ -11,6 +11,49 @@ use qr_render::{
 };
 use sha2::{Digest, Sha256};
 
+const APPROVED_SVG_SHA256: [[[&str; 2]; 2]; 4] = [
+    [
+        [
+            "849d1aef21b475dc0a11456ba549ef943cc79dc7a56cc4965a6b2e4a14703f54",
+            "23be314543a9de2efa53314dd1854ebef6c76a30ec81cdf37f2c100596ff13be",
+        ],
+        [
+            "c256fe4504c1e8405aad99cda54baffd98a7252436ef5718ddd6554157b0fa66",
+            "58fb401c4209df67ebbfbcca1f83bec2a6d8573df7b93861a7c0a480e4a0f47a",
+        ],
+    ],
+    [
+        [
+            "6f2a728b61fb1d7509e0bc0cea252e54d81c42227b6844899ff8c29c99cb95f6",
+            "b3cd70d017677efaf6ec31ca2f3cc258eb0dc9435a08e088d0c1714bbee83b59",
+        ],
+        [
+            "48e1d78364fee0610e62ffc16e8a29c6115bb792e9ad38cff3cac500c055646f",
+            "20ca1a1f6aaefda98549b7eefdaf0dba8cc889b17d153a1edf1afdbc690dec52",
+        ],
+    ],
+    [
+        [
+            "44e070b6bbf4ff0e826d38a95f1f55d68689248e02987fcac608f5acab7a6656",
+            "1814fb0fdd7a431381a897021a5e87bf364f79e16f784098ed61d566197c9d9e",
+        ],
+        [
+            "d84b1a3e4390f036419ac3cea90179f96e88ea21bd8c849685235a9e503d7bee",
+            "4eec3097d53b6ef7a1b41c07892124db842502e9435646dc53a371cc42a76caf",
+        ],
+    ],
+    [
+        [
+            "0909ca246ec8411d4de15ed1dc159a1fc4b656ba3535e80348f8e1cb97943d42",
+            "e1b969668bc4ecebf8b485de57c8eb7782375c043034635b7dc950ed65cd6f97",
+        ],
+        [
+            "a85c6114cb3886c0bd0e7c60db19072ef06d78ffa28a87909f6354ff10c9dfab",
+            "b2992cabc1cf14dbdff3bebdfd9dfb970df4f2acaa1ef83ccdda575a13b74a64",
+        ],
+    ],
+];
+
 #[test]
 fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     let payload = r#"safe/<script>alert("payload")</script>"#;
@@ -76,7 +119,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
 fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic() {
     let encoded = encoded_qr("APPROVED SVG APPEARANCE");
 
-    for profile in SUPPORTED_PROFILES {
+    for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         let safe_model = RenderModel::new(&encoded, RenderOptions::safe(profile).unwrap()).unwrap();
         let safe_svg = render_svg(&safe_model).unwrap();
         let safe_document = roxmltree::Document::parse(&safe_svg).unwrap();
@@ -86,11 +129,15 @@ fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic
             .and_then(|node| node.attribute("d"))
             .unwrap();
 
-        for foreground in APPROVED_FOREGROUNDS {
-            for background in APPROVED_BACKGROUNDS {
+        for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
+            for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
                 let options = RenderOptions::approved(profile, foreground, background).unwrap();
                 let model = RenderModel::new(&encoded, options).unwrap();
                 let first = render_svg(&model).unwrap();
+                assert_eq!(
+                    sha256_hex(first.as_bytes()),
+                    APPROVED_SVG_SHA256[profile_index][foreground_index][background_index],
+                );
                 assert_eq!(first, render_svg(&model).unwrap());
 
                 let document = roxmltree::Document::parse(&first).unwrap();

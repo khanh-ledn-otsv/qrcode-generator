@@ -17,6 +17,20 @@ use qr_web::workflow::{
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 type DebounceSignal = RwSignal<DebounceTimer>;
 
+#[derive(Clone, Copy)]
+struct ForegroundPresentation {
+    name: &'static str,
+    value: &'static str,
+    color: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct BackgroundPresentation {
+    name: &'static str,
+    value: &'static str,
+    description: &'static str,
+}
+
 #[component]
 fn App() -> impl IntoView {
     let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
@@ -57,18 +71,14 @@ fn App() -> impl IntoView {
         }
     });
     let foreground_options = APPROVED_FOREGROUNDS.map(|foreground| {
-        let (name, value) = match foreground {
-            Foreground::Black => ("Black", "black"),
-            Foreground::Brand => ("Brand", "brand"),
-        };
-        let color = foreground_label(foreground);
+        let presentation = foreground_presentation(foreground);
         view! {
             <label class=move || profile_card_class(state.with(|current| current.foreground() == foreground))>
                 <input
                     class="peer sr-only"
                     type="radio"
                     name="foreground-color"
-                    value=value
+                    value=presentation.value
                     prop:checked=move || state.with(|current| current.foreground() == foreground)
                     on:change=move |_| {
                         if let Some(Ok(request)) = state.try_update(|current| current.select_foreground(foreground)) {
@@ -76,27 +86,20 @@ fn App() -> impl IntoView {
                         }
                     }
                 />
-                <span class="block text-sm font-bold text-slate-950">{name}</span>
-                <span class="mt-1 block text-xs font-mono text-slate-600">{color}</span>
+                <span class="block text-sm font-bold text-slate-950">{presentation.name}</span>
+                <span class="mt-1 block text-xs font-mono text-slate-600">{presentation.color}</span>
             </label>
         }
     });
     let background_options = APPROVED_BACKGROUNDS.map(|background| {
-            let (name, description, value) = match background {
-                Background::Opaque(_) => ("Opaque white", "Known placement contrast", "white"),
-                Background::Transparent => (
-                    "Transparent",
-                    "Requires placement checks",
-                    "transparent",
-                ),
-            };
-            view! {
+        let presentation = background_presentation(background);
+        view! {
                 <label class=move || profile_card_class(state.with(|current| current.background() == background))>
                     <input
                         class="peer sr-only"
                         type="radio"
                         name="background-treatment"
-                        value=value
+                    value=presentation.value
                         prop:checked=move || state.with(|current| current.background() == background)
                         on:change=move |_| {
                             if let Some(Ok(request)) = state.try_update(|current| current.select_background(background)) {
@@ -104,8 +107,8 @@ fn App() -> impl IntoView {
                             }
                         }
                     />
-                    <span class="block text-sm font-bold text-slate-950">{name}</span>
-                    <span class="mt-1 block text-xs leading-5 text-slate-600">{description}</span>
+                <span class="block text-sm font-bold text-slate-950">{presentation.name}</span>
+                <span class="mt-1 block text-xs leading-5 text-slate-600">{presentation.description}</span>
                 </label>
             }
         });
@@ -347,8 +350,8 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Quiet zone" value=move || diagnostic_value(state, |details| format!("{} modules per side", details.quiet_zone_modules())) />
                                 <Diagnostic label="PNG geometry" value=move || diagnostic_value(state, |details| format!("{} px/module · {} px symbol · {} px padding", details.module_scale(), details.rendered_symbol_side_pixels(), details.outer_padding_per_side())) />
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
-                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_label(details.foreground()).to_owned()) />
-                                <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_label(details.background()).to_owned()) />
+                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_presentation(details.foreground()).color.to_owned()) />
+                                <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_presentation(details.background()).name.to_owned()) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
                                 <Diagnostic label="Safety" value=move || diagnostic_value(state, |details| safety_label(details.safety()).to_owned()) />
                             </dl>
@@ -510,18 +513,38 @@ fn profile_card_class(selected: bool) -> &'static str {
     }
 }
 
-fn foreground_label(foreground: Foreground) -> &'static str {
+fn foreground_presentation(foreground: Foreground) -> ForegroundPresentation {
     match foreground {
-        Foreground::Black => "#000000",
-        Foreground::Brand => "#BD0F72",
+        Foreground::Black => ForegroundPresentation {
+            name: "Black",
+            value: "black",
+            color: "#000000",
+        },
+        Foreground::Brand => ForegroundPresentation {
+            name: "Brand",
+            value: "brand",
+            color: "#BD0F72",
+        },
     }
 }
 
-fn background_label(background: Background) -> &'static str {
+fn background_presentation(background: Background) -> BackgroundPresentation {
     match background {
-        Background::Opaque(Rgba::WHITE) => "Opaque white",
-        Background::Transparent => "Transparent",
-        Background::Opaque(_) => "Unapproved opaque color",
+        Background::Opaque(Rgba::WHITE) => BackgroundPresentation {
+            name: "Opaque white",
+            value: "white",
+            description: "Known placement contrast",
+        },
+        Background::Transparent => BackgroundPresentation {
+            name: "Transparent",
+            value: "transparent",
+            description: "Requires placement checks",
+        },
+        Background::Opaque(_) => BackgroundPresentation {
+            name: "Unapproved opaque color",
+            value: "unapproved",
+            description: "Unavailable",
+        },
     }
 }
 

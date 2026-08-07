@@ -46,6 +46,11 @@
   previews own deterministic SVG/PNG downloads with bounded browser resources;
   complete payload-free diagnostics and accessible states are backed by native,
   WASM, axe, privacy-interception, hash, responsive, and pinned-decode tests.
+- [Ticket 17](issues/17-add-approved-color-and-transparency.md): Compiled black
+  and brand foreground presets combine only with opaque white or transparent
+  backgrounds; typed contrast validation, placement-surface cautions, and
+  generated structural/deterministic/pinned-decode coverage enforce all 16
+  selectable profile tuples.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
