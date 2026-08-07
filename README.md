@@ -50,7 +50,7 @@ native diagnostic example with:
 
 ```sh
 cargo test -p qr-core --test fuzz_regressions
-cargo fuzz run encode -- -runs=10000
+cargo fuzz run encode_utf8 -- -runs=10000
 printf %s 'synthetic diagnostic input' | cargo run -p qr-core --example diagnostics
 ```
 

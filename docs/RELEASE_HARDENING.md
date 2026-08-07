@@ -55,7 +55,8 @@ The following commands expose the hardening seams individually:
 | Deterministic adverse envelope | `pnpm run test:adverse:decode` |
 | Coverage thresholds | `pnpm run release:coverage` |
 | Mutation thresholds | `pnpm run release:mutation` |
-| One-hour-per-target fuzz budget | `pnpm run release:fuzz` |
+| Ten-minute-per-target extended fuzz budget | `pnpm run release:fuzz` |
+| One-hour critical-target fuzz budget | `pnpm run release:fuzz:deep` |
 | Miri core/geometry checks | `pnpm run release:miri` |
 | Dependency advisories/duplicates | `pnpm run release:dependencies` |
 | Criterion performance distributions | `pnpm run release:performance -- --save-baseline release` |
@@ -87,6 +88,12 @@ Each of the 192 generated matrix rows identifies all seven configuration
 dimensions plus its payload class. The 144 renderable rows record safety and a
 ZXing decode; the 48 bundled-logo/transparent rows record the expected typed
 rejection. `tests/adverse/parameters.json` is the versioned transform manifest.
+The adverse evidence applies all 13 named transforms to the safe square
+baseline, a 10-transform envelope to rounded transparent output, and a
+six-transform envelope to logo output. It compares decoded pixels before
+invoking ZXing and includes light, darker, and patterned placement backgrounds;
+each evidence row records the configuration, safety class, transform, decoder,
+and outcome.
 
 The optimized WASM baseline measured on 2026-08-07 is 154,450 gzip bytes. The
 160,000-byte ceiling allows 3.6% headroom and fails larger regressions. Approved

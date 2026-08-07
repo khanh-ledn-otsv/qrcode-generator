@@ -11,7 +11,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, encode};
 use qr_render::{
-    Background, Foreground, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
+    Background, DataModuleStyle, Foreground, LogoStyle, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES, render_png,
 };
 
 #[test]
@@ -29,6 +30,8 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
             "perspective",
             "contrast",
             "brightness",
+            "background",
+            "background",
             "background",
             "dot_gain",
             "ink_loss",
@@ -64,7 +67,11 @@ fn adverse_transforms_are_reproducible_and_preserve_canvas_dimensions() -> Resul
             "{} changed the exported canvas",
             transform.id()
         );
-        assert_ne!(first, source, "{} had no observable effect", transform.id());
+        assert!(
+            adverse::pixels_differ(&first, &source)?,
+            "{} had no observable pixel effect",
+            transform.id()
+        );
     }
     Ok(())
 }
@@ -83,39 +90,126 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         &source_checkout,
         manifest.decoder().source_commit(),
     );
-    let payload = "https://example.test/adverse-envelope";
-    let encoded = encode(EncodeRequest {
-        text: payload,
+    let safe_payload = "https://example.test/adverse-envelope";
+    let safe_encoded = encode(EncodeRequest {
+        text: safe_payload,
         ecc: ErrorCorrection::Medium,
         max_version: SUPPORTED_PROFILES[1].maximum_version(),
     })?;
-    let source = render_png(&RenderModel::new(
-        &encoded,
+    let safe_source = render_png(&RenderModel::new(
+        &safe_encoded,
         RenderOptions::approved(
             SUPPORTED_PROFILES[1],
             Foreground::Brand,
             Background::Opaque(qr_render::Rgba::WHITE),
         )?,
     )?)?;
-    let expected = DecodeExpectation {
-        payload: payload.as_bytes().to_vec(),
-        version: QrVersion::new(encoded.version().number())?,
+    let safe_expected = DecodeExpectation {
+        payload: safe_payload.as_bytes().to_vec(),
+        version: QrVersion::new(safe_encoded.version().number())?,
         ecc: FixtureEcc::M,
         eci_assignment: None,
     };
+
+    let rounded_payload = "https://example.test/rounded-caution";
+    let rounded_encoded = encode(EncodeRequest {
+        text: rounded_payload,
+        ecc: ErrorCorrection::Medium,
+        max_version: SUPPORTED_PROFILES[1].maximum_version(),
+    })?;
+    let rounded_source = render_png(&RenderModel::new(
+        &rounded_encoded,
+        RenderOptions::approved_with_data_style(
+            SUPPORTED_PROFILES[1],
+            Foreground::Brand,
+            Background::Transparent,
+            DataModuleStyle::Rounded,
+        )?,
+    )?)?;
+    let rounded_source = adverse::composite_on(&rounded_source, [255, 255, 255, 255])?;
+    let rounded_expected = DecodeExpectation {
+        payload: rounded_payload.as_bytes().to_vec(),
+        version: QrVersion::new(rounded_encoded.version().number())?,
+        ecc: FixtureEcc::M,
+        eci_assignment: None,
+    };
+
+    let logo_payload = "https://example.test/logo-caution";
+    let logo_encoded = encode(EncodeRequest {
+        text: logo_payload,
+        ecc: ErrorCorrection::High,
+        max_version: SUPPORTED_PROFILES[1].maximum_version(),
+    })?;
+    let logo_source = render_png(&RenderModel::new(
+        &logo_encoded,
+        RenderOptions::safe(SUPPORTED_PROFILES[1])?.with_logo(LogoStyle::Bundled)?,
+    )?)?;
+    let logo_expected = DecodeExpectation {
+        payload: logo_payload.as_bytes().to_vec(),
+        version: QrVersion::new(logo_encoded.version().number())?,
+        ecc: FixtureEcc::H,
+        eci_assignment: None,
+    };
+
+    let configurations = [
+        ("safe-square", "safe", safe_source, safe_expected),
+        (
+            "rounded-transparent",
+            "caution",
+            rounded_source,
+            rounded_expected,
+        ),
+        ("logo", "caution", logo_source, logo_expected),
+    ];
     let suite = adverse::TransformSuite::load()?;
     let output = tempfile::tempdir()?;
     let mut outcomes = Vec::new();
 
-    for transform in suite.transforms() {
-        let artifact = output.path().join(format!("{}.png", transform.id()));
-        fs::write(&artifact, transform.apply(&source, suite.seed())?)?;
-        decoder.inspect_and_compare(&artifact, &expected)?;
-        outcomes.push(serde_json::json!({
-            "id": transform.id(),
-            "decoder": manifest.decoder().version(),
-            "outcome": "decoded",
-        }));
+    for (configuration, safety, source, expected) in configurations {
+        for transform in suite.transforms() {
+            let included = match configuration {
+                "safe-square" => true,
+                "rounded-transparent" => matches!(
+                    transform.kind(),
+                    "blur"
+                        | "scaling"
+                        | "jpeg"
+                        | "rotation"
+                        | "contrast"
+                        | "brightness"
+                        | "background"
+                        | "grayscale"
+                ),
+                "logo" => matches!(
+                    transform.kind(),
+                    "blur" | "scaling" | "jpeg" | "contrast" | "brightness" | "grayscale"
+                ),
+                _ => false,
+            };
+            if !included {
+                continue;
+            }
+            let artifact = output
+                .path()
+                .join(format!("{configuration}-{}.png", transform.id()));
+            let transformed = transform.apply(&source, suite.seed())?;
+            assert!(
+                adverse::pixels_differ(&transformed, &source)?,
+                "{configuration}/{} had no observable pixel effect",
+                transform.id()
+            );
+            fs::write(&artifact, transformed)?;
+            decoder
+                .inspect_and_compare(&artifact, &expected)
+                .map_err(|error| format!("{configuration}/{}: {error}", transform.id()))?;
+            outcomes.push(serde_json::json!({
+                "configuration": configuration,
+                "safety": safety,
+                "transform": transform.id(),
+                "decoder": manifest.decoder().version(),
+                "outcome": "decoded",
+            }));
+        }
     }
 
     if let Some(evidence_dir) = std::env::var_os("QR_RELEASE_EVIDENCE_DIR") {

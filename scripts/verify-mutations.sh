@@ -15,6 +15,10 @@ run_mutants() {
   cargo mutants --output "${output_dir}" "$@"
   local mutants_status=$?
   set -e
+  if [[ ${mutants_status} -ne 0 && ${mutants_status} -ne 2 ]]; then
+    echo "cargo-mutants failed with infrastructure status ${mutants_status}" >&2
+    exit "${mutants_status}"
+  fi
   if [[ ! -f "${output_dir}/outcomes.json" ]]; then
     echo "cargo-mutants failed before producing outcomes (status ${mutants_status})" >&2
     exit "${mutants_status}"

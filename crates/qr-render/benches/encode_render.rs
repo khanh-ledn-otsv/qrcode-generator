@@ -139,10 +139,20 @@ fn rendering_benchmarks(criterion: &mut Criterion) {
         .expect("safe options are valid")
         .with_logo(LogoStyle::Bundled)
         .expect("logo options are valid");
+    group.bench_function("logo-overlap-analysis", |bencher| {
+        bencher.iter(|| {
+            RenderModel::new(black_box(&logo_encoded), logo_options).expect("logo model is valid")
+        });
+    });
     group.bench_function("full-request-to-logo-artifacts", |bencher| {
         bencher.iter(|| {
-            let model = RenderModel::new(black_box(&logo_encoded), logo_options)
-                .expect("logo model is valid");
+            let encoded = encode(black_box(EncodeRequest {
+                text: logo_payload,
+                ecc: ErrorCorrection::High,
+                max_version: SUPPORTED_PROFILES[3].maximum_version(),
+            }))
+            .expect("logo benchmark payload fits");
+            let model = RenderModel::new(&encoded, logo_options).expect("logo model is valid");
             black_box((
                 render_svg(&model).expect("SVG renders"),
                 render_png(&model).expect("PNG renders"),

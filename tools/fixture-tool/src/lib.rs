@@ -37,6 +37,13 @@ impl FixtureManifest {
         Ok(manifest)
     }
 
+    pub fn parse_and_verify(bytes: &[u8], root: &Path) -> Result<Self, VerificationError> {
+        let manifest: Self = serde_json::from_slice(bytes)
+            .map_err(|error| VerificationError::new(format!("invalid manifest JSON: {error}")))?;
+        manifest.verify(root)?;
+        Ok(manifest)
+    }
+
     #[must_use]
     pub fn fixtures(&self) -> &[Fixture] {
         &self.fixtures

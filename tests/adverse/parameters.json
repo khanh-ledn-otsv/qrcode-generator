@@ -10,6 +10,8 @@
     { "id": "contrast-minus-8", "kind": "contrast", "delta": -8.0 },
     { "id": "brightness-plus-6", "kind": "brightness", "delta": 6 },
     { "id": "light-gray-background", "kind": "background", "rgba": [245, 245, 245, 255] },
+    { "id": "dark-gray-background", "kind": "background", "rgba": [160, 160, 160, 255] },
+    { "id": "patterned-light-background", "kind": "background", "rgba": [248, 248, 248, 255], "alternate_rgba": [225, 225, 225, 255], "cell_size": 12 },
     { "id": "dot-gain-radius-1", "kind": "dot_gain", "radius": 1 },
     { "id": "ink-loss-period-997", "kind": "ink_loss", "period": 997 },
     { "id": "grayscale-luma", "kind": "grayscale" }

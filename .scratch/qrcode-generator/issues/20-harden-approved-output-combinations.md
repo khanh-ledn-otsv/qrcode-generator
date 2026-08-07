@@ -19,7 +19,7 @@ Added a generated 192-row approved-output matrix spanning all seven selectable
 configuration dimensions and six required payload classes. The release evidence
 records 144 independently decoded artifacts and 48 explicit typed rejections for
 transparent-logo combinations. Added deterministic, manifest-driven adverse
-transforms; coverage and mutation gates; four fuzz targets; Miri, dependency,
+transforms; coverage and mutation gates; eight fuzz targets; Miri, dependency,
 bundle, and evidence commands; Criterion performance coverage; and deterministic
 artifact/allocation/bundle ceilings.
 

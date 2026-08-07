@@ -73,6 +73,8 @@ pub enum Transform {
     Background {
         id: String,
         rgba: [u8; 4],
+        alternate_rgba: Option<[u8; 4]>,
+        cell_size: Option<u32>,
     },
     DotGain {
         id: String,
@@ -134,7 +136,12 @@ impl Transform {
             } => perspective(&source, top_inset_percent, bottom_inset_percent),
             Self::Contrast { delta, .. } => imageops::contrast(&source, delta),
             Self::Brightness { delta, .. } => imageops::brighten(&source, delta),
-            Self::Background { rgba, .. } => composite_background(&source, Rgba(rgba)),
+            Self::Background {
+                rgba,
+                alternate_rgba,
+                cell_size,
+                ..
+            } => replace_background(&source, Rgba(rgba), alternate_rgba.map(Rgba), cell_size),
             Self::DotGain { radius, .. } => dot_gain(&source, radius),
             Self::InkLoss { period, .. } => ink_loss(&source, seed, period)?,
             Self::Grayscale { .. } => {
@@ -148,6 +155,17 @@ impl Transform {
 pub fn png_dimensions(bytes: &[u8]) -> Result<(u32, u32), Box<dyn Error>> {
     let image = image::load_from_memory_with_format(bytes, ImageFormat::Png)?;
     Ok((image.width(), image.height()))
+}
+
+pub fn pixels_differ(left: &[u8], right: &[u8]) -> Result<bool, Box<dyn Error>> {
+    let left = image::load_from_memory_with_format(left, ImageFormat::Png)?.into_rgba8();
+    let right = image::load_from_memory_with_format(right, ImageFormat::Png)?.into_rgba8();
+    Ok(left != right)
+}
+
+pub fn composite_on(source: &[u8], rgba: [u8; 4]) -> Result<Vec<u8>, Box<dyn Error>> {
+    let source = image::load_from_memory_with_format(source, ImageFormat::Png)?.into_rgba8();
+    encode_png(&composite_background(&source, Rgba(rgba)))
 }
 
 fn scale_simulation(source: &RgbaImage, percent: u32) -> Result<RgbaImage, Box<dyn Error>> {
@@ -229,10 +247,36 @@ fn composite_background(source: &RgbaImage, background: Rgba<u8>) -> RgbaImage {
     })
 }
 
+fn replace_background(
+    source: &RgbaImage,
+    background: Rgba<u8>,
+    alternate: Option<Rgba<u8>>,
+    cell_size: Option<u32>,
+) -> RgbaImage {
+    let composited = composite_background(source, background);
+    RgbaImage::from_fn(source.width(), source.height(), |x, y| {
+        let original = *source.get_pixel(x, y);
+        if is_ink(original) {
+            *composited.get_pixel(x, y)
+        } else {
+            match (alternate, cell_size) {
+                (Some(alternate), Some(cell_size)) if cell_size != 0 => {
+                    if (x / cell_size + y / cell_size).is_multiple_of(2) {
+                        background
+                    } else {
+                        alternate
+                    }
+                }
+                _ => background,
+            }
+        }
+    })
+}
+
 fn dot_gain(source: &RgbaImage, radius: u32) -> RgbaImage {
     RgbaImage::from_fn(source.width(), source.height(), |x, y| {
         let original = *source.get_pixel(x, y);
-        if original.0[3] != 0 {
+        if is_ink(original) {
             return original;
         }
         let x_start = x.saturating_sub(radius);
@@ -242,7 +286,7 @@ fn dot_gain(source: &RgbaImage, radius: u32) -> RgbaImage {
         for neighbor_y in y_start..=y_end {
             for neighbor_x in x_start..=x_end {
                 let candidate = *source.get_pixel(neighbor_x, neighbor_y);
-                if candidate.0[3] != 0 {
+                if is_ink(candidate) {
                     return candidate;
                 }
             }
@@ -265,13 +309,17 @@ fn ink_loss(source: &RgbaImage, seed: u64, period: u64) -> Result<RgbaImage, Box
                 .wrapping_add(seed)
                 .wrapping_mul(6_364_136_223_846_793_005)
                 .wrapping_add(1_442_695_040_888_963_407);
-            if pixel.0[3] != 0 && mixed % period == 0 {
+            if is_ink(pixel) && mixed % period == 0 {
                 Rgba([pixel.0[0], pixel.0[1], pixel.0[2], 0])
             } else {
                 pixel
             }
         },
     ))
+}
+
+fn is_ink(pixel: Rgba<u8>) -> bool {
+    pixel.0[3] != 0 && pixel.0[..3].iter().any(|channel| *channel < 240)
 }
 
 fn encode_png(image: &RgbaImage) -> Result<Vec<u8>, Box<dyn Error>> {
