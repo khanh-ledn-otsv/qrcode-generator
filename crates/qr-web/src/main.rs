@@ -4,9 +4,8 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
-    DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle, OutputSafety, ProfileId, Rgba,
-    SUPPORTED_PROFILES,
+    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, Background, DataModuleStyle, FinderStyle,
+    Foreground, FunctionModuleStyle, LogoStyle, OutputSafety, ProfileId, Rgba, SUPPORTED_PROFILES,
 };
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
@@ -17,13 +16,6 @@ use qr_web::workflow::{
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 type DebounceSignal = RwSignal<DebounceTimer>;
-
-#[derive(Clone, Copy)]
-struct ForegroundPresentation {
-    name: &'static str,
-    value: &'static str,
-    color: &'static str,
-}
 
 #[derive(Clone, Copy)]
 struct BackgroundPresentation {
@@ -78,27 +70,6 @@ fn App() -> impl IntoView {
             </label>
         }
     });
-    let foreground_options = APPROVED_FOREGROUNDS.map(|foreground| {
-        let presentation = foreground_presentation(foreground);
-        view! {
-            <label class=move || profile_card_class(state.with(|current| current.foreground() == foreground))>
-                <input
-                    class="peer sr-only"
-                    type="radio"
-                    name="foreground-color"
-                    value=presentation.value
-                    prop:checked=move || state.with(|current| current.foreground() == foreground)
-                    on:change=move |_| {
-                        if let Some(Ok(request)) = state.try_update(|current| current.select_foreground(foreground)) {
-                            schedule_preview(state, pending_timer, request);
-                        }
-                    }
-                />
-                <span class="block text-sm font-bold text-slate-950">{presentation.name}</span>
-                <span class="mt-1 block text-xs font-mono text-slate-600">{presentation.color}</span>
-            </label>
-        }
-    });
     let background_options = APPROVED_BACKGROUNDS.map(|background| {
         let presentation = background_presentation(background);
         view! {
@@ -107,7 +78,8 @@ fn App() -> impl IntoView {
                         class="peer sr-only"
                         type="radio"
                         name="background-treatment"
-                    value=presentation.value
+                        value=presentation.value
+                        disabled=move || state.with(WorkflowState::logo_enabled) && matches!(background, Background::Transparent)
                         prop:checked=move || state.with(|current| current.background() == background)
                         on:change=move |_| {
                             if let Some(Ok(request)) = state.try_update(|current| current.select_background(background)) {
@@ -307,11 +279,6 @@ fn App() -> impl IntoView {
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">{profile_options}</div>
                         </fieldset>
 
-                        <fieldset class="mt-8">
-                            <legend class="text-sm font-semibold text-slate-800">"Foreground color"</legend>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{foreground_options}</div>
-                        </fieldset>
-
                         <fieldset class="mt-8" aria-describedby="payload-caution">
                             <legend class="text-sm font-semibold text-slate-800">"Background treatment"</legend>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">{background_options}</div>
@@ -323,6 +290,25 @@ fn App() -> impl IntoView {
                             <p class="mt-3 text-xs leading-5 text-slate-600">
                                 "Function modules and finder patterns always remain square."
                             </p>
+                        </fieldset>
+
+                        <fieldset class="mt-8" aria-describedby="payload-caution">
+                            <legend class="text-sm font-semibold text-slate-800">"Bundled logo"</legend>
+                            <label class=move || profile_card_class(state.with(WorkflowState::logo_enabled))>
+                                <input
+                                    class="peer sr-only"
+                                    type="checkbox"
+                                    name="bundled-logo"
+                                    prop:checked=move || state.with(WorkflowState::logo_enabled)
+                                    on:change=move |event| {
+                                        if let Some(Ok(request)) = state.try_update(|current| current.set_logo_enabled(event_target_checked(&event))) {
+                                            schedule_preview(state, pending_timer, request);
+                                        }
+                                    }
+                                />
+                                <span class="block text-sm font-bold text-slate-950">"ONE lettermark"</span>
+                                <span class="mt-1 block text-xs leading-5 text-slate-600">"Uses ECC H and an opaque white knockout"</span>
+                            </label>
                         </fieldset>
                     </section>
 
@@ -387,11 +373,12 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Quiet zone" value=move || diagnostic_value(state, |details| format!("{} modules per side", details.quiet_zone_modules())) />
                                 <Diagnostic label="PNG geometry" value=move || diagnostic_value(state, |details| format!("{} px/module · {} px symbol · {} px padding", details.module_scale(), details.rendered_symbol_side_pixels(), details.outer_padding_per_side())) />
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
-                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_presentation(details.foreground()).color.to_owned()) />
+                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_color(details.foreground()).to_owned()) />
                                 <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_presentation(details.background()).name.to_owned()) />
                                 <Diagnostic label="Data modules" value=move || diagnostic_value(state, |details| data_module_style_label(details.data_module_style()).to_owned()) />
                                 <Diagnostic label="Function modules" value=move || diagnostic_value(state, |details| function_module_style_label(details.function_module_style()).to_owned()) />
                                 <Diagnostic label="Finders" value=move || diagnostic_value(state, |details| finder_style_label(details.finder_style()).to_owned()) />
+                                <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
                                 <Diagnostic label="Safety" value=move || diagnostic_value(state, |details| safety_label(details.safety()).to_owned()) />
                             </dl>
@@ -553,18 +540,9 @@ fn profile_card_class(selected: bool) -> &'static str {
     }
 }
 
-fn foreground_presentation(foreground: Foreground) -> ForegroundPresentation {
+fn foreground_color(foreground: Foreground) -> &'static str {
     match foreground {
-        Foreground::Black => ForegroundPresentation {
-            name: "Black",
-            value: "black",
-            color: "#000000",
-        },
-        Foreground::Brand => ForegroundPresentation {
-            name: "Brand",
-            value: "brand",
-            color: "#BD0F72",
-        },
+        Foreground::Brand => "#BD0F72",
     }
 }
 
@@ -616,6 +594,17 @@ const fn function_module_style_label(style: FunctionModuleStyle) -> &'static str
 const fn finder_style_label(style: FinderStyle) -> &'static str {
     match style {
         FinderStyle::StandardSquare => "Standard square",
+    }
+}
+
+fn logo_label(style: LogoStyle, placement: Option<qr_render::LogoPlacement>) -> String {
+    match (style, placement) {
+        (LogoStyle::None, _) => "None".to_owned(),
+        (LogoStyle::Bundled, Some(placement)) => format!(
+            "ONE lettermark · {} data/remainder modules obscured",
+            placement.obscured_modules()
+        ),
+        (LogoStyle::Bundled, None) => "Unavailable".to_owned(),
     }
 }
 

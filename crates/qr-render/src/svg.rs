@@ -40,9 +40,21 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
         )
         .map_err(|_| RenderError::RenderFailure)?;
     }
-    write!(svg, "<path fill=\"{}\" d=\"", foreground).map_err(|_| RenderError::RenderFailure)?;
+    write!(
+        svg,
+        "<path fill=\"{}\" shape-rendering=\"crispEdges\" d=\"",
+        foreground
+    )
+    .map_err(|_| RenderError::RenderFailure)?;
 
+    let logo_placement = model.logo_placement();
     for cell in model.cells().filter(|cell| cell.module().is_dark()) {
+        if logo_placement.is_some_and(|logo| {
+            logo.knockout_bounds()
+                .contains(u32::from(cell.x()), u32::from(cell.y()))
+        }) {
+            continue;
+        }
         let x = u32::from(cell.x())
             .checked_add(origin.x().get())
             .ok_or(RenderError::DimensionOverflow)?;
@@ -59,8 +71,59 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
             write!(svg, "M{x} {y}h1v1h-1z").map_err(|_| RenderError::RenderFailure)?;
         }
     }
-    svg.push_str("\"/></svg>");
+    svg.push_str("\"/>");
+    if let Some(logo) = logo_placement {
+        write_logo(&mut svg, model, logo)?;
+    }
+    svg.push_str("</svg>");
     Ok(svg)
+}
+
+fn write_logo(
+    svg: &mut String,
+    model: &RenderModel<'_>,
+    logo: crate::LogoPlacement,
+) -> Result<(), RenderError> {
+    let origin = model.svg_placement().matrix_origin();
+    let knockout = logo.knockout_bounds();
+    let knockout_x = origin.x().get() + knockout.left().get();
+    let knockout_y = origin.y().get() + knockout.top().get();
+    write!(
+        svg,
+        "<rect data-role=\"logo-knockout\" x=\"{knockout_x}\" y=\"{knockout_y}\" width=\"{}\" height=\"{}\" fill=\"#ffffff\"/>",
+        knockout.width().get(),
+        knockout.height().get(),
+    )
+    .map_err(|_| RenderError::RenderFailure)?;
+
+    let source = logo.source_bounds();
+    let source_x = source
+        .left_thousandths()
+        .checked_add(origin.x().get() * 1_000)
+        .ok_or(RenderError::DimensionOverflow)?;
+    let source_y = source
+        .top_thousandths()
+        .checked_add(origin.y().get() * 1_000)
+        .ok_or(RenderError::DimensionOverflow)?;
+    write!(
+        svg,
+        "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"0 0 1000 602\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\"><path fill=\"#bd0f72\" d=\"M191.6667,192.6667v216.6667h191.6667v-216.6667h-191.6667ZM337.5,367.6667h-100v-133.3333h100v133.3333Z\"/><polygon fill=\"#bd0f72\" points=\"808.3333 234.3333 808.3333 192.6667 641.6667 192.6667 641.6667 409.3333 808.3333 409.3333 808.3333 367.6667 687.5 367.6667 687.5 321.8333 808.3333 321.8333 808.3333 280.1667 687.5 280.1667 687.5 234.3333 808.3333 234.3333\"/><polygon fill=\"#bd0f72\" points=\"566.6667 334.3333 454.1667 192.6667 412.5 192.6667 412.5 409.3333 458.3333 409.3333 458.3333 267.6667 570.8333 409.3333 612.5 409.3333 612.5 192.6667 566.6667 192.6667 566.6667 334.3333\"/></svg>",
+        decimal_thousandths(source_x),
+        decimal_thousandths(source_y),
+        decimal_thousandths(source.width_thousandths()),
+        decimal_thousandths(source.height_thousandths()),
+    )
+    .map_err(|_| RenderError::RenderFailure)
+}
+
+fn decimal_thousandths(value: u32) -> String {
+    let whole = value / 1_000;
+    let fraction = value % 1_000;
+    if fraction == 0 {
+        whole.to_string()
+    } else {
+        format!("{whole}.{fraction:03}")
+    }
 }
 
 fn hex_color(color: Rgba) -> String {

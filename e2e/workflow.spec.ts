@@ -85,24 +85,17 @@ test("profile controls work by keyboard and layouts fit desktop and mobile width
   }
 });
 
-test("offers only approved colors and shows transparent placement cautions", async ({ page }) => {
+test("uses only magenta and shows transparent placement cautions", async ({ page }) => {
   await enterPayload(page, "approved color workflow");
 
-  const black = page.getByRole("radio", { name: /Black/ });
-  const brand = page.getByRole("radio", { name: /Brand/ });
   const white = page.getByRole("radio", { name: /Opaque white/ });
   const transparent = page.getByRole("radio", { name: /Transparent/ });
-  await expect(black).toBeChecked();
   await expect(white).toBeChecked();
-  await expect(
-    page.getByRole("group", { name: "Foreground color" }).getByRole("radio"),
-  ).toHaveCount(2);
+  await expect(page.getByRole("group", { name: "Foreground color" })).toHaveCount(0);
   await expect(
     page.getByRole("group", { name: "Background treatment" }).getByRole("radio"),
   ).toHaveCount(2);
 
-  await brand.focus();
-  await page.keyboard.press("Space");
   await expect.poll(() => diagnostic(page, "Foreground")).toBe("#BD0F72");
   await expect.poll(() => diagnostic(page, "Contrast")).toBe("6.04:1");
   await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
@@ -120,6 +113,20 @@ test("offers only approved colors and shows transparent placement cautions", asy
   await expect(surfaces).toHaveText(["White", "Light gray", "Dark", "Patterned"]);
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(surfaces.first().locator("rect")).toHaveCount(0);
+});
+
+test("logo mode refits at ECC H and requires opaque white", async ({ page }) => {
+  await enterPayload(page, "a".repeat(70));
+  const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
+  const transparent = page.getByRole("radio", { name: /Transparent/ });
+
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await expect(logo).toBeChecked();
+  await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
+  await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");
+  await expect.poll(() => diagnostic(page, "Logo")).toContain("ONE lettermark");
+  await expect(transparent).toBeDisabled();
+  await expect(page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]')).toHaveCount(5);
 });
 
 test("offers only square and rounded data modules with standard square finders", async ({

@@ -1,0 +1,64 @@
+use std::error::Error;
+
+use qr_core::tables::ErrorCorrection;
+use qr_core::{EncodeRequest, Version, encode};
+use qr_render::{LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES};
+
+fn main() -> Result<(), Box<dyn Error>> {
+    println!(
+        "| Profile | H version | Matrix | PNG module scale | Source logo bounds (modules ×1000) | Knockout bounds (modules) | Offset (modules) | Protected clearance | Obscured data | Obscured remainder | Outcome |"
+    );
+    println!("|---|---:|---:|---:|---|---|---|---:|---:|---:|---|");
+    for profile in SUPPORTED_PROFILES {
+        for version_number in 1..=profile.maximum_version().number() {
+            let text = payload_for_high_version(version_number)?;
+            let encoded = encode(EncodeRequest {
+                text: &text,
+                ecc: ErrorCorrection::High,
+                max_version: Version::try_from(version_number)?,
+            })?;
+            let options = RenderOptions::safe(profile)?.with_logo(LogoStyle::Bundled)?;
+            let model = RenderModel::new(&encoded, options)?;
+            let logo = model.logo_placement().ok_or("logo policy rejected a row")?;
+            let source = logo.source_bounds();
+            let knockout = logo.knockout_bounds();
+            let (offset_x, offset_y) = logo.offset();
+            println!(
+                "| {:?} | {} | {}×{} | {} px | ({}, {}) {}×{} | ({}, {}) {}×{} | ({offset_x}, {offset_y}) | {} modules | {} | {} | valid |",
+                profile.id(),
+                version_number,
+                encoded.modules().size(),
+                encoded.modules().size(),
+                model.png_placement().module_scale().get(),
+                source.left_thousandths(),
+                source.top_thousandths(),
+                source.width_thousandths(),
+                source.height_thousandths(),
+                knockout.left().get(),
+                knockout.top().get(),
+                knockout.width().get(),
+                knockout.height().get(),
+                logo.protected_clearance(),
+                logo.obscured_data_modules(),
+                logo.obscured_remainder_modules(),
+            );
+        }
+    }
+    Ok(())
+}
+
+fn payload_for_high_version(version: u8) -> Result<String, Box<dyn Error>> {
+    for length in 1..=1_000 {
+        let text = "a".repeat(length);
+        if encode(EncodeRequest {
+            text: &text,
+            ecc: ErrorCorrection::High,
+            max_version: Version::try_from(version)?,
+        })
+        .is_ok_and(|encoded| encoded.version().number() == version)
+        {
+            return Ok(text);
+        }
+    }
+    Err(format!("no byte payload selected H-level version {version}").into())
+}

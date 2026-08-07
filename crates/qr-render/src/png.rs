@@ -1,5 +1,6 @@
 use png::{BitDepth, ColorType, Compression, Encoder, Filter};
 
+use crate::logo::{logo_contains_source_point, source_view_box};
 use crate::{Background, DataModuleStyle, PixelDimensions, RenderError, RenderModel, Rgba};
 
 const COVERAGE_SAMPLES_PER_AXIS: u32 = 8;
@@ -29,7 +30,14 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
     let dimensions = placement.canvas_dimensions();
     let origin = placement.matrix_origin();
     let scale = placement.module_scale().get();
+    let logo_placement = model.logo_placement();
     for cell in model.cells().filter(|cell| cell.module().is_dark()) {
+        if logo_placement.is_some_and(|logo| {
+            logo.knockout_bounds()
+                .contains(u32::from(cell.x()), u32::from(cell.y()))
+        }) {
+            continue;
+        }
         let x = u32::from(cell.x())
             .checked_mul(scale)
             .and_then(|offset| origin.x().get().checked_add(offset))
@@ -59,7 +67,115 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
             )?;
         }
     }
+    if let Some(logo) = logo_placement {
+        render_logo(&mut pixels, dimensions, origin, scale, logo)?;
+    }
     Ok(pixels)
+}
+
+fn render_logo(
+    pixels: &mut [u8],
+    dimensions: PixelDimensions,
+    matrix_origin: crate::PixelPoint,
+    scale: u32,
+    logo: crate::LogoPlacement,
+) -> Result<(), RenderError> {
+    let knockout = logo.knockout_bounds();
+    let knockout_x = knockout
+        .left()
+        .get()
+        .checked_mul(scale)
+        .and_then(|offset| matrix_origin.x().get().checked_add(offset))
+        .ok_or(RenderError::DimensionOverflow)?;
+    let knockout_y = knockout
+        .top()
+        .get()
+        .checked_mul(scale)
+        .and_then(|offset| matrix_origin.y().get().checked_add(offset))
+        .ok_or(RenderError::DimensionOverflow)?;
+    fill_rectangle(
+        pixels,
+        dimensions,
+        knockout_x,
+        knockout_y,
+        knockout.width().get() * scale,
+        knockout.height().get() * scale,
+        Rgba::WHITE,
+    )?;
+
+    let source = logo.source_bounds();
+    let source_left_pixels = f64::from(matrix_origin.x().get())
+        + f64::from(source.left_thousandths()) * f64::from(scale) / 1_000.0;
+    let source_top_pixels = f64::from(matrix_origin.y().get())
+        + f64::from(source.top_thousandths()) * f64::from(scale) / 1_000.0;
+    let source_width_pixels = f64::from(source.width_thousandths()) * f64::from(scale) / 1_000.0;
+    let source_height_pixels = f64::from(source.height_thousandths()) * f64::from(scale) / 1_000.0;
+    let x_start = source_left_pixels.floor() as u32;
+    let y_start = source_top_pixels.floor() as u32;
+    let x_end = (source_left_pixels + source_width_pixels).ceil() as u32;
+    let y_end = (source_top_pixels + source_height_pixels).ceil() as u32;
+    let (view_box_width, view_box_height) = source_view_box();
+    let canvas_width = u64::from(dimensions.width().get());
+    for y in y_start..y_end {
+        for x in x_start..x_end {
+            let source_x = (f64::from(x) + 0.5 - source_left_pixels) * f64::from(view_box_width)
+                / source_width_pixels;
+            let source_y = (f64::from(y) + 0.5 - source_top_pixels) * f64::from(view_box_height)
+                / source_height_pixels;
+            if !logo_contains_source_point(source_x, source_y) {
+                continue;
+            }
+            let offset = u64::from(y)
+                .checked_mul(canvas_width)
+                .and_then(|value| value.checked_add(u64::from(x)))
+                .and_then(|value| value.checked_mul(4))
+                .and_then(|value| usize::try_from(value).ok())
+                .ok_or(RenderError::DimensionOverflow)?;
+            pixels
+                .get_mut(offset..offset + 4)
+                .ok_or(RenderError::RenderFailure)?
+                .copy_from_slice(&Rgba::BRAND.channels());
+        }
+    }
+    Ok(())
+}
+
+fn fill_rectangle(
+    pixels: &mut [u8],
+    dimensions: PixelDimensions,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+    color: Rgba,
+) -> Result<(), RenderError> {
+    let canvas_width = u64::from(dimensions.width().get());
+    let x_end = x.checked_add(width).ok_or(RenderError::DimensionOverflow)?;
+    let y_end = y
+        .checked_add(height)
+        .ok_or(RenderError::DimensionOverflow)?;
+    if x_end > dimensions.width().get() || y_end > dimensions.height().get() {
+        return Err(RenderError::RenderFailure);
+    }
+    for row in y..y_end {
+        let start = u64::from(row)
+            .checked_mul(canvas_width)
+            .and_then(|value| value.checked_add(u64::from(x)))
+            .and_then(|value| value.checked_mul(4))
+            .and_then(|value| usize::try_from(value).ok())
+            .ok_or(RenderError::DimensionOverflow)?;
+        let end = start
+            .checked_add(usize::try_from(width * 4).map_err(|_| RenderError::DimensionOverflow)?)
+            .ok_or(RenderError::DimensionOverflow)?;
+        for pixel in pixels
+            .get_mut(start..end)
+            .ok_or(RenderError::RenderFailure)?
+            .chunks_exact_mut(4)
+        {
+            pixel.copy_from_slice(&color.channels());
+        }
+    }
+    Ok(())
 }
 
 fn fill_rounded(

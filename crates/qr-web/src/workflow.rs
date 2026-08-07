@@ -6,8 +6,8 @@ use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
     Background, ContrastRatio, DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle,
-    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, render_png, render_svg,
+    LogoPlacement, LogoStyle, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -15,6 +15,7 @@ use crate::textarea::{TextAreaBuffer, projected_utf16_length};
 const CONTROL_CHARACTER_CAUTION: &str =
     "This payload contains control characters. Confirm that they are intentional.";
 const TRANSPARENT_OUTPUT_CAUTION: &str = "Transparent output has unknown effective contrast. Check it on white, light-gray, dark, and patterned placement surfaces.";
+const LOGO_OUTPUT_CAUTION: &str = "The bundled logo obscures QR data modules. Validate the exported code in its actual environment.";
 const INTERNAL_FAILURE_MESSAGE: &str =
     "QR generation failed unexpectedly. Change the input and try again.";
 const SAFE_OUTPUT_GUIDANCE: &str =
@@ -132,6 +133,8 @@ pub struct Diagnostics {
     data_module_style: DataModuleStyle,
     function_module_style: FunctionModuleStyle,
     finder_style: FinderStyle,
+    logo_style: LogoStyle,
+    logo_placement: Option<LogoPlacement>,
 }
 
 impl Diagnostics {
@@ -249,6 +252,16 @@ impl Diagnostics {
     pub const fn finder_style(self) -> FinderStyle {
         self.finder_style
     }
+
+    #[must_use]
+    pub const fn logo_style(self) -> LogoStyle {
+        self.logo_style
+    }
+
+    #[must_use]
+    pub const fn logo_placement(self) -> Option<LogoPlacement> {
+        self.logo_placement
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -340,6 +353,8 @@ pub enum WorkflowFailure {
         actual: ContrastRatio,
         minimum: ContrastRatio,
     },
+    LogoRequiresOpaqueWhite,
+    UnsafeLogoGeometry,
     Internal,
 }
 
@@ -363,6 +378,13 @@ impl WorkflowFailure {
                 minimum.hundredths() / 100,
                 minimum.hundredths() % 100,
             ),
+            Self::LogoRequiresOpaqueWhite => {
+                "Logo mode requires an opaque white QR background.".to_owned()
+            }
+            Self::UnsafeLogoGeometry => {
+                "Logo mode is unavailable because no safe placement exists for this QR version."
+                    .to_owned()
+            }
             Self::Internal => INTERNAL_FAILURE_MESSAGE.to_owned(),
         }
     }
@@ -394,7 +416,7 @@ impl WorkflowState {
             payload: TextAreaBuffer::new(String::new()),
             profile_id,
             logo_enabled: false,
-            foreground: Foreground::Black,
+            foreground: Foreground::Brand,
             background: Background::Opaque(Rgba::WHITE),
             data_module_style: DataModuleStyle::Square,
             revision: Revision(0),
@@ -462,6 +484,9 @@ impl WorkflowState {
 
     pub fn set_logo_enabled(&mut self, enabled: bool) -> Result<PreviewRequest, WorkflowFailure> {
         self.logo_enabled = enabled;
+        if enabled {
+            self.background = Background::Opaque(Rgba::WHITE);
+        }
         self.begin_preview()
     }
 
@@ -477,6 +502,9 @@ impl WorkflowState {
         &mut self,
         background: Background,
     ) -> Result<PreviewRequest, WorkflowFailure> {
+        if self.logo_enabled && background != Background::Opaque(Rgba::WHITE) {
+            return Err(WorkflowFailure::LogoRequiresOpaqueWhite);
+        }
         self.background = background;
         self.begin_preview()
     }
@@ -530,6 +558,11 @@ impl WorkflowState {
     }
 
     #[must_use]
+    pub const fn logo_enabled(&self) -> bool {
+        self.logo_enabled
+    }
+
+    #[must_use]
     pub fn preview(&self) -> Option<&Preview> {
         match &self.preview_state {
             PreviewState::Ready(preview) => Some(preview),
@@ -569,11 +602,12 @@ impl WorkflowState {
         let control = control_character_caution(self.payload.raw());
         let transparent = matches!(self.background, Background::Transparent)
             .then_some(TRANSPARENT_OUTPUT_CAUTION);
-        match (control, transparent) {
-            (Some(first), Some(second)) => Some(format!("{first} {second}")),
-            (Some(caution), None) | (None, Some(caution)) => Some(caution.to_owned()),
-            (None, None) => None,
-        }
+        let logo = self.logo_enabled.then_some(LOGO_OUTPUT_CAUTION);
+        let cautions = [control, transparent, logo]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+        (!cautions.is_empty()).then(|| cautions.join(" "))
     }
 
     pub fn complete_preview(
@@ -633,8 +667,15 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         request.background,
         request.data_module_style,
     )
+    .and_then(|options| {
+        options.with_logo(if request.logo_enabled {
+            LogoStyle::Bundled
+        } else {
+            LogoStyle::None
+        })
+    })
     .map_err(classify_render_error)?;
-    let model = RenderModel::new(&encoded, options).map_err(|_| WorkflowFailure::Internal)?;
+    let model = RenderModel::new(&encoded, options).map_err(classify_render_error)?;
     let svg = render_svg(&model).map_err(|_| WorkflowFailure::Internal)?;
     let png = render_png(&model).map_err(|_| WorkflowFailure::Internal)?;
     let png_placement = model.png_placement();
@@ -674,6 +715,8 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             data_module_style: options.data_module_style(),
             function_module_style: options.function_module_style(),
             finder_style: options.finder_style(),
+            logo_style: options.logo_style(),
+            logo_placement: model.logo_placement(),
         },
     })
 }
@@ -726,6 +769,8 @@ fn classify_render_error(error: RenderError) -> WorkflowFailure {
         RenderError::UnsafeContrast { actual, minimum } => {
             WorkflowFailure::UnsafeContrast { actual, minimum }
         }
+        RenderError::LogoRequiresOpaqueWhite => WorkflowFailure::LogoRequiresOpaqueWhite,
+        RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry,
         _ => WorkflowFailure::Internal,
     }
 }

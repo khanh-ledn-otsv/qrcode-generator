@@ -26,7 +26,7 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
     assert_eq!(model.version(), encoded.version());
     assert_eq!(model.ecc(), encoded.ecc());
     assert_eq!(model.mask(), encoded.mask());
-    assert_eq!(model.options().foreground(), Rgba::BLACK);
+    assert_eq!(model.options().foreground(), Rgba::BRAND);
     assert_eq!(
         model.options().background(),
         Background::Opaque(Rgba::WHITE)
@@ -44,13 +44,13 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
 fn approved_color_and_background_options_have_measurable_safety() {
     let profile = SUPPORTED_PROFILES[1];
 
-    let safe = RenderOptions::approved(profile, Foreground::Black, Background::Opaque(Rgba::WHITE))
+    let safe = RenderOptions::approved(profile, Foreground::Brand, Background::Opaque(Rgba::WHITE))
         .unwrap();
-    assert_eq!(safe.foreground(), Rgba::BLACK);
+    assert_eq!(safe.foreground(), Rgba::BRAND);
     assert_eq!(safe.safety(), OutputSafety::Safe);
     assert_eq!(
         safe.contrast_ratio(),
-        Some(ContrastRatio::from_hundredths(2_100))
+        Some(ContrastRatio::from_hundredths(604))
     );
 
     let brand =
@@ -108,7 +108,7 @@ fn generated_approved_color_background_profile_matrix_is_complete() {
         * APPROVED_FOREGROUNDS.len()
         * APPROVED_BACKGROUNDS.len()
         * APPROVED_DATA_MODULE_STYLES.len();
-    assert_eq!(combinations, 32);
+    assert_eq!(combinations, 16);
 
     for profile in SUPPORTED_PROFILES {
         for foreground in APPROVED_FOREGROUNDS {
@@ -136,7 +136,7 @@ fn rounded_data_style_changes_no_encoded_symbol_decisions() {
     let original = encoded.clone();
     let options = RenderOptions::approved_with_data_style(
         SUPPORTED_PROFILES[1],
-        Foreground::Black,
+        Foreground::Brand,
         Background::Opaque(Rgba::WHITE),
         DataModuleStyle::Rounded,
     )

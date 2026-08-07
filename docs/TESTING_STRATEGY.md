@@ -315,7 +315,8 @@ Parse every generated SVG and assert:
 - no frame, label, stroke, or path exists outside the QR symbol geometry;
 - paths stay inside their cells and within checked bounds;
 - function modules retain their approved conservative geometry;
-- the bundled solid-gray placeholder logo is embedded from `assets/logo-placeholder.svg` with no external reference;
+- the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with its complete `1000×602` source box and no external reference;
+- logo knockout geometry is opaque white, outside the four-module quiet zone, function-safe, deterministic, and independently decoded for every enabled H-level profile/version row;
 - stable element/path ordering and normalized number formatting;
 - identical request produces identical UTF-8 bytes.
 

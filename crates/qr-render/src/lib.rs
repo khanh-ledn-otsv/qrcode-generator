@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod geometry;
+mod logo;
 mod model;
 mod png;
 mod profile;
@@ -11,6 +12,9 @@ mod svg;
 pub use geometry::{
     CanvasGeometry, GeometryError, ModuleCount, OuterPadding, PaddingContent, PixelCount,
     PixelDimensions, SymbolGeometry,
+};
+pub use logo::{
+    BUNDLED_LOGO_SVG, LogoKnockoutBounds, LogoPlacement, LogoSourceBounds, ModuleCoordinate,
 };
 pub use model::{
     APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,

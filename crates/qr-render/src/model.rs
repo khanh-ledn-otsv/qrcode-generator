@@ -5,9 +5,10 @@ use qr_core::EncodedQr;
 use qr_core::matrix::{MaskId, Module, ModuleKind, ModuleMatrix};
 use qr_core::tables::ErrorCorrection;
 
+use crate::logo::calculate_logo_placement;
 use crate::{
-    CanvasGeometry, GeometryError, ModuleCount, OuterPadding, OutputProfile, PixelCount,
-    PixelDimensions, ProfileError, SymbolGeometry, Version,
+    CanvasGeometry, GeometryError, LogoPlacement, ModuleCount, OuterPadding, OutputProfile,
+    PixelCount, PixelDimensions, ProfileError, SymbolGeometry, Version,
 };
 
 /// Defensive, target-independent ceiling for a direct RGBA render buffer.
@@ -22,7 +23,6 @@ pub struct Rgba {
 }
 
 impl Rgba {
-    pub const BLACK: Self = Self::opaque(0, 0, 0);
     pub const BRAND: Self = Self::opaque(189, 15, 114);
     pub const WHITE: Self = Self::opaque(255, 255, 255);
 
@@ -50,7 +50,6 @@ pub enum Background {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Foreground {
-    Black,
     Brand,
 }
 
@@ -58,13 +57,12 @@ impl Foreground {
     #[must_use]
     pub const fn rgba(self) -> Rgba {
         match self {
-            Self::Black => Rgba::BLACK,
             Self::Brand => Rgba::BRAND,
         }
     }
 }
 
-pub const APPROVED_FOREGROUNDS: [Foreground; 2] = [Foreground::Black, Foreground::Brand];
+pub const APPROVED_FOREGROUNDS: [Foreground; 1] = [Foreground::Brand];
 pub const APPROVED_BACKGROUNDS: [Background; 2] =
     [Background::Opaque(Rgba::WHITE), Background::Transparent];
 
@@ -131,6 +129,7 @@ pub enum FinderStyle {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogoStyle {
     None,
+    Bundled,
 }
 
 /// Validated rendering choices for the approved safe preset.
@@ -150,7 +149,7 @@ pub struct RenderOptions {
 
 impl RenderOptions {
     pub fn safe(profile: OutputProfile) -> Result<Self, RenderError> {
-        Self::approved(profile, Foreground::Black, Background::Opaque(Rgba::WHITE))
+        Self::approved(profile, Foreground::Brand, Background::Opaque(Rgba::WHITE))
     }
 
     pub fn approved(
@@ -247,11 +246,19 @@ impl RenderOptions {
         self.logo_style
     }
 
+    pub fn with_logo(mut self, logo_style: LogoStyle) -> Result<Self, RenderError> {
+        if logo_style == LogoStyle::Bundled && self.background != Background::Opaque(Rgba::WHITE) {
+            return Err(RenderError::LogoRequiresOpaqueWhite);
+        }
+        self.logo_style = logo_style;
+        Ok(self)
+    }
+
     #[must_use]
     pub const fn safety(self) -> OutputSafety {
-        match self.background {
-            Background::Opaque(_) => OutputSafety::Safe,
-            Background::Transparent => OutputSafety::Caution,
+        match (self.logo_style, self.background) {
+            (LogoStyle::Bundled, _) | (_, Background::Transparent) => OutputSafety::Caution,
+            (LogoStyle::None, Background::Opaque(_)) => OutputSafety::Safe,
         }
     }
 
@@ -480,10 +487,18 @@ pub struct RenderModel<'encoded> {
     symbol: SymbolGeometry,
     svg_placement: SvgPlacement,
     png_placement: PngPlacement,
+    logo_placement: Option<LogoPlacement>,
 }
 
 impl<'encoded> RenderModel<'encoded> {
     pub fn new(encoded: &'encoded EncodedQr, options: RenderOptions) -> Result<Self, RenderError> {
+        if options.logo_style() == LogoStyle::Bundled && encoded.ecc() != ErrorCorrection::High {
+            return Err(RenderError::LogoRequiresHighEcc);
+        }
+        let logo_placement = match options.logo_style() {
+            LogoStyle::None => None,
+            LogoStyle::Bundled => Some(calculate_logo_placement(encoded.modules())?),
+        };
         let png_geometry = options
             .profile()
             .geometry(encoded.version())
@@ -526,6 +541,7 @@ impl<'encoded> RenderModel<'encoded> {
                 },
                 rgba_buffer_len,
             },
+            logo_placement,
         })
     }
 
@@ -567,6 +583,11 @@ impl<'encoded> RenderModel<'encoded> {
     #[must_use]
     pub const fn png_placement(&self) -> PngPlacement {
         self.png_placement
+    }
+
+    #[must_use]
+    pub const fn logo_placement(&self) -> Option<LogoPlacement> {
+        self.logo_placement
     }
 
     pub fn cells(&self) -> impl Iterator<Item = RenderCell> + '_ {
@@ -616,6 +637,9 @@ pub enum RenderError {
         minimum: ContrastRatio,
     },
     UnapprovedColorCombination,
+    LogoRequiresHighEcc,
+    LogoRequiresOpaqueWhite,
+    UnsafeLogoGeometry,
     RenderFailure,
 }
 
@@ -643,6 +667,12 @@ impl fmt::Display for RenderError {
             Self::UnapprovedColorCombination => {
                 formatter.write_str("the foreground/background combination is not approved")
             }
+            Self::LogoRequiresHighEcc => formatter.write_str("the bundled logo requires ECC H"),
+            Self::LogoRequiresOpaqueWhite => {
+                formatter.write_str("the bundled logo requires an opaque white background")
+            }
+            Self::UnsafeLogoGeometry => formatter
+                .write_str("the bundled logo cannot avoid protected modules at this QR version"),
             Self::RenderFailure => formatter.write_str("rendering failed"),
         }
     }

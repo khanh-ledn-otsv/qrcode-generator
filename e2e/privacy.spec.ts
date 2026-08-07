@@ -17,10 +17,8 @@ test("generation, configuration, and download leak no payload or external reques
 
   await enterPayload(page, SAFE_PAYLOAD);
   await page.getByText("Print", { exact: true }).click();
-  await page.getByText("Brand", { exact: true }).click();
   await page.getByText("Transparent", { exact: true }).click();
   await expect(page.getByRole("radio", { name: /Print/ })).toBeChecked();
-  await expect(page.getByRole("radio", { name: /Brand/ })).toBeChecked();
   await expect(page.getByRole("radio", { name: /Transparent/ })).toBeChecked();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [svgDownload] = await Promise.all([

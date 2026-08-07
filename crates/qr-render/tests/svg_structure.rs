@@ -13,47 +13,23 @@ use qr_render::{
 };
 use sha2::{Digest, Sha256};
 
-const APPROVED_SVG_SHA256: [[[&str; 2]; 2]; 4] = [
-    [
-        [
-            "849d1aef21b475dc0a11456ba549ef943cc79dc7a56cc4965a6b2e4a14703f54",
-            "23be314543a9de2efa53314dd1854ebef6c76a30ec81cdf37f2c100596ff13be",
-        ],
-        [
-            "c256fe4504c1e8405aad99cda54baffd98a7252436ef5718ddd6554157b0fa66",
-            "58fb401c4209df67ebbfbcca1f83bec2a6d8573df7b93861a7c0a480e4a0f47a",
-        ],
-    ],
-    [
-        [
-            "6f2a728b61fb1d7509e0bc0cea252e54d81c42227b6844899ff8c29c99cb95f6",
-            "b3cd70d017677efaf6ec31ca2f3cc258eb0dc9435a08e088d0c1714bbee83b59",
-        ],
-        [
-            "48e1d78364fee0610e62ffc16e8a29c6115bb792e9ad38cff3cac500c055646f",
-            "20ca1a1f6aaefda98549b7eefdaf0dba8cc889b17d153a1edf1afdbc690dec52",
-        ],
-    ],
-    [
-        [
-            "44e070b6bbf4ff0e826d38a95f1f55d68689248e02987fcac608f5acab7a6656",
-            "1814fb0fdd7a431381a897021a5e87bf364f79e16f784098ed61d566197c9d9e",
-        ],
-        [
-            "d84b1a3e4390f036419ac3cea90179f96e88ea21bd8c849685235a9e503d7bee",
-            "4eec3097d53b6ef7a1b41c07892124db842502e9435646dc53a371cc42a76caf",
-        ],
-    ],
-    [
-        [
-            "0909ca246ec8411d4de15ed1dc159a1fc4b656ba3535e80348f8e1cb97943d42",
-            "e1b969668bc4ecebf8b485de57c8eb7782375c043034635b7dc950ed65cd6f97",
-        ],
-        [
-            "a85c6114cb3886c0bd0e7c60db19072ef06d78ffa28a87909f6354ff10c9dfab",
-            "b2992cabc1cf14dbdff3bebdfd9dfb970df4f2acaa1ef83ccdda575a13b74a64",
-        ],
-    ],
+const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 4] = [
+    [[
+        "f15791b686846369c2f3de449981d355081e2e29f4418e39270555427d035afe",
+        "85416319a20dd1ad017d1c0ca46ab938a2e2ff1d7ab7c49b4b70a6aa69833e8c",
+    ]],
+    [[
+        "3d697c5aa8dc6f3866856347916b572fd6959e6355c2bf67ec0560203cf2bf9a",
+        "d537ed10eab59f09e68461bc66c5a9845824a4496114a5bd45e03f428bbbec31",
+    ]],
+    [[
+        "d8dd346c543097fd8c44162eb38d95000d0fcb9c183e4f41bb8f6c74442afcce",
+        "acf7b3c425ddd8b2a5313bb88b77c0130fecd271aa9f7a17bed312f02ba8bcf8",
+    ]],
+    [[
+        "0906bb118e0b059fda652eb8d4504b3522cedc9021276b6518a38c69279bff91",
+        "542925ca846e3d148229f32ab94187f3b7dc4f70f6aa033730dda23a95b94a7b",
+    ]],
 ];
 
 #[test]
@@ -68,7 +44,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(first.as_bytes(), second.as_bytes());
     assert_eq!(
         sha256_hex(first.as_bytes()),
-        "271ca0e86f33cfd9c8febdd031447ba5c9088947d5aa94f65f4de064019b8080"
+        "25ce72a4028cfe0aedc855d4cd63df074957a5438b968a774b64a0c556678dae"
     );
     assert!(!first.contains(payload));
 
@@ -97,7 +73,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(elements[0].attribute("height"), Some(extent.as_str()));
     assert_eq!(elements[0].attribute("fill"), Some("#ffffff"));
     assert_eq!(elements[1].tag_name().name(), "path");
-    assert_eq!(elements[1].attribute("fill"), Some("#000000"));
+    assert_eq!(elements[1].attribute("fill"), Some("#bd0f72"));
     assert!(
         elements[1]
             .attribute("d")
@@ -160,12 +136,7 @@ fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic
                     .find(|node| node.has_tag_name("path"))
                     .unwrap();
                 assert_eq!(path.attribute("d"), Some(safe_path));
-                let expected_foreground = if foreground.rgba() == Rgba::BLACK {
-                    "#000000"
-                } else {
-                    "#bd0f72"
-                };
-                assert_eq!(path.attribute("fill"), Some(expected_foreground));
+                assert_eq!(path.attribute("fill"), Some("#bd0f72"));
             }
         }
     }
@@ -225,10 +196,10 @@ fn independent_rasterization_preserves_background_quiet_zone_and_square_modules(
     let extent = model.symbol().extent_modules().get();
     let finder_center_x = ((4 * 2 + 1) * dimensions.width().get()) / (extent * 2);
     let finder_center_y = ((4 * 2 + 1) * dimensions.height().get()) / (extent * 2);
-    let black = pixmap.pixel(finder_center_x, finder_center_y).unwrap();
+    let brand = pixmap.pixel(finder_center_x, finder_center_y).unwrap();
     assert_eq!(
-        (black.red(), black.green(), black.blue(), black.alpha()),
-        (0, 0, 0, 255)
+        (brand.red(), brand.green(), brand.blue(), brand.alpha()),
+        (189, 15, 114, 255)
     );
 }
 
@@ -237,7 +208,7 @@ fn rounded_svg_rounds_only_data_cells_by_one_quarter_inside_each_cell() {
     let encoded = encoded_qr("ROUNDED SVG GEOMETRY");
     let options = RenderOptions::approved_with_data_style(
         SUPPORTED_PROFILES[1],
-        qr_render::Foreground::Black,
+        qr_render::Foreground::Brand,
         Background::Opaque(Rgba::WHITE),
         DataModuleStyle::Rounded,
     )
@@ -286,7 +257,7 @@ fn every_approved_data_style_has_structural_and_deterministic_svg_coverage() {
         for style in APPROVED_DATA_MODULE_STYLES {
             let options = RenderOptions::approved_with_data_style(
                 profile,
-                Foreground::Black,
+                Foreground::Brand,
                 Background::Opaque(Rgba::WHITE),
                 style,
             )

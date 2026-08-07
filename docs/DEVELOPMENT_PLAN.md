@@ -71,29 +71,29 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 
 This keeps the pixel geometry testable on native Rust and WASM and avoids browser-dependent rasterization.
 
-### 2.6 Initial branding safety defaults
+### 2.6 Branding safety defaults
 
-These defaults make implementation testable while product-specific artwork is pending:
+These release-1 defaults use the approved ONE treatment:
 
-- Safe preset: black foreground, opaque white background, square data modules, square function modules, standard square finders, no border, no logo.
-- Brand preset: `#BD0F72` foreground on opaque white; it must pass the contrast rule and decode suite.
+- `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
 - Rounded data modules: maximum radius 25% of a module cell. Function modules and finders remain square in release 1.
 - Dot modules: deferred from release 1.
 - Transparent background: supported as a caution, with export evaluated against white, light gray, and the documented dark/patterned previews. It is never the default.
 - Module strokes and decorative borders: excluded from the product. Surplus fixed-canvas padding remains background-only.
 - Finder styling: standard square at launch. A future rounded finder would be a separately approved and named preset requiring the full decode matrix.
 
-**Launch decisions accepted by the project owner on 2026-08-06:** release 1 includes the safe and brand presets above, the 4.5:1 opaque contrast threshold, optional transparency as a caution, square and rounded data modules, standard finders, no dots, and the repository-owned gray placeholder logo described below.
+**Launch decisions accepted by the project owner on 2026-08-07:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque contrast threshold, optional no-logo transparency as a caution, square and rounded data modules, standard finders, no dots, and the bundled ONE lettermark described below.
 
 ### 2.7 Logo safety
 
 - Enabling the logo sets ECC H before version selection, so capacity/version is recalculated first.
-- The logo plus knockout is centered, uses one module of padding initially, and is at most 20% of matrix width.
+- Geometry is selected after H-level fitting in module coordinates. The complete `1000×602` source box is uniformly scaled, receives at least one module of outward-snapped knockout clearance, and the complete knockout remains at most 20% of matrix width.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
-- The renderer uses the repository-owned, sanitized solid-gray placeholder at `assets/logo-placeholder.svg`. The placeholder is deliberately visually neutral and exercises a conservative solid occlusion. No upload or arbitrary SVG is accepted in release 1.
-- Replacing the placeholder is a deliberate product change: record the replacement asset's license/provenance, sanitize it, and rerun every logo structural, deterministic, and independent-decode gate before making it selectable.
-- On a transparent QR background, the knockout remains opaque white.
+- The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
+- Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
+- Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
+- Exact centering is preferred. When it intersects an alignment or other protected module, the deterministic nearest-safe search uses squared module distance, then upper, then left tie-breaking. The compiled dimensions and generated evidence are recorded in [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - If geometry is unsafe for the selected version, logo mode is disabled with a reason. The encoder must not force a larger version merely to create logo space.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.

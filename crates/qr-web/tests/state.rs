@@ -103,12 +103,12 @@ fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     assert_eq!(diagnostics.matrix_modules(), 21);
     assert_eq!(diagnostics.svg_side_pixels(), 90);
     assert_eq!(diagnostics.png_side_pixels(), 270);
-    assert_eq!(diagnostics.foreground(), Foreground::Black);
+    assert_eq!(diagnostics.foreground(), Foreground::Brand);
     assert_eq!(diagnostics.background(), Background::Opaque(Rgba::WHITE));
     assert_eq!(diagnostics.safety(), OutputSafety::Safe);
     assert_eq!(
         diagnostics.contrast_ratio(),
-        Some(ContrastRatio::from_hundredths(2_100))
+        Some(ContrastRatio::from_hundredths(604))
     );
     assert!(state.exports_enabled());
 }
@@ -331,6 +331,17 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
     let logo_diagnostics = state.preview().expect("logo preview fits").diagnostics();
     assert_eq!(logo_diagnostics.ecc(), ErrorCorrection::High);
     assert_eq!(logo_diagnostics.selected_version().number(), 8);
+    assert_eq!(logo_diagnostics.logo_style(), qr_render::LogoStyle::Bundled);
+    assert!(logo_diagnostics.logo_placement().is_some());
+    assert_eq!(logo_diagnostics.safety(), OutputSafety::Caution);
+    assert!(
+        state
+            .preview()
+            .unwrap()
+            .svg()
+            .contains("data-role=\"bundled-logo\"")
+    );
+    assert!(state.caution().unwrap().contains("bundled logo obscures"));
 
     let restored_request = state
         .set_logo_enabled(false)
@@ -374,7 +385,7 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     ));
     assert_eq!(
         state.validation_message().as_deref(),
-        Some("Opaque QR contrast is 4.49:1; at least 4.50:1 is required."),
+        Some("Opaque QR contrast is 1.29:1; at least 4.50:1 is required."),
     );
     assert!(!state.exports_enabled());
 

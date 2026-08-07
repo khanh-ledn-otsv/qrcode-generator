@@ -1,5 +1,5 @@
 # Bundled assets
 
-`logo-placeholder.svg` is a repository-owned temporary test and launch placeholder created for this project on 2026-08-06. It is a solid `#808080` square with no scripts, events, text, external references, metadata, or embedded resources.
+`RGB-one-lettermark-magenta.svg` is the project-owned ONE brand lettermark supplied directly by the project owner on 2026-08-07 and approved for use in this product. The supplied file was sanitized to explicit local magenta geometry with no scripts, events, text, external references, metadata, embedded resources, CSS, or invisible layers. Its complete `0 0 1000 602` view box is part of the artwork contract because it preserves the owner-supplied clear space.
 
-The solid shape deliberately provides conservative logo-occlusion coverage. Replacing it requires recorded license/provenance, sanitization, and rerunning every logo structural, deterministic, and independent-decode check.
+The asset is compile-time embedded and has no runtime request path. The supplied white variant is not bundled into the product. Replacing or editing the magenta asset requires recorded license/provenance, sanitization, and rerunning the complete structural, deterministic, geometry, and independent-decode logo suite before release.

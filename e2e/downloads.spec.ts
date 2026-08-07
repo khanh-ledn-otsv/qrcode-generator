@@ -38,14 +38,16 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.readUInt32BE(16)).toBe(360);
   expect(png.readUInt32BE(20)).toBe(360);
   expect(await sha256(svg)).toBe(
-    "271ca0e86f33cfd9c8febdd031447ba5c9088947d5aa94f65f4de064019b8080",
+    "25ce72a4028cfe0aedc855d4cd63df074957a5438b968a774b64a0c556678dae",
   );
   expect(await sha256(png)).toBe(
-    "139610a415ccf86ad47d932318abd86ec7d7dbbffe267df8a12f2001b2ef505d",
+    "63eff460c478c84b3703e003a580feee9770ea5ba94178ded78a8e64cea41f9b",
   );
 });
 
 test("downloaded PNG independently decodes with the pinned reader", async ({ page }) => {
+  const decodePayload = "hello";
+  await enterPayload(page, decodePayload);
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");
   expect(
@@ -72,5 +74,5 @@ test("downloaded PNG independently decodes with the pinned reader", async ({ pag
     { encoding: "utf8" },
   );
   expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout.trim()).toBe(SAFE_PAYLOAD);
+  expect(result.stdout.trim()).toBe(decodePayload);
 });

@@ -46,15 +46,17 @@
   previews own deterministic SVG/PNG downloads with bounded browser resources;
   complete payload-free diagnostics and accessible states are backed by native,
   WASM, axe, privacy-interception, hash, responsive, and pinned-decode tests.
-- [Ticket 17](issues/17-add-approved-color-and-transparency.md): Compiled black
-  and brand foreground presets combine only with opaque white or transparent
-  backgrounds; typed contrast validation, placement-surface cautions, and
-  generated structural/deterministic/pinned-decode coverage enforce all 16
-  selectable profile tuples.
+- [Ticket 17](issues/17-add-approved-color-and-transparency.md): The contrast and
+  transparency infrastructure validates compiled appearance choices, placement
+  cautions, and generated structural/deterministic/pinned-decode coverage.
 - [Ticket 18](issues/18-add-approved-module-and-finder-styling.md): One compiled
   style list exposes square and quarter-cell-rounded data modules, while every
   protected function module and finder remains square; deterministic SVG/PNG
   geometry and generated pinned-decode coverage enforce the approved set.
+- [Ticket 19](issues/19-integrate-bundled-logo-safely.md): Magenta is the sole QR
+  foreground; the sanitized ONE lettermark is compile-time embedded behind an
+  opaque-white, function-safe knockout selected by deterministic H-level module
+  geometry, with all profile/version rows passing pinned SVG and PNG decoding.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.

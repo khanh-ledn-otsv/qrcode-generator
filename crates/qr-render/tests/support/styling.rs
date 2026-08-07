@@ -104,7 +104,7 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
                 background_index: 0,
                 style_index,
                 profile,
-                foreground: Foreground::Black,
+                foreground: Foreground::Brand,
                 background: APPROVED_BACKGROUNDS[0],
                 style,
             };

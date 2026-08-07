@@ -14,47 +14,23 @@ use qr_render::{
 };
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
-const APPROVED_PNG_SHA256: [[[&str; 2]; 2]; 4] = [
-    [
-        [
-            "33c0730e09fee0280931c93b3c03fae426038c4a5f0cc65ae03866cde84ff623",
-            "84e7d9d1864414b522d0cb6576f7b1dfabb5f5e5ed9bd1f7c017bb5e2afee1ef",
-        ],
-        [
-            "06b69a797867104775f6dad478d7cc302d1a6a3e99c658721fae88fd79e8dc39",
-            "0a87a239c1065f93023aa36387ce0a7e7cc812c3e190c9428d5b7eab40221817",
-        ],
-    ],
-    [
-        [
-            "e2d1baeaf53495a7996213d53ee02ef2e1cb917ff1acbb699a8b925562c7cf8e",
-            "e60ffd66c5facf0908b2e508c4d7e93aaa0833324f82daa3f1d5852471068a36",
-        ],
-        [
-            "9ec9e03d33e55cfa776818d24b5b624cf4d88a7ec53e593f60d8109090a097fa",
-            "39e43edbf4743ad65ef00efcc7407972a3d5b08a35d6b0fea6cb40d4fb9f6a9b",
-        ],
-    ],
-    [
-        [
-            "13562702dae2bbbef2bc2bf849af3e4b02cca4b1bb486af4c793cdcbed2701e0",
-            "0c5aec8163b9b90842c1fcea27049cf37e425e518bf660477d2240df2fc7d7ea",
-        ],
-        [
-            "8421fc5b37de3fb8ddf27106f17c960ebd58574744f5651f1945e29760cbb47e",
-            "2b18d59aea715b62b8b25895417432aad56268c728d47809e0da3b0b590f9c90",
-        ],
-    ],
-    [
-        [
-            "5075d023a7aa8dd76ab7d169187200a18950b6332a88cc2f1fa2f5022cffb9d6",
-            "0aec59692d1abd3f5bce1fd59eefaaf07a37d0a7cd2e88d6afa5597c666a3094",
-        ],
-        [
-            "aebef13859038d6659b7eb8eefa4f763db15bfbf4d32a6c0552933c19d3f071c",
-            "740fa986a67c577109621a226111d385b991310c3e9b17562cd6bd7f76d914bf",
-        ],
-    ],
+const APPROVED_PNG_SHA256: [[[&str; 2]; 1]; 4] = [
+    [[
+        "06b69a797867104775f6dad478d7cc302d1a6a3e99c658721fae88fd79e8dc39",
+        "0a87a239c1065f93023aa36387ce0a7e7cc812c3e190c9428d5b7eab40221817",
+    ]],
+    [[
+        "9ec9e03d33e55cfa776818d24b5b624cf4d88a7ec53e593f60d8109090a097fa",
+        "39e43edbf4743ad65ef00efcc7407972a3d5b08a35d6b0fea6cb40d4fb9f6a9b",
+    ]],
+    [[
+        "8421fc5b37de3fb8ddf27106f17c960ebd58574744f5651f1945e29760cbb47e",
+        "2b18d59aea715b62b8b25895417432aad56268c728d47809e0da3b0b590f9c90",
+    ]],
+    [[
+        "aebef13859038d6659b7eb8eefa4f763db15bfbf4d32a6c0552933c19d3f071c",
+        "740fa986a67c577109621a226111d385b991310c3e9b17562cd6bd7f76d914bf",
+    ]],
 ];
 
 #[test]
@@ -123,7 +99,7 @@ fn decoded_pixels_are_exact_background_or_integer_module_rectangles() {
                             .module(module_x, module_y)
                             .is_some_and(|module| module.is_dark())
                         {
-                            [0, 0, 0, 255]
+                            [189, 15, 114, 255]
                         } else {
                             [255, 255, 255, 255]
                         }
@@ -182,7 +158,7 @@ fn rounded_png_uses_final_pixel_coverage_only_inside_dark_data_cells() {
     let encoded = encoded_qr_at_version(1);
     let options = RenderOptions::approved_with_data_style(
         SUPPORTED_PROFILES[1],
-        Foreground::Black,
+        Foreground::Brand,
         Background::Opaque(Rgba::WHITE),
         DataModuleStyle::Rounded,
     )
@@ -215,11 +191,10 @@ fn rounded_png_uses_final_pixel_coverage_only_inside_dark_data_cells() {
                     ModuleKind::Data | ModuleKind::Remainder
                 ) {
                     assert_eq!(pixel[3], 255);
-                    assert_eq!(pixel[0], pixel[1]);
-                    assert_eq!(pixel[1], pixel[2]);
-                    saw_partial_coverage |= pixel[0] > 0 && pixel[0] < 255;
+                    saw_partial_coverage |=
+                        pixel != [189, 15, 114, 255] && pixel != [255, 255, 255, 255];
                 } else {
-                    assert_eq!(pixel, [0, 0, 0, 255]);
+                    assert_eq!(pixel, [189, 15, 114, 255]);
                 }
             }
         }
@@ -234,7 +209,7 @@ fn every_approved_data_style_has_deterministic_png_geometry_coverage() {
         for style in APPROVED_DATA_MODULE_STYLES {
             let options = RenderOptions::approved_with_data_style(
                 profile,
-                Foreground::Black,
+                Foreground::Brand,
                 Background::Transparent,
                 style,
             )

@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto("/");
 });
 
-for (const state of ["default", "caution", "transparent", "invalid"] as const) {
+for (const state of ["default", "caution", "transparent", "logo", "invalid"] as const) {
   test(`has no automated accessibility violations in the ${state} state`, async ({ page }) => {
     if (state === "default") await enterPayload(page, "accessible QR");
     if (state === "caution") await enterCautionPayload(page);
@@ -16,6 +16,11 @@ for (const state of ["default", "caution", "transparent", "invalid"] as const) {
       await page.getByRole("radio", { name: /Transparent/ }).focus();
       await page.keyboard.press("Space");
       await expect(page.getByTestId("transparent-surface-preview")).toHaveCount(4);
+    }
+    if (state === "logo") {
+      await enterPayload(page, "accessible logo QR");
+      await page.getByText("ONE lettermark", { exact: true }).click();
+      await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();
     }
     if (state === "invalid") {
       await page.getByLabel("Text to encode").fill("x".repeat(4097));
