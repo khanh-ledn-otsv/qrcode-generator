@@ -85,6 +85,18 @@ test("profile controls work by keyboard and layouts fit desktop and mobile width
   }
 });
 
+test("shows the opaque preview at its real SVG size", async ({ page }) => {
+  await enterPayload(page, "real-size preview");
+
+  const preview = page.getByTestId("qr-preview").locator("svg:visible");
+  await expect(preview).toHaveAttribute("width", "120");
+  await expect(preview).toHaveAttribute("height", "120");
+  const box = await preview.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.width).toBeCloseTo(120, 2);
+  expect(box!.height).toBeCloseTo(120, 2);
+});
+
 test("uses only magenta and shows transparent placement cautions", async ({ page }) => {
   await enterPayload(page, "approved color workflow");
 
@@ -116,7 +128,7 @@ test("uses only magenta and shows transparent placement cautions", async ({ page
 });
 
 test("logo mode refits at ECC H and requires opaque white", async ({ page }) => {
-  await enterPayload(page, "a".repeat(70));
+  await enterPayload(page, "a".repeat(30));
   const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
   const transparent = page.getByRole("radio", { name: /Transparent/ });
 
@@ -161,28 +173,19 @@ test("logo mode refits at ECC H and requires opaque white", async ({ page }) => 
   expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
 });
 
-test("offers only square and rounded data modules with standard square finders", async ({
+test("uses square modules and standard square finders without a shape control", async ({
   page,
 }) => {
   await enterPayload(page, "approved styling workflow");
 
-  const styles = page.getByRole("group", { name: "Data module shape" }).getByRole("radio");
-  await expect(styles).toHaveCount(2);
-  await expect(page.getByRole("radio", { name: /^Square/ })).toBeChecked();
-  await expect.poll(() => diagnostic(page, "Data modules")).toBe("Square");
+  await expect(page.getByRole("group", { name: "Data module shape" })).toHaveCount(0);
   await expect.poll(() => diagnostic(page, "Function modules")).toBe("Square");
   await expect.poll(() => diagnostic(page, "Finders")).toBe("Standard square");
-
-  const rounded = page.getByRole("radio", { name: /^Rounded/ });
-  await rounded.focus();
-  await page.keyboard.press("Space");
-  await expect(rounded).toBeChecked();
-  await expect.poll(() => diagnostic(page, "Data modules")).toBe("Rounded");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
     "d",
-    /a\.25\.25/,
+    /M\d+ \d+h1v1h-1z/,
   );
 });
 

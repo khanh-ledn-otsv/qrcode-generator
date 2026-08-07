@@ -9,8 +9,7 @@ use qr_core::selection::select_mask;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    APPROVED_DATA_MODULE_STYLES, Background, Foreground, LogoStyle, RenderModel, RenderOptions,
-    Rgba, SUPPORTED_PROFILES, render_png, render_svg,
+    LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 fn encoding_benchmarks(criterion: &mut Criterion) {
@@ -102,22 +101,14 @@ fn rendering_benchmarks(criterion: &mut Criterion) {
             max_version: profile.maximum_version(),
         })
         .expect("benchmark payload fits");
-        for style in APPROVED_DATA_MODULE_STYLES {
-            let options = RenderOptions::approved_with_data_style(
-                profile,
-                Foreground::Brand,
-                Background::Opaque(Rgba::WHITE),
-                style,
-            )
-            .expect("benchmark options are approved");
-            let model = RenderModel::new(&encoded, options).expect("benchmark model is valid");
-            group.bench_function(
-                BenchmarkId::new("png", format!("{profile_index}-{style:?}")),
-                |bencher| {
-                    bencher.iter(|| render_png(black_box(&model)).expect("PNG renders"));
-                },
-            );
-        }
+        let model = RenderModel::new(
+            &encoded,
+            RenderOptions::safe(profile).expect("safe options are valid"),
+        )
+        .expect("benchmark model is valid");
+        group.bench_function(BenchmarkId::new("png", profile_index), |bencher| {
+            bencher.iter(|| render_png(black_box(&model)).expect("PNG renders"));
+        });
         let model = RenderModel::new(
             &encoded,
             RenderOptions::safe(profile).expect("safe options are valid"),

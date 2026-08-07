@@ -14,7 +14,6 @@ rustup component add llvm-tools-preview
 cargo install --locked cargo-llvm-cov --version 0.8.6
 cargo install --locked cargo-mutants --version 27.1.0
 cargo install --locked cargo-audit --version 0.22.2
-cargo install --locked cargo-bloat --version 0.12.1
 cargo install --locked cargo-fuzz --version 0.13.2
 rustup toolchain install nightly --component miri
 ```
@@ -60,8 +59,6 @@ The following commands expose the hardening seams individually:
 | Miri core/geometry checks | `pnpm run release:miri` |
 | Dependency advisories/duplicates | `pnpm run release:dependencies` |
 | Criterion performance distributions | `pnpm run release:performance -- --save-baseline release` |
-| Compressed WASM ceiling | `pnpm run release:bundle` |
-| WASM size attribution | `pnpm run release:size-attribution` |
 
 Coverage is checked without filename exclusions. The enforced scopes and
 line/region minima are the ones in `TESTING_STRATEGY.md`: qr-core 95/90,
@@ -82,28 +79,21 @@ Run:
 pnpm run release:evidence
 ```
 
-This writes the approved matrix, adverse decoder outcomes, deterministic gzip
-measurement, and artifact SHA-256 hashes under `target/release-evidence/`.
-Each of the 192 generated matrix rows identifies all seven configuration
-dimensions plus its payload class. The 144 renderable rows record safety and a
-ZXing decode; the 48 bundled-logo/transparent rows record the expected typed
-rejection. `tests/adverse/parameters.json` is the versioned transform manifest.
-The adverse evidence applies all 13 named transforms to the safe square
-baseline, a 10-transform envelope to rounded transparent output, and a
-six-transform envelope to logo output. It compares decoded pixels before
+This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
+hashes under `target/release-evidence/`. Each of the 96 generated matrix rows
+identifies the six configuration dimensions plus its payload class. Renderable
+rows record safety and a ZXing decode; unsupported logo/background or centered
+logo geometry records the expected typed rejection.
+`tests/adverse/parameters.json` is the versioned transform manifest. The adverse
+evidence applies the named transforms to the safe square baseline, transparent
+output, and logo output. It compares decoded pixels before
 invoking ZXing and includes light, darker, and patterned placement backgrounds;
 each evidence row records the configuration, safety class, transform, decoder,
 and outcome.
 
-The optimized WASM baseline measured on 2026-08-07 is 154,450 gzip bytes. The
-160,000-byte ceiling allows 3.6% headroom and fails larger regressions. Approved
-matrix artifact and allocation ceilings live in
+Approved matrix artifact and allocation ceilings live in
 `tests/baselines/resources.json` and are exercised in ordinary native tests.
 
-Release evidence is incomplete until the owner also records the named physical
-device, scanner, printer, stock/material, 25 mm and 30 mm print, and placement
-matrix required by `TESTING_STRATEGY.md`. Those manual results are deliberately
-not fabricated by repository automation.
-
 Use [`RELEASE_READINESS.md`](RELEASE_READINESS.md) for the final clean-build,
-browser, manual-evidence, exception, and sign-off gate.
+browser, artifact, and privacy gate. Manual product checks remain outside the
+repository evidence system.

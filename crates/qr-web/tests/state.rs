@@ -1,8 +1,5 @@
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_render::{
-    Background, ContrastRatio, DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle,
-    OutputSafety, ProfileId, Rgba,
-};
+use qr_render::{Background, ContrastRatio, Foreground, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
 
 #[test]
@@ -160,41 +157,6 @@ fn approved_brand_and_transparency_selections_update_artifacts_and_safety() {
 }
 
 #[test]
-fn rounded_data_selection_changes_geometry_but_keeps_conservative_function_styles() {
-    let mut state = WorkflowState::new(ProfileId::Content);
-    let payload = state
-        .set_payload("approved module styling".to_owned())
-        .expect("revision is available");
-    assert!(state.complete_preview(payload.revision(), evaluate_preview(&payload)));
-    let square = state.preview().unwrap().clone();
-    assert_eq!(state.data_module_style(), DataModuleStyle::Square);
-
-    let rounded = state
-        .select_data_module_style(DataModuleStyle::Rounded)
-        .expect("revision is available");
-    assert!(state.complete_preview(rounded.revision(), evaluate_preview(&rounded)));
-    let rounded = state.preview().unwrap();
-
-    assert_ne!(rounded.svg(), square.svg());
-    assert_ne!(
-        rounded.artifact(ArtifactKind::Png).bytes(),
-        square.artifact(ArtifactKind::Png).bytes()
-    );
-    assert_eq!(
-        rounded.diagnostics().data_module_style(),
-        DataModuleStyle::Rounded
-    );
-    assert_eq!(
-        rounded.diagnostics().function_module_style(),
-        FunctionModuleStyle::Square
-    );
-    assert_eq!(
-        rounded.diagnostics().finder_style(),
-        FinderStyle::StandardSquare
-    );
-}
-
-#[test]
 fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text() {
     let sensitive = "private!";
     let mut state = WorkflowState::new(ProfileId::Inline);
@@ -312,7 +274,7 @@ fn profile_changes_refit_without_changing_safe_ecc() {
 fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
     let mut state = WorkflowState::new(ProfileId::Print);
     let safe_request = state
-        .set_payload("a".repeat(70))
+        .set_payload("a".repeat(30))
         .expect("revision is available");
     assert!(state.complete_preview(safe_request.revision(), evaluate_preview(&safe_request),));
     assert_eq!(
@@ -322,7 +284,7 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
             .diagnostics()
             .selected_version()
             .number(),
-        5,
+        3,
     );
 
     let logo_request = state.set_logo_enabled(true).expect("revision is available");
@@ -330,7 +292,7 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
     assert!(state.complete_preview(logo_request.revision(), evaluate_preview(&logo_request),));
     let logo_diagnostics = state.preview().expect("logo preview fits").diagnostics();
     assert_eq!(logo_diagnostics.ecc(), ErrorCorrection::High);
-    assert_eq!(logo_diagnostics.selected_version().number(), 8);
+    assert_eq!(logo_diagnostics.selected_version().number(), 4);
     assert_eq!(logo_diagnostics.logo_style(), qr_render::LogoStyle::Bundled);
     assert!(logo_diagnostics.logo_placement().is_some());
     assert_eq!(logo_diagnostics.safety(), OutputSafety::Caution);
@@ -356,7 +318,7 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
         .expect("safe preview is restored")
         .diagnostics();
     assert_eq!(restored.ecc(), ErrorCorrection::Medium);
-    assert_eq!(restored.selected_version().number(), 5);
+    assert_eq!(restored.selected_version().number(), 3);
 }
 
 #[test]

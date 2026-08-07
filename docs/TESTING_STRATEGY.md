@@ -13,7 +13,6 @@ A QR output is accepted only when all applicable layers agree:
 3. **Independent decoding:** production SVG and PNG output decode to the original bytes/text using a separately implemented decoder.
 4. **Product behavior:** profiles, warnings, disabled states, downloads, accessibility, and privacy behave correctly in real browsers.
 5. **Robustness:** property tests, mutation tests, fuzzing, and adverse-image tests expose mistakes not represented by examples.
-6. **Physical validation:** representative phone, scanner, screen, and print environments pass a documented release checklist.
 
 No single decoder result proves QR conformance. Conversely, an exact unstyled matrix does not prove that branded output remains usable.
 
@@ -47,16 +46,14 @@ Pin `proptest` to the reviewed 1.11.x line initially. Pin all other crate versio
 | `cargo-fuzz` | Coverage-guided libFuzzer targets | Run manually with documented budgets. Crashes, panics, hangs, excessive allocation, and invariant failures are defects. Minimized regression inputs are committed. |
 | Miri | Undefined-behavior and strict interpreter checks | Run manually for supported native core and render tests. Production code should contain no `unsafe`; dependencies are outside the project gate. |
 | `cargo-audit` | RustSec advisories | Run manually before release, with any temporary advisory exception documented. |
-| `cargo-bloat` | WASM/native size attribution | Trend report for release builds; helps validate the provisional bundle target. |
 
 Start with the currently reviewed `cargo-llvm-cov` 0.8.x line, then pin exact versions when each local tool is introduced.
 
-### 2.3 Browser and accessibility tools
+### 2.3 Browser tools
 
 | Tool | Scope |
 |---|---|
 | Playwright Test | End-to-end testing in Chromium, Firefox, and WebKit; viewport/device emulation; download verification; keyboard interaction; screenshots only where visual review is useful. |
-| `@axe-core/playwright` | Automated accessibility rules integrated into Playwright. It supplements, but does not replace, keyboard and screen-reader-oriented checks. |
 
 Use TypeScript only in `e2e/`. Keep business logic and expected QR calculations in Rust fixtures rather than duplicating the encoder in test JavaScript.
 
@@ -122,7 +119,6 @@ tests/
 └── adverse/                      # deterministic transform definitions
 e2e/
 ├── playwright.config.ts
-├── accessibility.spec.ts
 ├── downloads.spec.ts
 ├── privacy.spec.ts
 ├── profiles.spec.ts
@@ -339,7 +335,7 @@ Decode the emitted PNG as a file and inspect:
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
 - exact square-module rectangles with no intermediate colors in safe mode;
-- approved edge coverage only for rounded/dot QR data styles and the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
+- approved edge coverage only for the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
 - byte-for-byte equality for repeated requests on native and WASM where encoder output is specified to be cross-target identical.
 
 Decode the resulting pixels through ZXing-C++; do not declare success merely because the same `png` crate can read its own output.
@@ -348,7 +344,7 @@ Decode the resulting pixels through ZXing-C++; do not declare success merely bec
 
 Testing every control independently is insufficient because failures interact. Build a generated list from compiled approved presets and require that every selectable tuple appears in the test report.
 
-For each approved tuple of foreground, background/transparency, module style, finder style, logo state, and profile:
+For each approved tuple of foreground, background/transparency, finder style, logo state, and profile:
 
 - render at least a short URL, a dense URL near the profile ceiling, Numeric, Alphanumeric, ASCII Byte, and UTF-8+ECI payload;
 - test safe baseline versions across all allowed versions;
@@ -371,7 +367,7 @@ Keep transforms deterministic with named parameters and seeds. Start with separa
 - light and dark/patterned backgrounds for transparent output;
 - simulated print dot gain, ink loss, and grayscale conversion.
 
-Define a baseline pass envelope before launch from real approved outputs. Do not invent universal thresholds. Safe presets should meet a stronger envelope than logo/rounded caution presets. Store transform parameters and decoder outcomes as machine-readable release evidence.
+Define a baseline pass envelope before launch from real approved outputs. Do not invent universal thresholds. Safe presets should meet a stronger envelope than logo caution presets. Store transform parameters and decoder outcomes as machine-readable release evidence.
 
 ## 7. Web and WASM tests
 
@@ -418,23 +414,7 @@ Test through the user-visible UI:
 
 Run Chromium during feature verification. Run Chromium, Firefox, and WebKit during release hardening. Playwright projects use pinned browser binaries matching the pinned Playwright version.
 
-### 7.4 Accessibility
-
-Automated axe checks run on the default, caution, invalid, logo, and transparent states at desktop and mobile widths. Explicit tests also verify:
-
-- unique programmatic labels;
-- semantic fieldset/group relationships;
-- warning text is not color-only;
-- validation announcements use an appropriate live region without announcing each keystroke;
-- focus is not stolen during preview refresh;
-- export-disabled reasons are available to assistive technology;
-- profile cards and style controls work with keyboard and expected roles;
-- preview has a useful label that excludes sensitive payload text;
-- contrast of the application UI, independent of QR output contrast.
-
-Manual release testing includes VoiceOver on Safari and one Windows screen-reader/browser combination selected by the owner.
-
-### 7.5 Privacy and security behavior
+### 7.4 Privacy and security behavior
 
 Playwright intercepts all network requests after initial navigation. Fail if generation, preview, style changes, logo use, or download causes any request outside the static application origin. Also assert:
 
@@ -531,7 +511,7 @@ Use Criterion to benchmark:
 - Version 1, profile ceilings, and Version 40 encoding;
 - each mask candidate and total mask selection;
 - safe SVG generation;
-- safe and rounded PNG generation at all four canvas sizes;
+- safe PNG generation at all four canvas sizes;
 - logo overlap analysis;
 - full request-to-artifact path.
 
@@ -561,16 +541,16 @@ Test defensive resource limits explicitly:
 - full property case count and approved branding tuples;
 - exhaustive profile/version geometry and independent decoding;
 - Chromium, Firefox, and WebKit browser tests;
-- coverage, mutation, Miri, adverse-image, size, and performance checks as applicable.
+- coverage, mutation, Miri, adverse-image, and performance checks as applicable.
 
 ### Release validation
 
 - clean rebuild with pinned tools and artifact hashes;
 - complete automated suite with no retry-hidden failures;
-- named real-device, scanner, browser, and printer matrix;
-- print samples at 25 mm and 30 mm;
 - local production-build privacy and network inspection;
-- signed evidence report mapping every acceptance criterion to tests and results.
+- automated evidence report mapping every repository-owned acceptance criterion to tests and results.
+
+Manual product checks are performed separately by the owner and are not collected, validated, or signed by the repository evidence tooling.
 
 Repository-owned automation and publishing are intentionally deferred and are not specified here.
 
@@ -601,7 +581,7 @@ A feature change is incomplete unless reviewers can answer yes to the applicable
 - Does Proptest favor its new boundaries?
 - Is its input surface represented by an existing fuzz target?
 - Would mutation testing detect reversed comparisons and altered constants?
-- Are accessibility, privacy, and logging effects tested?
+- Are privacy and logging effects tested?
 - Are fixture changes provenance-recorded and human-reviewable?
 - Are performance/allocation bounds affected?
 
@@ -618,7 +598,7 @@ A feature change is incomplete unless reviewers can answer yes to the applicable
 9. Add native web-state tests, WASM browser tests, then Playwright E2E.
 10. Generate the branding tuple matrix from approved configuration.
 11. Add adverse transforms, documented fuzz budgets, Miri, and performance tracking.
-12. Produce the release evidence template before manual validation starts.
+12. Produce the automated release evidence report.
 
 ## 16. References checked
 
@@ -628,6 +608,5 @@ A feature change is incomplete unless reviewers can answer yes to the applicable
 - [cargo-llvm-cov repository](https://github.com/taiki-e/cargo-llvm-cov)
 - [cargo-mutants documentation](https://mutants.rs/)
 - [Playwright browser documentation](https://playwright.dev/docs/browsers)
-- [Playwright accessibility testing](https://playwright.dev/docs/accessibility-testing)
 - [`resvg` documentation](https://docs.rs/resvg/latest/resvg/)
 - [ZXing-C++ repository](https://github.com/zxing-cpp/zxing-cpp)

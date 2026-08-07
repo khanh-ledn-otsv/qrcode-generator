@@ -12,7 +12,7 @@ The product direction is coherent and the repository is an appropriate Leptos 0.
 
 The repository state originally reviewed contained one Leptos binary and no workspace crates, QR implementation, test suite, or approved logo. It also loaded Google Fonts at runtime, which conflicted with an offline/self-contained internal tool posture and had to be removed or replaced with a bundled asset.
 
-Development can proceed with the decisions in this document. The remaining owner coordination concerns named physical release environments in M5 only.
+Development can proceed with the decisions in this document. Physical validation is performed manually outside the repository and is not collected as release evidence.
 
 ## 2. Decisions resolved by this review
 
@@ -64,7 +64,7 @@ Enabling the bundled logo is the only release-1 transition that changes ECC: it 
 Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rust `png` crate. Do not use Canvas, browser SVG screenshots, or a general scene renderer for production PNG export.
 
 - Square cells are filled by exact integer pixel rectangles.
-- Rounded and dot cells use deterministic final-pixel coverage evaluation; the complete image is never resized.
+- QR modules are rendered as exact square final-pixel rectangles; the complete image is never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; QR modules and knockout edges remain pixel-sharp.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
@@ -77,24 +77,24 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 These release-1 defaults use the approved ONE treatment:
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
-- Rounded data modules: maximum radius 25% of a module cell. Function modules and finders remain square in release 1.
+- All data modules, function modules, and finders are square in release 1.
 - Dot modules: deferred from release 1.
 - Transparent background: supported as a caution, with export evaluated against white, light gray, and the documented dark/patterned previews. It is never the default.
 - Module strokes and decorative borders: excluded from the product. Surplus fixed-canvas padding remains background-only.
-- Finder styling: standard square at launch. A future rounded finder would be a separately approved and named preset requiring the full decode matrix.
+- Finder styling: standard square only.
 
-**Launch decisions accepted by the project owner on 2026-08-07:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque contrast threshold, optional no-logo transparency as a caution, square and rounded data modules, standard finders, no dots, and the bundled ONE lettermark described below.
+**Launch decisions accepted by the project owner on 2026-08-07 and revised on 2026-08-07:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque contrast threshold, optional no-logo transparency as a caution, square modules, standard finders, and the bundled ONE lettermark described below. Rounded and dot modules are excluded.
 
 ### 2.7 Logo safety
 
 - Enabling the logo sets ECC H before version selection, so capacity/version is recalculated first.
-- Geometry is selected after H-level fitting in module coordinates. The unchanged asset geometry is uniformly scaled through the reviewed `180 180 640 240` presentation box, receives at least one module of outward-snapped knockout clearance, and the complete knockout remains at most 40% of matrix width. Logo output stays classified as a caution, and every compiled size must pass the independent SVG/PNG decode matrix before release.
+- Geometry is selected after H-level fitting in module coordinates. The unchanged asset geometry is uniformly scaled through the reviewed `180 180 640 240` presentation box. Version 1 uses a tight function-safe knockout; Versions 2–6 receive at least one module of outward-snapped knockout clearance. The complete knockout remains at most 40% of matrix width. Logo output stays classified as a caution, and every enabled size must pass the independent SVG/PNG decode matrix before release.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
 - Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
-- Exact centering is preferred. When it intersects an alignment or other protected module, the deterministic nearest-safe search uses squared module distance, then upper, then left tie-breaking. The compiled dimensions and generated evidence are recorded in [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
+- Exact centering is mandatory. If the centered artwork or knockout intersects an alignment or other protected module, logo geometry is rejected rather than shifted. The compiled dimensions and generated evidence are recorded in [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - If geometry is unsafe for the selected version, logo mode is disabled with a reason. The encoder must not force a larger version merely to create logo space.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
@@ -110,7 +110,7 @@ These are implementation interpretations until merged back into the product spec
 5. **Remainder bits:** Capacity tables and placement must explicitly include the standard remainder-bit count per version. Every non-function matrix cell must be assigned once, including remainder bits.
 6. **Input safety:** Plain text is allowed; URL syntax is not required. The UI may identify likely URLs, but it must not rewrite them. Empty input and over-limit input are invalid. Control characters receive a caution unless product policy later forbids them.
 7. **External network calls:** Production HTML must not request Google Fonts or other remote UI assets. Bundle approved assets or use the system font stack.
-8. **Performance targets:** Treat the 250 KB compressed WASM target as a measurement target, not a release gate, until the Phase 1 browser spike measures Leptos plus PNG support.
+8. **Performance targets:** Track encoder and renderer distributions on a stable local machine without enforcing a bundle-size gate or wall-clock correctness assertion.
 9. **Print guidance:** The 160 px value is a design canvas, not a physical-size guarantee. Export remains SVG-first and the UI displays “place at 25–30 mm or larger; validate for the actual environment.”
 
 ## 4. Target architecture
@@ -246,7 +246,7 @@ Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon cra
 - `quirc` as a second decoder for representative raster cases where its text/ECI behavior is applicable.
 - Nayuki QR Code Generator 1.8.0 and `python-qrcode` 8.2 create development fixtures only after owner approval. Their explicit-version/mask outputs are compared, not linked into production or copied as implementation source. Segno 1.6.6 was evaluated and rejected for this role after its byte-aligned padding output disagreed with Nayuki; the rejected matrix was not committed.
 
-Additional local verification may use `cargo-llvm-cov`, `cargo-mutants`, Miri, `cargo-audit`, Playwright Test, and `@axe-core/playwright`. See the testing strategy for the rationale and enforcement thresholds.
+Additional local verification may use `cargo-llvm-cov`, `cargo-mutants`, Miri, `cargo-audit`, and Playwright Test. See the testing strategy for the rationale and enforcement thresholds.
 
 Browser tooling uses the `.nvmrc`-declared Node.js v24 runtime and the
 `packageManager`-pinned pnpm release. TypeScript is linted with Oxlint and
@@ -312,7 +312,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 - Implement safe-preset consolidated SVG output.
 - Implement direct RGBA and deterministic PNG serialization.
 - Add quiet-zone, centering, integer-scale, dimensions, determinism, and decode tests.
-- Prototype WASM bundle size and renderer performance; record actual baselines.
+- Prototype renderer performance and record actual baselines.
 
 **Exit:** safe SVG/PNG outputs for every profile and allowed version satisfy geometry assertions and decode gates; maximum versions retain 6 px/module.
 
@@ -331,27 +331,25 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 - Apply the owner-approved launch preset list.
 - Implement contrast classification using the approved measurable thresholds.
-- Add rounded modules/finder preset only as approved.
+- Keep the single square-module and standard-finder treatment.
 - Integrate sanitized bundled logo, knockout, function-overlap validation, and overlap diagnostics.
 - Add transparency surface previews and exhaustive approved-combination decode tests.
 
 **Exit:** every selectable combination passes its required decode suite; unsafe combinations cannot be selected or exported.
 
-### M5 — Release hardening (1–2 weeks plus manual test logistics, risk: medium)
+### M5 — Release hardening (1–2 weeks, risk: medium)
 
-- Run sustained fuzzing, dependency/license review, performance profiling, and bundle analysis.
+- Run sustained fuzzing, dependency/license review, and performance profiling.
 - Execute adverse raster transformations with documented thresholds.
-- Complete the named browser/device/scanner/printer/placement matrix.
-- Produce print samples and validate 25 mm and 30 mm placements.
 - Complete the release runbook, user guidance, and local production-build privacy inspection.
 
-**Exit:** all acceptance criteria have linked evidence; manual exceptions are signed off; the local production build makes no payload/logo request and logs no payload.
+**Exit:** all automated acceptance criteria have linked evidence; the local production build makes no payload/logo request and logs no payload. Manual product checks remain outside the evidence system.
 
 **Total expected engineering effort:** roughly 8–13 developer-weeks, with core conformance and logo decode validation carrying most uncertainty. Removing borders saves a UI/configuration branch, a render layer, SVG security cases, and one dimension from the branding test matrix; it does not materially reduce encoder-core risk.
 
 ## 8. Local verification
 
-The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, adverse-image, and physical checks performed during release hardening.
+The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, and adverse-image checks performed during release hardening.
 
 Repository-owned automation and publishing are intentionally deferred. The owner will configure them separately later.
 
@@ -377,9 +375,9 @@ The following ticket slices are small enough for review and preserve dependency 
 16. Leptos state model, payload/profile workflow, and preview.
 17. Diagnostics, validation, accessibility, and downloads.
 18. Approved color/contrast and transparency previews.
-19. Square/rounded data-module presets with standard square finders.
+19. Square data modules with standard square finders.
 20. Bundled magenta ONE lettermark, knockout, overlap checks, and decode matrix.
-21. Hardening, performance, manual validation, release evidence, and docs.
+21. Hardening, performance, automated release evidence, and docs.
 
 Tickets 3–11 should generally land sequentially because later code relies on earlier invariants. UI shell work may run in parallel after ticket 2, but export controls must not be presented as functional until the core and safe renderer pass their gates.
 
@@ -387,7 +385,7 @@ Tickets 3–11 should generally land sequentially because later code relies on e
 
 The implementation policy, launch presets, ECC behavior, contrast threshold, transparency behavior, styling set, and bundled ONE lettermark are accepted. Access to a licensed complete ISO/IEC 18004:2024 copy remains useful for a later audit but is not an implementation gate under the public-source corroboration policy in section 2.1.
 
-Release validation still requires the owner to name the supported browser, iOS/Android device, scanner app, printer, stock/material, and placement environments and to coordinate the physical checks. This blocks only completion of M5/ticket 21, not implementation through M4/ticket 20.
+Manual browser, device, scanner, printer, material, and placement checks are owner-operated outside the repository and do not block the automated M5/ticket 21 evidence gate.
 
 ## 11. Definition of done
 

@@ -4,8 +4,7 @@ use libfuzzer_sys::fuzz_target;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, encode};
 use qr_render::{
-    APPROVED_DATA_MODULE_STYLES, Background, Foreground, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, render_svg,
+    Background, Foreground, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_svg,
 };
 
 fuzz_target!(|data: &[u8]| {
@@ -21,18 +20,12 @@ fuzz_target!(|data: &[u8]| {
     }) else {
         return;
     };
-    let style = APPROVED_DATA_MODULE_STYLES[usize::from((control >> 2) & 1)];
-    let background = if control & 0b1000 == 0 {
+    let background = if control & 0b100 == 0 {
         Background::Opaque(Rgba::WHITE)
     } else {
         Background::Transparent
     };
-    let Ok(options) = RenderOptions::approved_with_data_style(
-        profile,
-        Foreground::Brand,
-        background,
-        style,
-    ) else {
+    let Ok(options) = RenderOptions::approved(profile, Foreground::Brand, background) else {
         return;
     };
     let Ok(model) = RenderModel::new(&encoded, options) else {

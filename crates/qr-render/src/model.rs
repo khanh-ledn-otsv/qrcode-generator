@@ -108,15 +108,6 @@ pub enum OutputSafety {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DataModuleStyle {
-    Square,
-    Rounded,
-}
-
-pub const APPROVED_DATA_MODULE_STYLES: [DataModuleStyle; 2] =
-    [DataModuleStyle::Square, DataModuleStyle::Rounded];
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FunctionModuleStyle {
     Square,
 }
@@ -147,7 +138,6 @@ pub struct RenderOptions {
     profile: OutputProfile,
     foreground: Rgba,
     background: Background,
-    data_module_style: DataModuleStyle,
     function_module_style: FunctionModuleStyle,
     finder_style: FinderStyle,
     logo_style: LogoStyle,
@@ -163,31 +153,13 @@ impl RenderOptions {
         foreground: Foreground,
         background: Background,
     ) -> Result<Self, RenderError> {
-        Self::approved_with_data_style(profile, foreground, background, DataModuleStyle::Square)
-    }
-
-    pub fn approved_with_data_style(
-        profile: OutputProfile,
-        foreground: Foreground,
-        background: Background,
-        data_module_style: DataModuleStyle,
-    ) -> Result<Self, RenderError> {
-        Self::try_new_with_data_style(profile, foreground.rgba(), background, data_module_style)
+        Self::try_new(profile, foreground.rgba(), background)
     }
 
     pub fn try_new(
         profile: OutputProfile,
         foreground: Rgba,
         background: Background,
-    ) -> Result<Self, RenderError> {
-        Self::try_new_with_data_style(profile, foreground, background, DataModuleStyle::Square)
-    }
-
-    pub fn try_new_with_data_style(
-        profile: OutputProfile,
-        foreground: Rgba,
-        background: Background,
-        data_module_style: DataModuleStyle,
     ) -> Result<Self, RenderError> {
         profile.validate().map_err(RenderError::InvalidProfile)?;
         if let Background::Opaque(background_color) = background {
@@ -210,7 +182,6 @@ impl RenderOptions {
             profile,
             foreground,
             background,
-            data_module_style,
             function_module_style: FunctionModuleStyle::Square,
             finder_style: FinderStyle::StandardSquare,
             logo_style: LogoStyle::None,
@@ -230,11 +201,6 @@ impl RenderOptions {
     #[must_use]
     pub const fn background(self) -> Background {
         self.background
-    }
-
-    #[must_use]
-    pub const fn data_module_style(self) -> DataModuleStyle {
-        self.data_module_style
     }
 
     #[must_use]

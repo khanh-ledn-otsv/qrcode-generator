@@ -6,8 +6,7 @@ use libfuzzer_sys::fuzz_target;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, encode};
 use qr_render::{
-    APPROVED_DATA_MODULE_STYLES, Background, Foreground, LogoStyle, MAX_RGBA_BUFFER_BYTES,
-    RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png,
+    LogoStyle, MAX_RGBA_BUFFER_BYTES, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
 };
 
 fuzz_target!(|data: &[u8]| {
@@ -31,13 +30,7 @@ fuzz_target!(|data: &[u8]| {
     }) else {
         return;
     };
-    let style = APPROVED_DATA_MODULE_STYLES[usize::from((control >> 3) & 1)];
-    let Ok(mut options) = RenderOptions::approved_with_data_style(
-        profile,
-        Foreground::Brand,
-        Background::Opaque(Rgba::WHITE),
-        style,
-    ) else {
+    let Ok(mut options) = RenderOptions::safe(profile) else {
         return;
     };
     if logo {
@@ -66,7 +59,10 @@ fuzz_target!(|data: &[u8]| {
     let Some(buffer_size) = reader.output_buffer_size() else {
         panic!("approved PNG output must have a bounded buffer");
     };
-    assert!(u64::try_from(buffer_size).expect("approved buffer length fits u64") <= MAX_RGBA_BUFFER_BYTES);
+    assert!(
+        u64::try_from(buffer_size).expect("approved buffer length fits u64")
+            <= MAX_RGBA_BUFFER_BYTES
+    );
     let mut pixels = vec![0; buffer_size];
     assert!(reader.next_frame(&mut pixels).is_ok());
 });

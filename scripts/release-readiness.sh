@@ -53,5 +53,4 @@ uv run --project tests/oracles --locked python tests/support/collect_release_rea
 
 uv run --project tests/oracles --locked python tests/support/validate_release_readiness.py \
   --automated "${evidence_root}/automated.json" \
-  --manual "${QR_MANUAL_EVIDENCE:-tests/release/manual-evidence.json}" \
   --output "${evidence_root}/readiness-report.json"

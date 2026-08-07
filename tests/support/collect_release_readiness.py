@@ -1,5 +1,4 @@
 import argparse
-import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -26,16 +25,10 @@ CRITICAL_WORKFLOW_TESTS = {
     "distinguishes the input-limit boundary and keeps exports disabled",
     "disposing the page with pending debounce work initializes cleanly",
     "profile controls work by keyboard and layouts fit desktop and mobile widths",
+    "shows the opaque preview at its real SVG size",
     "uses only magenta and shows transparent placement cautions",
     "logo mode refits at ECC H and requires opaque white",
-    "offers only square and rounded data modules with standard square finders",
-}
-ACCESSIBILITY_TESTS = {
-    *(
-        f"has no automated accessibility violations in the {state} state"
-        for state in ("default", "caution", "transparent", "logo", "invalid")
-    ),
-    "warnings, focus, preview labels, and disabled reasons are programmatic",
+    "uses square modules and standard square finders without a shape control",
 }
 
 
@@ -47,26 +40,14 @@ def _hashes(build: Path) -> dict[str, str]:
     }
 
 
-def collect_build_evidence(first: Path, second: Path, maximum_wasm_bytes: int) -> dict[str, Any]:
+def collect_build_evidence(first: Path, second: Path) -> dict[str, Any]:
     first_hashes = _hashes(first)
     second_hashes = _hashes(second)
     if not first_hashes or first_hashes != second_hashes:
         raise BuildMismatchError("independent production-build hashes do not match")
-    wasm_files = [path for path in first.rglob("*.wasm") if path.is_file()]
-    if len(wasm_files) != 1:
-        raise BuildMismatchError("production build must contain exactly one WASM artifact")
-    compressed_size = len(gzip.compress(wasm_files[0].read_bytes(), mtime=0))
-    if compressed_size > maximum_wasm_bytes:
-        raise BuildMismatchError(
-            f"compressed WASM is {compressed_size} bytes; maximum is {maximum_wasm_bytes}"
-        )
-    return {
-        "reproducible_builds": {"match": True, "hashes": first_hashes},
-        "compressed_wasm": {
-            "observed_bytes": compressed_size,
-            "maximum_bytes": maximum_wasm_bytes,
-        },
-    }
+    if not any(name.endswith(".wasm") for name in first_hashes):
+        raise BuildMismatchError("production build must contain a WASM artifact")
+    return {"reproducible_builds": {"match": True, "hashes": first_hashes}}
 
 
 def collect_result_evidence(playwright_report: Path, release_evidence: Path) -> dict[str, Any]:
@@ -85,13 +66,7 @@ def collect_result_evidence(playwright_report: Path, release_evidence: Path) -> 
                     raise ResultEvidenceError(f"duplicate Playwright result: {project} / {title}")
                 by_project[project][title] = test.get("results", [])
 
-    required = {
-        PRIVACY_TEST,
-        GUIDANCE_TEST,
-        *DOWNLOAD_TESTS,
-        *ACCESSIBILITY_TESTS,
-        *CRITICAL_WORKFLOW_TESTS,
-    }
+    required = {PRIVACY_TEST, GUIDANCE_TEST, *DOWNLOAD_TESTS, *CRITICAL_WORKFLOW_TESTS}
     browsers: dict[str, dict[str, Any]] = {}
     for project, tests in by_project.items():
         missing = required - tests.keys()
@@ -111,18 +86,13 @@ def collect_result_evidence(playwright_report: Path, release_evidence: Path) -> 
     adverse_path = release_evidence / "adverse-decode.json"
     matrix_rows = json.loads(matrix_path.read_text()).get("rows")
     adverse_outcomes = json.loads(adverse_path.read_text()).get("outcomes")
-    if not isinstance(matrix_rows, list) or len(matrix_rows) != 192:
-        raise ResultEvidenceError("approved output evidence must contain exactly 192 rows")
+    if not isinstance(matrix_rows, list) or len(matrix_rows) != 96:
+        raise ResultEvidenceError("approved output evidence must contain exactly 96 rows")
     if not isinstance(adverse_outcomes, list) or not adverse_outcomes:
         raise ResultEvidenceError("adverse decoder evidence is missing outcomes")
     return {
         "browsers": browsers,
         "network_inspection": {"passed": True, "external_requests": 0, "source_test": PRIVACY_TEST},
-        "accessibility": {
-            "passed": True,
-            "violations": 0,
-            "source_tests": sorted(ACCESSIBILITY_TESTS),
-        },
         "downloads": {"passed": True, "source_tests": sorted(DOWNLOAD_TESTS)},
         "guidance": {"passed": True, "source_test": GUIDANCE_TEST},
         "artifact_evidence": {
@@ -150,7 +120,6 @@ def main() -> None:
     parser.add_argument("--trunk", required=True)
     parser.add_argument("--playwright", required=True)
     parser.add_argument("--zxing", required=True)
-    parser.add_argument("--maximum-wasm-bytes", type=int, default=160_000)
     parser.add_argument("--output", type=Path, required=True)
     arguments = parser.parse_args()
 
@@ -166,11 +135,7 @@ def main() -> None:
             "playwright": arguments.playwright,
             "zxing": arguments.zxing,
         },
-        **collect_build_evidence(
-            arguments.first_build,
-            arguments.second_build,
-            arguments.maximum_wasm_bytes,
-        ),
+        **collect_build_evidence(arguments.first_build, arguments.second_build),
         **collect_result_evidence(arguments.playwright_report, arguments.release_evidence),
     }
     arguments.output.parent.mkdir(parents=True, exist_ok=True)

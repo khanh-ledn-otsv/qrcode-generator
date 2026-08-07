@@ -43,9 +43,9 @@ const MODULE_UNITS: u32 = 1_000;
 
 // Largest source-box widths that passed the committed H-level profile/version
 // decode matrix while keeping the whitespace-heavy ONE asset visually legible.
-// Odd widths allow exact visual centering in every odd-width QR matrix while
-// the one-module knockout edges remain on the module grid.
-const SOURCE_WIDTH_MODULES: [u32; 13] = [5, 7, 7, 7, 9, 9, 11, 11, 11, 13, 13, 13, 15];
+// Even widths keep both axes exactly centered at thousandth-module precision
+// for the asset's 8:3 presentation aspect ratio.
+const SOURCE_WIDTH_MODULES: [u32; 13] = [6, 6, 8, 8, 8, 10, 10, 10, 10, 12, 12, 12, 14];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModuleCoordinate(u32);
@@ -139,8 +139,6 @@ impl LogoSourceBounds {
 pub struct LogoPlacement {
     source: LogoSourceBounds,
     knockout: LogoKnockoutBounds,
-    offset_x: i32,
-    offset_y: i32,
     protected_clearance: u32,
     obscured_data_modules: u32,
     obscured_remainder_modules: u32,
@@ -155,11 +153,6 @@ impl LogoPlacement {
     #[must_use]
     pub const fn knockout_bounds(self) -> LogoKnockoutBounds {
         self.knockout
-    }
-
-    #[must_use]
-    pub const fn offset(self) -> (i32, i32) {
-        (self.offset_x, self.offset_y)
     }
 
     #[must_use]
@@ -209,52 +202,33 @@ pub(crate) fn calculate_logo_placement(
         .and_then(|width| width.checked_sub(source_height))
         .map(|difference| difference / 2)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
-    let centered_knockout =
-        knockout_for_source(centered_left, centered_top, source_width, source_height)?;
+    let knockout_padding = if matrix.version().number() == 1 {
+        0
+    } else {
+        MODULE_UNITS
+    };
+    let centered_knockout = knockout_for_source(
+        centered_left,
+        centered_top,
+        source_width,
+        source_height,
+        knockout_padding,
+    )?;
 
-    let search_limit = i32::try_from(matrix_width).map_err(|_| RenderError::DimensionOverflow)?;
-    let mut selected: Option<((i64, i32, i32), LogoPlacement)> = None;
-    for offset_y in -search_limit..=search_limit {
-        for offset_x in -search_limit..=search_limit {
-            let Some(knockout) =
-                shifted_knockout(centered_knockout, offset_x, offset_y, matrix_width)
-            else {
-                continue;
-            };
-            let Some((data_count, remainder_count, clearance)) = analyze_knockout(matrix, knockout)
-            else {
-                continue;
-            };
-            let source_left = shifted_units(centered_left, offset_x)?;
-            let source_top = shifted_units(centered_top, offset_y)?;
-            let distance = i64::from(offset_x).pow(2) + i64::from(offset_y).pow(2);
-            let key = (distance, offset_y, offset_x);
-            let placement = LogoPlacement {
-                source: LogoSourceBounds {
-                    left_thousandths: source_left,
-                    top_thousandths: source_top,
-                    width_thousandths: source_width,
-                    height_thousandths: source_height,
-                },
-                knockout,
-                offset_x,
-                offset_y,
-                protected_clearance: clearance,
-                obscured_data_modules: data_count,
-                obscured_remainder_modules: remainder_count,
-            };
-            if selected
-                .as_ref()
-                .is_none_or(|(selected_key, _)| key < *selected_key)
-            {
-                selected = Some((key, placement));
-            }
-        }
-    }
-
-    let placement = selected
-        .map(|(_, placement)| placement)
-        .ok_or(RenderError::UnsafeLogoGeometry)?;
+    let (data_count, remainder_count, clearance) =
+        analyze_knockout(matrix, centered_knockout).ok_or(RenderError::UnsafeLogoGeometry)?;
+    let placement = LogoPlacement {
+        source: LogoSourceBounds {
+            left_thousandths: centered_left,
+            top_thousandths: centered_top,
+            width_thousandths: source_width,
+            height_thousandths: source_height,
+        },
+        knockout: centered_knockout,
+        protected_clearance: clearance,
+        obscured_data_modules: data_count,
+        obscured_remainder_modules: remainder_count,
+    };
     let knockout = placement.knockout;
     if knockout.width.0 * 5 > matrix_width * 2 || knockout.height.0 * 5 > matrix_width * 2 {
         return Err(RenderError::UnsafeLogoGeometry);
@@ -267,20 +241,21 @@ fn knockout_for_source(
     top: u32,
     width: u32,
     height: u32,
+    padding: u32,
 ) -> Result<LogoKnockoutBounds, RenderError> {
     let padded_left = left
-        .checked_sub(MODULE_UNITS)
+        .checked_sub(padding)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
     let padded_top = top
-        .checked_sub(MODULE_UNITS)
+        .checked_sub(padding)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
     let right = left
         .checked_add(width)
-        .and_then(|value| value.checked_add(MODULE_UNITS))
+        .and_then(|value| value.checked_add(padding))
         .ok_or(RenderError::DimensionOverflow)?;
     let bottom = top
         .checked_add(height)
-        .and_then(|value| value.checked_add(MODULE_UNITS))
+        .and_then(|value| value.checked_add(padding))
         .ok_or(RenderError::DimensionOverflow)?;
     let knockout_left = padded_left / MODULE_UNITS;
     let knockout_top = padded_top / MODULE_UNITS;
@@ -292,31 +267,6 @@ fn knockout_for_source(
         width: ModuleCoordinate(knockout_right - knockout_left),
         height: ModuleCoordinate(knockout_bottom - knockout_top),
     })
-}
-
-fn shifted_knockout(
-    centered: LogoKnockoutBounds,
-    offset_x: i32,
-    offset_y: i32,
-    matrix_width: u32,
-) -> Option<LogoKnockoutBounds> {
-    let left = i64::from(centered.left.0) + i64::from(offset_x);
-    let top = i64::from(centered.top.0) + i64::from(offset_y);
-    let right = left + i64::from(centered.width.0);
-    let bottom = top + i64::from(centered.height.0);
-    if left < 0 || top < 0 || right > i64::from(matrix_width) || bottom > i64::from(matrix_width) {
-        return None;
-    }
-    Some(LogoKnockoutBounds {
-        left: ModuleCoordinate(u32::try_from(left).ok()?),
-        top: ModuleCoordinate(u32::try_from(top).ok()?),
-        ..centered
-    })
-}
-
-fn shifted_units(centered: u32, offset: i32) -> Result<u32, RenderError> {
-    let shifted = i64::from(centered) + i64::from(offset) * i64::from(MODULE_UNITS);
-    u32::try_from(shifted).map_err(|_| RenderError::UnsafeLogoGeometry)
 }
 
 fn analyze_knockout(

@@ -11,8 +11,7 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, encode};
 use qr_render::{
-    Background, DataModuleStyle, Foreground, LogoStyle, RenderModel, RenderOptions,
-    SUPPORTED_PROFILES, render_png,
+    Background, Foreground, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
 };
 
 #[test]
@@ -111,25 +110,24 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         eci_assignment: None,
     };
 
-    let rounded_payload = "https://example.test/rounded-caution";
-    let rounded_encoded = encode(EncodeRequest {
-        text: rounded_payload,
+    let transparent_payload = "https://example.test/transparent-caution";
+    let transparent_encoded = encode(EncodeRequest {
+        text: transparent_payload,
         ecc: ErrorCorrection::Medium,
         max_version: SUPPORTED_PROFILES[1].maximum_version(),
     })?;
-    let rounded_source = render_png(&RenderModel::new(
-        &rounded_encoded,
-        RenderOptions::approved_with_data_style(
+    let transparent_source = render_png(&RenderModel::new(
+        &transparent_encoded,
+        RenderOptions::approved(
             SUPPORTED_PROFILES[1],
             Foreground::Brand,
             Background::Transparent,
-            DataModuleStyle::Rounded,
         )?,
     )?)?;
-    let rounded_source = adverse::composite_on(&rounded_source, [255, 255, 255, 255])?;
-    let rounded_expected = DecodeExpectation {
-        payload: rounded_payload.as_bytes().to_vec(),
-        version: QrVersion::new(rounded_encoded.version().number())?,
+    let transparent_source = adverse::composite_on(&transparent_source, [255, 255, 255, 255])?;
+    let transparent_expected = DecodeExpectation {
+        payload: transparent_payload.as_bytes().to_vec(),
+        version: QrVersion::new(transparent_encoded.version().number())?,
         ecc: FixtureEcc::M,
         eci_assignment: None,
     };
@@ -154,10 +152,10 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     let configurations = [
         ("safe-square", "safe", safe_source, safe_expected),
         (
-            "rounded-transparent",
+            "transparent",
             "caution",
-            rounded_source,
-            rounded_expected,
+            transparent_source,
+            transparent_expected,
         ),
         ("logo", "caution", logo_source, logo_expected),
     ];
@@ -169,7 +167,7 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         for transform in suite.transforms() {
             let included = match configuration {
                 "safe-square" => true,
-                "rounded-transparent" => matches!(
+                "transparent" => matches!(
                     transform.kind(),
                     "blur"
                         | "scaling"

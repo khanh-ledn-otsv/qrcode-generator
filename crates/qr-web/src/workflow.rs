@@ -5,9 +5,9 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
-    Background, ContrastRatio, DataModuleStyle, FinderStyle, Foreground, FunctionModuleStyle,
-    LogoPlacement, LogoStyle, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel,
-    RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
+    Background, ContrastRatio, FinderStyle, Foreground, FunctionModuleStyle, LogoPlacement,
+    LogoStyle, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions,
+    Rgba, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -84,7 +84,6 @@ pub struct PreviewRequest {
     logo_enabled: bool,
     foreground: Foreground,
     background: Background,
-    data_module_style: DataModuleStyle,
 }
 
 impl PreviewRequest {
@@ -130,7 +129,6 @@ pub struct Diagnostics {
     background: Background,
     safety: OutputSafety,
     contrast_ratio: Option<ContrastRatio>,
-    data_module_style: DataModuleStyle,
     function_module_style: FunctionModuleStyle,
     finder_style: FinderStyle,
     logo_style: LogoStyle,
@@ -236,11 +234,6 @@ impl Diagnostics {
     #[must_use]
     pub const fn contrast_ratio(self) -> Option<ContrastRatio> {
         self.contrast_ratio
-    }
-
-    #[must_use]
-    pub const fn data_module_style(self) -> DataModuleStyle {
-        self.data_module_style
     }
 
     #[must_use]
@@ -404,7 +397,6 @@ pub struct WorkflowState {
     logo_enabled: bool,
     foreground: Foreground,
     background: Background,
-    data_module_style: DataModuleStyle,
     revision: Revision,
     preview_state: PreviewState,
 }
@@ -418,7 +410,6 @@ impl WorkflowState {
             logo_enabled: false,
             foreground: Foreground::Brand,
             background: Background::Opaque(Rgba::WHITE),
-            data_module_style: DataModuleStyle::Square,
             revision: Revision(0),
             preview_state: PreviewState::Invalid(WorkflowFailure::EmptyPayload),
         }
@@ -509,14 +500,6 @@ impl WorkflowState {
         self.begin_preview()
     }
 
-    pub fn select_data_module_style(
-        &mut self,
-        data_module_style: DataModuleStyle,
-    ) -> Result<PreviewRequest, WorkflowFailure> {
-        self.data_module_style = data_module_style;
-        self.begin_preview()
-    }
-
     #[must_use]
     pub fn payload(&self) -> &str {
         self.payload.raw()
@@ -550,11 +533,6 @@ impl WorkflowState {
     #[must_use]
     pub const fn background(&self) -> Background {
         self.background
-    }
-
-    #[must_use]
-    pub const fn data_module_style(&self) -> DataModuleStyle {
-        self.data_module_style
     }
 
     #[must_use]
@@ -643,7 +621,6 @@ impl WorkflowState {
             logo_enabled: self.logo_enabled,
             foreground: self.foreground,
             background: self.background,
-            data_module_style: self.data_module_style,
         })
     }
 
@@ -661,20 +638,15 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         max_version: profile.maximum_version(),
     })
     .map_err(|error| classify_encode_error(error, profile.maximum_version()))?;
-    let options = RenderOptions::approved_with_data_style(
-        profile,
-        request.foreground,
-        request.background,
-        request.data_module_style,
-    )
-    .and_then(|options| {
-        options.with_logo(if request.logo_enabled {
-            LogoStyle::Bundled
-        } else {
-            LogoStyle::None
+    let options = RenderOptions::approved(profile, request.foreground, request.background)
+        .and_then(|options| {
+            options.with_logo(if request.logo_enabled {
+                LogoStyle::Bundled
+            } else {
+                LogoStyle::None
+            })
         })
-    })
-    .map_err(classify_render_error)?;
+        .map_err(classify_render_error)?;
     let model = RenderModel::new(&encoded, options).map_err(classify_render_error)?;
     let svg = render_svg(&model).map_err(|_| WorkflowFailure::Internal)?;
     let png = render_png(&model).map_err(|_| WorkflowFailure::Internal)?;
@@ -712,7 +684,6 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             background: request.background,
             safety: options.safety(),
             contrast_ratio: options.contrast_ratio(),
-            data_module_style: options.data_module_style(),
             function_module_style: options.function_module_style(),
             finder_style: options.finder_style(),
             logo_style: options.logo_style(),

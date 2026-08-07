@@ -3,13 +3,11 @@ mod raster;
 #[path = "support/versions.rs"]
 mod versions;
 
-use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FOREGROUNDS, Background,
-    DataModuleStyle, Foreground, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, Version,
-    render_svg,
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions, Rgba,
+    SUPPORTED_PROFILES, Version, render_svg,
 };
 use sha2::{Digest, Sha256};
 
@@ -201,82 +199,6 @@ fn independent_rasterization_preserves_background_quiet_zone_and_square_modules(
         (brand.red(), brand.green(), brand.blue(), brand.alpha()),
         (189, 15, 114, 255)
     );
-}
-
-#[test]
-fn rounded_svg_rounds_only_data_cells_by_one_quarter_inside_each_cell() {
-    let encoded = encoded_qr("ROUNDED SVG GEOMETRY");
-    let options = RenderOptions::approved_with_data_style(
-        SUPPORTED_PROFILES[1],
-        qr_render::Foreground::Brand,
-        Background::Opaque(Rgba::WHITE),
-        DataModuleStyle::Rounded,
-    )
-    .unwrap();
-    let model = RenderModel::new(&encoded, options).unwrap();
-    let first = render_svg(&model).unwrap();
-    assert_eq!(first, render_svg(&model).unwrap());
-
-    let document = roxmltree::Document::parse(&first).unwrap();
-    let path = document
-        .descendants()
-        .find(|node| node.has_tag_name("path"))
-        .and_then(|node| node.attribute("d"))
-        .unwrap();
-    let quiet = model.svg_placement().matrix_origin().x().get();
-    let data = model
-        .cells()
-        .find(|cell| {
-            cell.module().is_dark()
-                && matches!(
-                    cell.module().kind(),
-                    ModuleKind::Data | ModuleKind::Remainder
-                )
-        })
-        .unwrap();
-    let function = model
-        .cells()
-        .find(|cell| cell.module().is_dark() && cell.module().kind() == ModuleKind::Finder)
-        .unwrap();
-    let data_x = u32::from(data.x()) + quiet;
-    let data_y = u32::from(data.y()) + quiet;
-    let function_x = u32::from(function.x()) + quiet;
-    let function_y = u32::from(function.y()) + quiet;
-
-    assert!(path.contains(&format!(
-        "M{data_x}.25 {data_y}h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25v-.5a.25.25 0 0 1 .25-.25z"
-    )));
-    assert!(path.contains(&format!("M{function_x} {function_y}h1v1h-1z")));
-    assert!(!path.contains("stroke"));
-}
-
-#[test]
-fn every_approved_data_style_has_structural_and_deterministic_svg_coverage() {
-    let encoded = encoded_qr("APPROVED SVG STYLE COVERAGE");
-    for profile in SUPPORTED_PROFILES {
-        for style in APPROVED_DATA_MODULE_STYLES {
-            let options = RenderOptions::approved_with_data_style(
-                profile,
-                Foreground::Brand,
-                Background::Opaque(Rgba::WHITE),
-                style,
-            )
-            .unwrap();
-            let model = RenderModel::new(&encoded, options).unwrap();
-            let first = render_svg(&model).unwrap();
-            assert_eq!(first, render_svg(&model).unwrap());
-            let document = roxmltree::Document::parse(&first).unwrap();
-            let path = document
-                .descendants()
-                .find(|node| node.has_tag_name("path"))
-                .and_then(|node| node.attribute("d"))
-                .unwrap();
-            match style {
-                DataModuleStyle::Square => assert!(!path.contains("a.25.25")),
-                DataModuleStyle::Rounded => assert!(path.contains("a.25.25")),
-            }
-        }
-    }
 }
 
 fn encoded_qr(text: &str) -> EncodedQr {

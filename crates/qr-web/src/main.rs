@@ -4,8 +4,8 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, Background, DataModuleStyle, FinderStyle,
-    Foreground, FunctionModuleStyle, LogoStyle, OutputSafety, ProfileId, Rgba, SUPPORTED_PROFILES,
+    APPROVED_BACKGROUNDS, Background, FinderStyle, Foreground, FunctionModuleStyle, LogoStyle,
+    OutputSafety, ProfileId, Rgba, SUPPORTED_PROFILES,
 };
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
@@ -19,13 +19,6 @@ type DebounceSignal = RwSignal<DebounceTimer>;
 
 #[derive(Clone, Copy)]
 struct BackgroundPresentation {
-    name: &'static str,
-    value: &'static str,
-    description: &'static str,
-}
-
-#[derive(Clone, Copy)]
-struct DataModuleStylePresentation {
     name: &'static str,
     value: &'static str,
     description: &'static str,
@@ -92,28 +85,6 @@ fn App() -> impl IntoView {
                 </label>
             }
         });
-    let data_module_style_options = APPROVED_DATA_MODULE_STYLES.map(|data_module_style| {
-        let presentation = data_module_style_presentation(data_module_style);
-        view! {
-            <label class=move || profile_card_class(state.with(|current| current.data_module_style() == data_module_style))>
-                <input
-                    class="peer sr-only"
-                    type="radio"
-                    name="data-module-style"
-                    value=presentation.value
-                    prop:checked=move || state.with(|current| current.data_module_style() == data_module_style)
-                    on:change=move |_| {
-                        if let Some(Ok(request)) = state.try_update(|current| current.select_data_module_style(data_module_style)) {
-                            schedule_preview(state, pending_timer, request);
-                        }
-                    }
-                />
-                <span class="block text-sm font-bold text-slate-950">{presentation.name}</span>
-                <span class="mt-1 block text-xs leading-5 text-slate-600">{presentation.description}</span>
-            </label>
-        }
-    });
-
     view! {
         <main class="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
             <div class="mx-auto max-w-7xl">
@@ -284,14 +255,6 @@ fn App() -> impl IntoView {
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">{background_options}</div>
                         </fieldset>
 
-                        <fieldset class="mt-8">
-                            <legend class="text-sm font-semibold text-slate-800">"Data module shape"</legend>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{data_module_style_options}</div>
-                            <p class="mt-3 text-xs leading-5 text-slate-600">
-                                "Function modules and finder patterns always remain square."
-                            </p>
-                        </fieldset>
-
                         <fieldset class="mt-8" aria-describedby="payload-caution">
                             <legend class="text-sm font-semibold text-slate-800">"Bundled logo"</legend>
                             <label class=move || profile_card_class(state.with(WorkflowState::logo_enabled))>
@@ -328,7 +291,7 @@ fn App() -> impl IntoView {
                             >
                                 <div
                                     class:hidden=move || state.with(|value| value.preview().is_none() || matches!(value.background(), Background::Transparent))
-                                    class="w-full [&>svg]:h-auto [&>svg]:w-full"
+                                    class="[&>svg]:block [&>svg]:h-auto"
                                     aria-hidden="true"
                                     inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())
                                 ></div>
@@ -338,19 +301,19 @@ fn App() -> impl IntoView {
                                     aria-hidden="true"
                                 >
                                     <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-300 bg-white p-2">
-                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
                                         <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"White"</figcaption>
                                     </figure>
                                     <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-300 bg-slate-200 p-2">
-                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
                                         <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Light gray"</figcaption>
                                     </figure>
                                     <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-700 bg-slate-900 p-2">
-                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
                                         <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Dark"</figcaption>
                                     </figure>
                                     <figure data-testid="transparent-surface-preview" class="preview-surface-patterned relative grid aspect-square place-items-center rounded-lg border border-slate-400 p-2">
-                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
                                         <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Patterned"</figcaption>
                                     </figure>
                                 </div>
@@ -375,7 +338,6 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
                                 <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_color(details.foreground()).to_owned()) />
                                 <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_presentation(details.background()).name.to_owned()) />
-                                <Diagnostic label="Data modules" value=move || diagnostic_value(state, |details| data_module_style_label(details.data_module_style()).to_owned()) />
                                 <Diagnostic label="Function modules" value=move || diagnostic_value(state, |details| function_module_style_label(details.function_module_style()).to_owned()) />
                                 <Diagnostic label="Finders" value=move || diagnostic_value(state, |details| finder_style_label(details.finder_style()).to_owned()) />
                                 <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
@@ -568,25 +530,6 @@ fn background_presentation(background: Background) -> BackgroundPresentation {
             description: "Unavailable",
         },
     }
-}
-
-fn data_module_style_presentation(style: DataModuleStyle) -> DataModuleStylePresentation {
-    match style {
-        DataModuleStyle::Square => DataModuleStylePresentation {
-            name: "Square",
-            value: "square",
-            description: "Crisp full-cell geometry",
-        },
-        DataModuleStyle::Rounded => DataModuleStylePresentation {
-            name: "Rounded",
-            value: "rounded",
-            description: "Quarter-cell corner radius",
-        },
-    }
-}
-
-fn data_module_style_label(style: DataModuleStyle) -> &'static str {
-    data_module_style_presentation(style).name
 }
 
 const fn function_module_style_label(style: FunctionModuleStyle) -> &'static str {

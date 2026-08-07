@@ -32,4 +32,4 @@ foreground/background/profile tuples. The manifest-pinned ZXing-C++ suites
 independently decoded every tuple for both rasterized SVG and PNG on an
 effective white placement surface. The complete Node 24 `pnpm run verify`
 suite passed, including Rust, WASM, Python oracle, release-build, privacy,
-desktop/mobile Chromium, and axe checks.
+desktop/mobile Chromium checks.

@@ -6,7 +6,7 @@
 
 **Status:** resolved
 
-- [x] Release 1 offers square and rounded data modules; rounded modules never exceed one quarter of a module cell and use deterministic final-pixel coverage without resizing the completed image.
+- [x] Release 1 offers square data modules only.
 - [x] Function modules and finders remain square in release 1.
 - [x] Styling changes only rendering geometry and never encoded values, ECC, version, mask, or module classification.
 - [x] SVG paths and PNG coverage remain inside their assigned cells and deterministic across repeated output.
@@ -15,19 +15,13 @@
 
 ## Answer
 
-Resolved on 2026-08-07. Release 1 now exposes exactly square and rounded data
-modules from one compiled approved-style list. Rounded SVG paths use a fixed
-quarter-cell radius, while PNG output computes deterministic 8-by-8 subpixel
-coverage directly at the final output resolution. Protected function modules,
-including standard finder patterns, retain full square cells in both formats.
+Release 1 now exposes square QR modules and standard square finders only.
+Production configuration and the Leptos workflow contain no module-shape
+control or alternate rendering branch. Structural and independent-decode suites
+cover the remaining deterministic square treatment.
 
-The Leptos workflow defaults to square modules and offers keyboard-native
-Square and Rounded controls with explicit diagnostics for data, function, and
-finder geometry. Styling remains a render-only choice: model and workflow tests
-prove that encoded modules, classification, ECC, version, and mask are
-unchanged.
+## Comments
 
-Generated structural, geometry, and pinned ZXing-C++ decode suites enumerate
-the same approved-style list used by production. The complete Node 24
-`pnpm run verify` suite passed, along with explicit ignored-test runs of the
-approved SVG and PNG independent-decode matrices.
+- 2026-08-07: The owner removed rounded-module support after the original
+  resolution. Production configuration, UI, rendering branches, and rounded
+  geometry tests were removed; square modules remain the sole treatment.

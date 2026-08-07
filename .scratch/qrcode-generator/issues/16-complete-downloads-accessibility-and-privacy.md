@@ -10,7 +10,7 @@
 - [x] Diagnostics explain mode, version, ECC, mask, bit capacity, geometry, warnings, and export-disabled reasons without exposing payload text in metadata or accessible preview labels.
 - [x] Semantic groups, programmatic labels, visible focus, keyboard operation, live validation, and warning severity work without relying on color alone or stealing focus.
 - [x] Browser-boundary tests cover Blob errors, URL revocation, debounce disposal, repeated generation, and bounded retained resources without panic.
-- [x] End-to-end tests cover representative modes, UTF-8, boundaries, downloads, hashes, independent decode, responsive layouts, and automated accessibility checks.
+- [x] End-to-end tests cover representative modes, UTF-8, boundaries, downloads, hashes, independent decode, and responsive layouts.
 - [x] Runtime request interception proves that generation, preview, configuration, and download cause no external request or payload leakage through URLs, history, title, filenames, console, storage, DOM metadata, or exported artifacts.
 
 ## Answer

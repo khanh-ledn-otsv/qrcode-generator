@@ -5,7 +5,7 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    Background, Foreground, LogoStyle, OutputSafety, RenderModel, RenderOptions, Rgba,
+    Background, Foreground, LogoStyle, OutputSafety, RenderError, RenderModel, RenderOptions, Rgba,
     SUPPORTED_PROFILES,
 };
 
@@ -26,24 +26,43 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
                 .unwrap()
                 .with_logo(LogoStyle::Bundled)
                 .unwrap();
-            let model = RenderModel::new(&encoded, options).unwrap();
+            let model = RenderModel::new(&encoded, options);
+            if version_number >= 7 {
+                assert_eq!(model.unwrap_err(), RenderError::UnsafeLogoGeometry);
+                continue;
+            }
+            let model = model.unwrap_or_else(|error| {
+                panic!("version {version_number} should have centered logo geometry: {error}")
+            });
             let placement = model.logo_placement().expect("logo placement");
             let knockout = placement.knockout_bounds();
             let source = placement.source_bounds();
             let matrix_width = u32::from(encoded.version().symbol_size());
 
+            assert_eq!(
+                source.left_thousandths() * 2 + source.width_thousandths(),
+                matrix_width * 1_000,
+                "version {version_number} logo is not horizontally centered",
+            );
+            assert_eq!(
+                source.top_thousandths() * 2 + source.height_thousandths(),
+                matrix_width * 1_000,
+                "version {version_number} logo is not vertically centered",
+            );
+
             assert!(knockout.width().get() * 5 <= matrix_width * 2);
             assert!(knockout.height().get() * 5 <= matrix_width * 2);
             assert!(source.width_thousandths() * 100 >= (matrix_width + 8) * 1_000 * 17);
-            assert!(source.left_thousandths() >= knockout.left().get() * 1_000 + 1_000);
-            assert!(source.top_thousandths() >= knockout.top().get() * 1_000 + 1_000);
+            let padding = if version_number == 1 { 0 } else { 1_000 };
+            assert!(source.left_thousandths() >= knockout.left().get() * 1_000 + padding);
+            assert!(source.top_thousandths() >= knockout.top().get() * 1_000 + padding);
             assert!(
                 source.right_thousandths()
-                    <= (knockout.left().get() + knockout.width().get()) * 1_000 - 1_000
+                    <= (knockout.left().get() + knockout.width().get()) * 1_000 - padding
             );
             assert!(
                 source.bottom_thousandths()
-                    <= (knockout.top().get() + knockout.height().get()) * 1_000 - 1_000
+                    <= (knockout.top().get() + knockout.height().get()) * 1_000 - padding
             );
             assert_eq!(
                 source.width_thousandths() * 240,

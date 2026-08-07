@@ -49,19 +49,22 @@
 - [Ticket 17](issues/17-add-approved-color-and-transparency.md): The contrast and
   transparency infrastructure validates compiled appearance choices, placement
   cautions, and generated structural/deterministic/pinned-decode coverage.
-- [Ticket 18](issues/18-add-approved-module-and-finder-styling.md): One compiled
-  style list exposes square and quarter-cell-rounded data modules, while every
-  protected function module and finder remains square; deterministic SVG/PNG
-  geometry and generated pinned-decode coverage enforce the approved set.
+- [Ticket 18](issues/18-add-approved-module-and-finder-styling.md): The original
+  rounded-module option was subsequently removed; release output now uses only
+  square data/function modules and standard square finders.
 - [Ticket 19](issues/19-integrate-bundled-logo-safely.md): Magenta is the sole QR
   foreground; the sanitized ONE lettermark is compile-time embedded behind an
   opaque-white, function-safe knockout selected by deterministic H-level module
   geometry, with all profile/version rows passing pinned SVG and PNG decoding.
 - [Ticket 20](issues/20-harden-approved-output-combinations.md): A generated
-  192-row matrix records all approved output/payload combinations and typed
+  96-row matrix records all approved output/payload combinations and typed
   rejections, while deterministic adverse decoding, quantitative coverage and
   mutation gates, fuzz/Miri/dependency commands, and reproducible performance,
-  allocation, artifact, and compressed-WASM baselines form the release evidence.
+  allocation, and artifact baselines form the release evidence.
+- [Ticket 21](issues/21-validate-release-readiness.md): The automated release
+  gate proves reproducible build hashes, zero-retry browser workflows, privacy,
+  downloads, approved artifacts, and guidance; manual product checks are kept
+  outside the repository evidence system.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.

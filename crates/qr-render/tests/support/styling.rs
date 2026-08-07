@@ -3,10 +3,9 @@ use std::error::Error;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_DATA_MODULE_STYLES, APPROVED_FINDERS, APPROVED_FOREGROUNDS,
-    APPROVED_FUNCTION_MODULE_STYLES, APPROVED_LOGO_STYLES, Background, DataModuleStyle,
-    FinderStyle, Foreground, FunctionModuleStyle, LogoStyle, OutputProfile, OutputSafety,
-    RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
+    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_FUNCTION_MODULE_STYLES,
+    APPROVED_LOGO_STYLES, Background, FinderStyle, Foreground, FunctionModuleStyle, LogoStyle,
+    OutputProfile, OutputSafety, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
 };
 
 #[derive(Clone, Copy)]
@@ -14,14 +13,12 @@ pub struct ApprovedStyleTuple {
     pub profile_index: usize,
     pub foreground_index: usize,
     pub background_index: usize,
-    pub style_index: usize,
     pub function_style_index: usize,
     pub finder_index: usize,
     pub logo_index: usize,
     pub profile: OutputProfile,
     pub foreground: Foreground,
     pub background: Background,
-    pub style: DataModuleStyle,
     pub function_style: FunctionModuleStyle,
     pub finder: FinderStyle,
     pub logo: LogoStyle,
@@ -29,13 +26,8 @@ pub struct ApprovedStyleTuple {
 
 impl ApprovedStyleTuple {
     pub fn options(self) -> Result<RenderOptions, RenderError> {
-        let options = RenderOptions::approved_with_data_style(
-            self.profile,
-            self.foreground,
-            self.background,
-            self.style,
-        )?
-        .with_logo(self.logo)?;
+        let options = RenderOptions::approved(self.profile, self.foreground, self.background)?
+            .with_logo(self.logo)?;
         if options.function_module_style() != self.function_style
             || options.finder_style() != self.finder
         {
@@ -62,11 +54,10 @@ impl ApprovedStyleTuple {
 
     pub fn label(self) -> String {
         format!(
-            "{}/{}/{}/{}/{}/{}/{}",
+            "{}/{}/{}/{}/{}/{}",
             self.profile_index,
             self.foreground_index,
             self.background_index,
-            self.style_index,
             self.function_style_index,
             self.finder_index,
             self.logo_index,
@@ -79,29 +70,25 @@ pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
             for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                for (style_index, style) in APPROVED_DATA_MODULE_STYLES.into_iter().enumerate() {
-                    for (function_style_index, function_style) in
-                        APPROVED_FUNCTION_MODULE_STYLES.into_iter().enumerate()
-                    {
-                        for (finder_index, finder) in APPROVED_FINDERS.into_iter().enumerate() {
-                            for (logo_index, logo) in APPROVED_LOGO_STYLES.into_iter().enumerate() {
-                                tuples.push(ApprovedStyleTuple {
-                                    profile_index,
-                                    foreground_index,
-                                    background_index,
-                                    style_index,
-                                    function_style_index,
-                                    finder_index,
-                                    logo_index,
-                                    profile,
-                                    foreground,
-                                    background,
-                                    style,
-                                    function_style,
-                                    finder,
-                                    logo,
-                                });
-                            }
+                for (function_style_index, function_style) in
+                    APPROVED_FUNCTION_MODULE_STYLES.into_iter().enumerate()
+                {
+                    for (finder_index, finder) in APPROVED_FINDERS.into_iter().enumerate() {
+                        for (logo_index, logo) in APPROVED_LOGO_STYLES.into_iter().enumerate() {
+                            tuples.push(ApprovedStyleTuple {
+                                profile_index,
+                                foreground_index,
+                                background_index,
+                                function_style_index,
+                                finder_index,
+                                logo_index,
+                                profile,
+                                foreground,
+                                background,
+                                function_style,
+                                finder,
+                                logo,
+                            });
                         }
                     }
                 }
@@ -251,40 +238,36 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
         }
     }
 
-    for (style_index, style) in APPROVED_DATA_MODULE_STYLES.into_iter().enumerate() {
-        for version in [1, 2, 5, 6, 7, 8, 12, 13] {
-            let (profile_index, profile) = SUPPORTED_PROFILES
-                .into_iter()
-                .enumerate()
-                .find(|(_, profile)| version <= profile.maximum_version().number())
-                .ok_or("transition version has no supporting profile")?;
-            let tuple = ApprovedStyleTuple {
-                profile_index,
-                foreground_index: 0,
-                background_index: 0,
-                style_index,
-                function_style_index: 0,
-                finder_index: 0,
-                logo_index: 0,
-                profile,
-                foreground: Foreground::Brand,
-                background: APPROVED_BACKGROUNDS[0],
-                style,
-                function_style: APPROVED_FUNCTION_MODULE_STYLES[0],
-                finder: APPROVED_FINDERS[0],
-                logo: LogoStyle::None,
-            };
-            prepared.push(prepare_decode_case(
-                tuple,
-                DecodeCase {
-                    class: PayloadClass::AsciiByte,
-                    label: format!("transition-version-{version}"),
-                    text: "a".repeat(crate::versions::first_byte_length(version)),
-                    eci_assignment: None,
-                    expected_version: Some(version),
-                },
-            )?);
-        }
+    for version in [1, 2, 5, 6, 7, 8, 12, 13] {
+        let (profile_index, profile) = SUPPORTED_PROFILES
+            .into_iter()
+            .enumerate()
+            .find(|(_, profile)| version <= profile.maximum_version().number())
+            .ok_or("transition version has no supporting profile")?;
+        let tuple = ApprovedStyleTuple {
+            profile_index,
+            foreground_index: 0,
+            background_index: 0,
+            function_style_index: 0,
+            finder_index: 0,
+            logo_index: 0,
+            profile,
+            foreground: Foreground::Brand,
+            background: APPROVED_BACKGROUNDS[0],
+            function_style: APPROVED_FUNCTION_MODULE_STYLES[0],
+            finder: APPROVED_FINDERS[0],
+            logo: LogoStyle::None,
+        };
+        prepared.push(prepare_decode_case(
+            tuple,
+            DecodeCase {
+                class: PayloadClass::AsciiByte,
+                label: format!("transition-version-{version}"),
+                text: "a".repeat(crate::versions::first_byte_length(version)),
+                eci_assignment: None,
+                expected_version: Some(version),
+            },
+        )?);
     }
     Ok(prepared)
 }

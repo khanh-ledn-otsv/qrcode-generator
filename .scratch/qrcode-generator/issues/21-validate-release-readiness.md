@@ -1,25 +1,27 @@
 # 21 — Validate release readiness
 
-**What to build:** Produce complete automated and physical evidence that the release candidate is safe, private, accessible, and usable.
+**What to build:** Produce complete repository-owned automated evidence that the release candidate is safe, private, and usable.
 
 **Blocked by:** 20 — Harden all approved output combinations.
 
-**Prerequisite:** The owner has named the supported browsers, devices, scanners, printers, materials, and placement environments.
+**Status:** resolved
 
-**Status:** claimed
-
-- [ ] A local production build and network inspection show no runtime payload or logo requests.
-- [ ] A clean build with pinned tools records reproducible application and artifact hashes plus compressed WASM size.
-- [ ] Supported desktop/mobile browsers pass critical paths, downloads, privacy inspection, and accessibility checks without retry-hidden correctness failures.
-- [ ] Named camera, scanner, screen, printer, material, and placement tests include print samples at 25 mm and 30 mm.
+- [x] A local production build and network inspection show no runtime payload or logo requests.
+- [x] Clean builds with pinned tools record matching application and artifact hashes.
+- [x] Supported desktop/mobile browser projects pass critical paths, downloads, and privacy inspection without retry-hidden correctness failures.
 - [x] User guidance explains SVG-first export, physical-size guidance, transparent/logo cautions, and environment-specific validation.
-- [x] The release runbook links every applicable acceptance criterion to automated results, manual evidence, or an explicitly signed-off exception.
+- [x] The release runbook links every repository-owned acceptance criterion to automated results.
 
 ## Comments
 
-- 2026-08-07: Added the clean-build evidence collector, strict readiness validator,
-  complete criterion map, and manual evidence template. Final evidence and sign-off
-  remain blocked because the prerequisite owner-supplied browser, device, scanner,
-  printer, material, placement, and physical-test names/results are not present in
-  the repository. The validator deliberately rejects placeholders and unsigned
-  omissions.
+- 2026-08-07: Owner removed bundle-size, automated accessibility, and manual-test
+  evidence from the repository release gate. The readiness report now validates
+  reproducible hashes, all configured browser projects, privacy, downloads,
+  approved artifacts, and user guidance without collecting manual evidence.
+
+## Answer
+
+Ticket 21 is complete under the revised evidence policy. `release:readiness`
+builds twice, checks exact hashes, runs the four zero-retry browser projects,
+collects decoder evidence, and validates the automated report. Manual product
+testing is intentionally outside the repository and requires no evidence file.
