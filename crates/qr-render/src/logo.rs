@@ -40,9 +40,10 @@ const SOURCE_VIEW_BOX_HEIGHT: u32 = 602;
 const MODULE_UNITS: u32 = 1_000;
 
 // Largest source-box widths that passed the committed H-level profile/version
-// decode matrix. Odd widths allow exact visual centering in every odd-width QR
-// matrix while the one-module knockout edges remain on the module grid.
-const SOURCE_WIDTH_MODULES: [u32; 13] = [1, 3, 3, 3, 5, 5, 7, 7, 7, 9, 9, 9, 11];
+// decode matrix while keeping the whitespace-heavy ONE asset visually legible.
+// Odd widths allow exact visual centering in every odd-width QR matrix while
+// the one-module knockout edges remain on the module grid.
+const SOURCE_WIDTH_MODULES: [u32; 13] = [5, 7, 7, 7, 9, 9, 11, 11, 11, 13, 13, 13, 15];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModuleCoordinate(u32);
@@ -252,7 +253,7 @@ pub(crate) fn calculate_logo_placement(
         .map(|(_, placement)| placement)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
     let knockout = placement.knockout;
-    if knockout.width.0 * 5 > matrix_width || knockout.height.0 * 5 > matrix_width {
+    if knockout.width.0 * 5 > matrix_width * 2 || knockout.height.0 * 5 > matrix_width * 2 {
         return Err(RenderError::UnsafeLogoGeometry);
     }
     Ok(placement)

@@ -87,7 +87,7 @@ These release-1 defaults use the approved ONE treatment:
 ### 2.7 Logo safety
 
 - Enabling the logo sets ECC H before version selection, so capacity/version is recalculated first.
-- Geometry is selected after H-level fitting in module coordinates. The complete `1000×602` source box is uniformly scaled, receives at least one module of outward-snapped knockout clearance, and the complete knockout remains at most 20% of matrix width.
+- Geometry is selected after H-level fitting in module coordinates. The complete `1000×602` source box is uniformly scaled, receives at least one module of outward-snapped knockout clearance, and the complete knockout remains at most 40% of matrix width. Logo output stays classified as a caution, and every compiled size must pass the independent SVG/PNG decode matrix before release.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.

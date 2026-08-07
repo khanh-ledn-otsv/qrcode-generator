@@ -126,7 +126,23 @@ test("logo mode refits at ECC H and requires opaque white", async ({ page }) => 
   await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");
   await expect.poll(() => diagnostic(page, "Logo")).toContain("ONE lettermark");
   await expect(transparent).toBeDisabled();
-  await expect(page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]')).toHaveCount(5);
+  const renderedLogos = page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]');
+  await expect(renderedLogos).toHaveCount(5);
+
+  const logoCard = page.getByText("ONE lettermark", { exact: true }).locator("..");
+  await expect(logoCard).toHaveCSS("display", "block");
+  const cardWidthRatio = await logoCard.evaluate((card) => {
+    const parentWidth = card.parentElement?.getBoundingClientRect().width ?? 0;
+    return card.getBoundingClientRect().width / parentWidth;
+  });
+  expect(cardWidthRatio).toBeGreaterThan(0.95);
+
+  const sourceWidthRatio = await renderedLogos.first().evaluate((renderedLogo) => {
+    const outerSvg = renderedLogo.ownerSVGElement;
+    if (!(renderedLogo instanceof SVGSVGElement) || outerSvg === null) return 0;
+    return renderedLogo.width.baseVal.value / outerSvg.viewBox.baseVal.width;
+  });
+  expect(sourceWidthRatio).toBeGreaterThanOrEqual(0.18);
 });
 
 test("offers only square and rounded data modules with standard square finders", async ({

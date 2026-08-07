@@ -32,8 +32,9 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
             let source = placement.source_bounds();
             let matrix_width = u32::from(encoded.version().symbol_size());
 
-            assert!(knockout.width().get() * 5 <= matrix_width);
-            assert!(knockout.height().get() * 5 <= matrix_width);
+            assert!(knockout.width().get() * 5 <= matrix_width * 2);
+            assert!(knockout.height().get() * 5 <= matrix_width * 2);
+            assert!(source.width_thousandths() * 100 >= (matrix_width + 8) * 1_000 * 17);
             assert!(source.left_thousandths() >= knockout.left().get() * 1_000 + 1_000);
             assert!(source.top_thousandths() >= knockout.top().get() * 1_000 + 1_000);
             assert!(

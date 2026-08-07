@@ -534,9 +534,9 @@ fn diagnostic_value(
 
 fn profile_card_class(selected: bool) -> &'static str {
     if selected {
-        "focus-within:ring-brand cursor-pointer rounded-2xl border border-brand bg-pink-50 p-4 ring-2 ring-brand ring-offset-2 transition"
+        "focus-within:ring-brand block cursor-pointer rounded-2xl border border-brand bg-pink-50 p-4 ring-2 ring-brand ring-offset-2 transition"
     } else {
-        "focus-within:ring-brand cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
+        "focus-within:ring-brand block cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
     }
 }
 
