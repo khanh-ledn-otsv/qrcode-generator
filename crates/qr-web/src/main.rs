@@ -3,7 +3,10 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
-use qr_render::{ProfileId, SUPPORTED_PROFILES};
+use qr_render::{
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, Foreground, OutputSafety, ProfileId,
+    Rgba, SUPPORTED_PROFILES,
+};
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
 use qr_web::workflow::{
@@ -53,6 +56,59 @@ fn App() -> impl IntoView {
             </label>
         }
     });
+    let foreground_options = APPROVED_FOREGROUNDS.map(|foreground| {
+        let (name, value) = match foreground {
+            Foreground::Black => ("Black", "black"),
+            Foreground::Brand => ("Brand", "brand"),
+        };
+        let color = foreground_label(foreground);
+        view! {
+            <label class=move || profile_card_class(state.with(|current| current.foreground() == foreground))>
+                <input
+                    class="peer sr-only"
+                    type="radio"
+                    name="foreground-color"
+                    value=value
+                    prop:checked=move || state.with(|current| current.foreground() == foreground)
+                    on:change=move |_| {
+                        if let Some(Ok(request)) = state.try_update(|current| current.select_foreground(foreground)) {
+                            schedule_preview(state, pending_timer, request);
+                        }
+                    }
+                />
+                <span class="block text-sm font-bold text-slate-950">{name}</span>
+                <span class="mt-1 block text-xs font-mono text-slate-600">{color}</span>
+            </label>
+        }
+    });
+    let background_options = APPROVED_BACKGROUNDS.map(|background| {
+            let (name, description, value) = match background {
+                Background::Opaque(_) => ("Opaque white", "Known placement contrast", "white"),
+                Background::Transparent => (
+                    "Transparent",
+                    "Requires placement checks",
+                    "transparent",
+                ),
+            };
+            view! {
+                <label class=move || profile_card_class(state.with(|current| current.background() == background))>
+                    <input
+                        class="peer sr-only"
+                        type="radio"
+                        name="background-treatment"
+                        value=value
+                        prop:checked=move || state.with(|current| current.background() == background)
+                        on:change=move |_| {
+                            if let Some(Ok(request)) = state.try_update(|current| current.select_background(background)) {
+                                schedule_preview(state, pending_timer, request);
+                            }
+                        }
+                    />
+                    <span class="block text-sm font-bold text-slate-950">{name}</span>
+                    <span class="mt-1 block text-xs leading-5 text-slate-600">{description}</span>
+                </label>
+            }
+        });
 
     view! {
         <main class="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
@@ -218,6 +274,16 @@ fn App() -> impl IntoView {
                             <legend class="text-sm font-semibold text-slate-800">"Output profile"</legend>
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">{profile_options}</div>
                         </fieldset>
+
+                        <fieldset class="mt-8">
+                            <legend class="text-sm font-semibold text-slate-800">"Foreground color"</legend>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{foreground_options}</div>
+                        </fieldset>
+
+                        <fieldset class="mt-8" aria-describedby="payload-caution">
+                            <legend class="text-sm font-semibold text-slate-800">"Background treatment"</legend>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{background_options}</div>
+                        </fieldset>
                     </section>
 
                     <div class="grid gap-6 lg:sticky lg:top-8">
@@ -235,11 +301,33 @@ fn App() -> impl IntoView {
                                 data-testid="qr-preview"
                             >
                                 <div
-                                    class:hidden=move || state.with(|value| value.preview().is_none())
+                                    class:hidden=move || state.with(|value| value.preview().is_none() || matches!(value.background(), Background::Transparent))
                                     class="w-full [&>svg]:h-auto [&>svg]:w-full"
                                     aria-hidden="true"
                                     inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())
                                 ></div>
+                                <div
+                                    class:hidden=move || state.with(|value| value.preview().is_none() || !matches!(value.background(), Background::Transparent))
+                                    class="grid w-full grid-cols-2 gap-2"
+                                    aria-hidden="true"
+                                >
+                                    <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-300 bg-white p-2">
+                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"White"</figcaption>
+                                    </figure>
+                                    <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-300 bg-slate-200 p-2">
+                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Light gray"</figcaption>
+                                    </figure>
+                                    <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-700 bg-slate-900 p-2">
+                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Dark"</figcaption>
+                                    </figure>
+                                    <figure data-testid="transparent-surface-preview" class="preview-surface-patterned relative grid aspect-square place-items-center rounded-lg border border-slate-400 p-2">
+                                        <div class="w-full [&>svg]:h-auto [&>svg]:w-full" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
+                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Patterned"</figcaption>
+                                    </figure>
+                                </div>
                                 <p class:hidden=move || state.with(|value| value.preview().is_some()) class="max-w-xs text-center text-sm leading-6 text-slate-500">
                                     {move || if state.with(WorkflowState::is_pending) { "Updating preview…" } else { "Enter a valid payload to see the QR preview." }}
                                 </p>
@@ -259,6 +347,10 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Quiet zone" value=move || diagnostic_value(state, |details| format!("{} modules per side", details.quiet_zone_modules())) />
                                 <Diagnostic label="PNG geometry" value=move || diagnostic_value(state, |details| format!("{} px/module · {} px symbol · {} px padding", details.module_scale(), details.rendered_symbol_side_pixels(), details.outer_padding_per_side())) />
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
+                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_label(details.foreground()).to_owned()) />
+                                <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_label(details.background()).to_owned()) />
+                                <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
+                                <Diagnostic label="Safety" value=move || diagnostic_value(state, |details| safety_label(details.safety()).to_owned()) />
                             </dl>
                             <p class="mt-5 rounded-2xl bg-slate-100 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
                                 {move || diagnostic_value(state, |details| details.print_guidance().to_owned())}
@@ -415,6 +507,41 @@ fn profile_card_class(selected: bool) -> &'static str {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-brand bg-pink-50 p-4 ring-2 ring-brand ring-offset-2 transition"
     } else {
         "focus-within:ring-brand cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-400 focus-within:ring-2 focus-within:ring-offset-2"
+    }
+}
+
+fn foreground_label(foreground: Foreground) -> &'static str {
+    match foreground {
+        Foreground::Black => "#000000",
+        Foreground::Brand => "#BD0F72",
+    }
+}
+
+fn background_label(background: Background) -> &'static str {
+    match background {
+        Background::Opaque(Rgba::WHITE) => "Opaque white",
+        Background::Transparent => "Transparent",
+        Background::Opaque(_) => "Unapproved opaque color",
+    }
+}
+
+fn contrast_label(ratio: Option<qr_render::ContrastRatio>) -> String {
+    ratio.map_or_else(
+        || "Unknown on placement surface".to_owned(),
+        |ratio| {
+            format!(
+                "{}.{:02}:1",
+                ratio.hundredths() / 100,
+                ratio.hundredths() % 100
+            )
+        },
+    )
+}
+
+fn safety_label(safety: OutputSafety) -> &'static str {
+    match safety {
+        OutputSafety::Safe => "Safe",
+        OutputSafety::Caution => "Caution",
     }
 }
 

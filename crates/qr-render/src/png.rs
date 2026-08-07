@@ -10,14 +10,17 @@ pub fn render_png(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
 
 fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
     let placement = model.png_placement();
-    let Background::Opaque(background) = model.options().background();
+    let background = match model.options().background() {
+        Background::Opaque(color) => color.channels(),
+        Background::Transparent => [0, 0, 0, 0],
+    };
     let mut pixels = Vec::new();
     pixels
         .try_reserve_exact(placement.rgba_buffer_len())
         .map_err(|_| RenderError::RenderFailure)?;
     pixels.resize(placement.rgba_buffer_len(), 0);
     for pixel in pixels.chunks_exact_mut(4) {
-        pixel.copy_from_slice(&background.channels());
+        pixel.copy_from_slice(&background);
     }
 
     let dimensions = placement.canvas_dimensions();

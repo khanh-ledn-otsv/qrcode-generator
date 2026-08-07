@@ -84,3 +84,40 @@ test("profile controls work by keyboard and layouts fit desktop and mobile width
     expect(Math.abs(previewBox!.y - payloadBox!.y)).toBeLessThan(4);
   }
 });
+
+test("offers only approved colors and shows transparent placement cautions", async ({ page }) => {
+  await enterPayload(page, "approved color workflow");
+
+  const black = page.getByRole("radio", { name: /Black/ });
+  const brand = page.getByRole("radio", { name: /Brand/ });
+  const white = page.getByRole("radio", { name: /Opaque white/ });
+  const transparent = page.getByRole("radio", { name: /Transparent/ });
+  await expect(black).toBeChecked();
+  await expect(white).toBeChecked();
+  await expect(
+    page.getByRole("group", { name: "Foreground color" }).getByRole("radio"),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("group", { name: "Background treatment" }).getByRole("radio"),
+  ).toHaveCount(2);
+
+  await brand.focus();
+  await page.keyboard.press("Space");
+  await expect.poll(() => diagnostic(page, "Foreground")).toBe("#BD0F72");
+  await expect.poll(() => diagnostic(page, "Contrast")).toBe("6.04:1");
+  await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
+    "fill",
+    "#bd0f72",
+  );
+
+  await transparent.focus();
+  await page.keyboard.press("Space");
+  await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");
+  await expect.poll(() => diagnostic(page, "Contrast")).toBe("Unknown on placement surface");
+  await expect(page.getByRole("status").filter({ hasText: "Transparent output" })).toBeVisible();
+  const surfaces = page.getByTestId("transparent-surface-preview");
+  await expect(surfaces).toHaveCount(4);
+  await expect(surfaces).toHaveText(["White", "Light gray", "Dark", "Patterned"]);
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(surfaces.first().locator("rect")).toHaveCount(0);
+});

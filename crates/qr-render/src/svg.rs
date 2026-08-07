@@ -9,9 +9,6 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
     let view_box = placement.view_box();
     let origin = placement.matrix_origin();
     let foreground = hex_color(model.options().foreground());
-    let background = match model.options().background() {
-        Background::Opaque(color) => hex_color(color),
-    };
 
     let dark_modules = model.cells().filter(|cell| cell.module().is_dark()).count();
     let estimated_path_bytes = dark_modules
@@ -26,17 +23,24 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
 
     write!(
         svg,
-        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\"><rect width=\"{}\" height=\"{}\" fill=\"{}\"/><path fill=\"{}\" d=\"",
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\">",
         output.width().get(),
         output.height().get(),
         view_box.width().get(),
         view_box.height().get(),
-        view_box.width().get(),
-        view_box.height().get(),
-        background,
-        foreground,
     )
     .map_err(|_| RenderError::RenderFailure)?;
+    if let Background::Opaque(background) = model.options().background() {
+        write!(
+            svg,
+            "<rect width=\"{}\" height=\"{}\" fill=\"{}\"/>",
+            view_box.width().get(),
+            view_box.height().get(),
+            hex_color(background),
+        )
+        .map_err(|_| RenderError::RenderFailure)?;
+    }
+    write!(svg, "<path fill=\"{}\" d=\"", foreground).map_err(|_| RenderError::RenderFailure)?;
 
     for cell in model.cells().filter(|cell| cell.module().is_dark()) {
         let x = u32::from(cell.x())

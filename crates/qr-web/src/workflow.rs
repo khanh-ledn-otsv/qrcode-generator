@@ -5,14 +5,15 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
-    OutputProfile, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
-    render_svg,
+    Background, ContrastRatio, Foreground, OutputProfile, OutputSafety, ProfileId, RenderError,
+    RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
 
 const CONTROL_CHARACTER_CAUTION: &str =
     "This payload contains control characters. Confirm that they are intentional.";
+const TRANSPARENT_OUTPUT_CAUTION: &str = "Transparent output has unknown effective contrast. Check it on white, light-gray, dark, and patterned placement surfaces.";
 const INTERNAL_FAILURE_MESSAGE: &str =
     "QR generation failed unexpectedly. Change the input and try again.";
 const SAFE_OUTPUT_GUIDANCE: &str =
@@ -79,6 +80,8 @@ pub struct PreviewRequest {
     payload: String,
     profile_id: ProfileId,
     logo_enabled: bool,
+    foreground: Foreground,
+    background: Background,
 }
 
 impl PreviewRequest {
@@ -120,6 +123,10 @@ pub struct Diagnostics {
     rendered_symbol_side_pixels: u32,
     outer_padding_per_side: u32,
     print_guidance: &'static str,
+    foreground: Foreground,
+    background: Background,
+    safety: OutputSafety,
+    contrast_ratio: Option<ContrastRatio>,
 }
 
 impl Diagnostics {
@@ -202,6 +209,26 @@ impl Diagnostics {
     pub const fn print_guidance(self) -> &'static str {
         self.print_guidance
     }
+
+    #[must_use]
+    pub const fn foreground(self) -> Foreground {
+        self.foreground
+    }
+
+    #[must_use]
+    pub const fn background(self) -> Background {
+        self.background
+    }
+
+    #[must_use]
+    pub const fn safety(self) -> OutputSafety {
+        self.safety
+    }
+
+    #[must_use]
+    pub const fn contrast_ratio(self) -> Option<ContrastRatio> {
+        self.contrast_ratio
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -282,8 +309,17 @@ impl Preview {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WorkflowFailure {
     EmptyPayload,
-    InputLimitExceeded { byte_length: usize, maximum: usize },
-    OverCapacity { maximum_version: Version },
+    InputLimitExceeded {
+        byte_length: usize,
+        maximum: usize,
+    },
+    OverCapacity {
+        maximum_version: Version,
+    },
+    UnsafeContrast {
+        actual: ContrastRatio,
+        minimum: ContrastRatio,
+    },
     Internal,
 }
 
@@ -299,6 +335,13 @@ impl WorkflowFailure {
             Self::OverCapacity { maximum_version } => format!(
                 "The payload does not fit this profile's maximum QR version {}.",
                 maximum_version.number()
+            ),
+            Self::UnsafeContrast { actual, minimum } => format!(
+                "Opaque QR contrast is {}.{:02}:1; at least {}.{:02}:1 is required.",
+                actual.hundredths() / 100,
+                actual.hundredths() % 100,
+                minimum.hundredths() / 100,
+                minimum.hundredths() % 100,
             ),
             Self::Internal => INTERNAL_FAILURE_MESSAGE.to_owned(),
         }
@@ -317,6 +360,8 @@ pub struct WorkflowState {
     payload: TextAreaBuffer,
     profile_id: ProfileId,
     logo_enabled: bool,
+    foreground: Foreground,
+    background: Background,
     revision: Revision,
     preview_state: PreviewState,
 }
@@ -328,6 +373,8 @@ impl WorkflowState {
             payload: TextAreaBuffer::new(String::new()),
             profile_id,
             logo_enabled: false,
+            foreground: Foreground::Black,
+            background: Background::Opaque(Rgba::WHITE),
             revision: Revision(0),
             preview_state: PreviewState::Invalid(WorkflowFailure::EmptyPayload),
         }
@@ -396,6 +443,22 @@ impl WorkflowState {
         self.begin_preview()
     }
 
+    pub fn select_foreground(
+        &mut self,
+        foreground: Foreground,
+    ) -> Result<PreviewRequest, WorkflowFailure> {
+        self.foreground = foreground;
+        self.begin_preview()
+    }
+
+    pub fn select_background(
+        &mut self,
+        background: Background,
+    ) -> Result<PreviewRequest, WorkflowFailure> {
+        self.background = background;
+        self.begin_preview()
+    }
+
     #[must_use]
     pub fn payload(&self) -> &str {
         self.payload.raw()
@@ -419,6 +482,16 @@ impl WorkflowState {
     #[must_use]
     pub const fn profile_id(&self) -> ProfileId {
         self.profile_id
+    }
+
+    #[must_use]
+    pub const fn foreground(&self) -> Foreground {
+        self.foreground
+    }
+
+    #[must_use]
+    pub const fn background(&self) -> Background {
+        self.background
     }
 
     #[must_use]
@@ -457,8 +530,15 @@ impl WorkflowState {
     }
 
     #[must_use]
-    pub fn caution(&self) -> Option<&'static str> {
-        control_character_caution(self.payload.raw())
+    pub fn caution(&self) -> Option<String> {
+        let control = control_character_caution(self.payload.raw());
+        let transparent = matches!(self.background, Background::Transparent)
+            .then_some(TRANSPARENT_OUTPUT_CAUTION);
+        match (control, transparent) {
+            (Some(first), Some(second)) => Some(format!("{first} {second}")),
+            (Some(caution), None) | (None, Some(caution)) => Some(caution.to_owned()),
+            (None, None) => None,
+        }
     }
 
     pub fn complete_preview(
@@ -492,6 +572,8 @@ impl WorkflowState {
             payload: self.payload.raw().to_owned(),
             profile_id: self.profile_id,
             logo_enabled: self.logo_enabled,
+            foreground: self.foreground,
+            background: self.background,
         })
     }
 
@@ -509,7 +591,8 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         max_version: profile.maximum_version(),
     })
     .map_err(|error| classify_encode_error(error, profile.maximum_version()))?;
-    let options = RenderOptions::safe(profile).map_err(|_| WorkflowFailure::Internal)?;
+    let options = RenderOptions::approved(profile, request.foreground, request.background)
+        .map_err(classify_render_error)?;
     let model = RenderModel::new(&encoded, options).map_err(|_| WorkflowFailure::Internal)?;
     let svg = render_svg(&model).map_err(|_| WorkflowFailure::Internal)?;
     let png = render_png(&model).map_err(|_| WorkflowFailure::Internal)?;
@@ -543,6 +626,10 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             rendered_symbol_side_pixels: png_placement.rendered_symbol_dimensions().width().get(),
             outer_padding_per_side: outer_padding.left.get(),
             print_guidance: profile_presentation(profile.id()).guidance(),
+            foreground: request.foreground,
+            background: request.background,
+            safety: options.safety(),
+            contrast_ratio: options.contrast_ratio(),
         },
     })
 }
@@ -586,6 +673,15 @@ fn classify_encode_error(error: EncodeError, maximum_version: Version) -> Workfl
         EncodeError::Payload(
             EncodingError::PayloadTooLargeForProfile { .. } | EncodingError::PayloadTooLargeForQr,
         ) => WorkflowFailure::OverCapacity { maximum_version },
+        _ => WorkflowFailure::Internal,
+    }
+}
+
+fn classify_render_error(error: RenderError) -> WorkflowFailure {
+    match error {
+        RenderError::UnsafeContrast { actual, minimum } => {
+            WorkflowFailure::UnsafeContrast { actual, minimum }
+        }
         _ => WorkflowFailure::Internal,
     }
 }

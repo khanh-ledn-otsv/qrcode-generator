@@ -7,7 +7,10 @@ use std::io::Cursor;
 
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, Version, encode};
-use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
+use qr_render::{
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES, render_png,
+};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 
@@ -86,6 +89,41 @@ fn decoded_pixels_are_exact_background_or_integer_module_rectangles() {
                     };
                     let offset = usize::try_from((y * width + x) * 4).unwrap();
                     assert_eq!(&pixels[offset..offset + 4], &expected);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn approved_png_color_background_profile_tuples_are_structural_and_deterministic() {
+    let encoded = encoded_qr_at_version(1);
+
+    for profile in SUPPORTED_PROFILES {
+        for foreground in APPROVED_FOREGROUNDS {
+            for background in APPROVED_BACKGROUNDS {
+                let options = RenderOptions::approved(profile, foreground, background).unwrap();
+                let model = RenderModel::new(&encoded, options).unwrap();
+                let first = render_png(&model).unwrap();
+                assert_eq!(first, render_png(&model).unwrap());
+
+                let (width, _, pixels) = decode_rgba(&first);
+                let background_pixel = match background {
+                    Background::Opaque(color) => color.channels(),
+                    Background::Transparent => [0, 0, 0, 0],
+                };
+                assert_eq!(&pixels[0..4], &background_pixel);
+
+                let dark = model.cells().find(|cell| cell.module().is_dark()).unwrap();
+                let placement = model.png_placement();
+                let scale = placement.module_scale().get();
+                let x = placement.matrix_origin().x().get() + u32::from(dark.x()) * scale;
+                let y = placement.matrix_origin().y().get() + u32::from(dark.y()) * scale;
+                let offset = usize::try_from((y * width + x) * 4).unwrap();
+                assert_eq!(&pixels[offset..offset + 4], &foreground.rgba().channels());
+                if matches!(background, Background::Transparent) {
+                    assert!(pixels.chunks_exact(4).any(|pixel| pixel == [0, 0, 0, 0]));
+                    assert!(pixels.chunks_exact(4).any(|pixel| pixel[3] == u8::MAX));
                 }
             }
         }

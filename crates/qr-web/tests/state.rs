@@ -1,5 +1,5 @@
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_render::ProfileId;
+use qr_render::{Background, ContrastRatio, Foreground, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
 
 #[test]
@@ -100,6 +100,59 @@ fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     assert_eq!(diagnostics.matrix_modules(), 21);
     assert_eq!(diagnostics.svg_side_pixels(), 90);
     assert_eq!(diagnostics.png_side_pixels(), 270);
+    assert_eq!(diagnostics.foreground(), Foreground::Black);
+    assert_eq!(diagnostics.background(), Background::Opaque(Rgba::WHITE));
+    assert_eq!(diagnostics.safety(), OutputSafety::Safe);
+    assert_eq!(
+        diagnostics.contrast_ratio(),
+        Some(ContrastRatio::from_hundredths(2_100))
+    );
+    assert!(state.exports_enabled());
+}
+
+#[test]
+fn approved_brand_and_transparency_selections_update_artifacts_and_safety() {
+    let mut state = WorkflowState::new(ProfileId::Content);
+    let payload = state
+        .set_payload("approved appearance".to_owned())
+        .expect("revision is available");
+    assert!(state.complete_preview(payload.revision(), evaluate_preview(&payload)));
+    let original = state.preview().unwrap().diagnostics();
+
+    let brand = state
+        .select_foreground(Foreground::Brand)
+        .expect("revision is available");
+    assert!(state.complete_preview(brand.revision(), evaluate_preview(&brand)));
+    let brand_preview = state.preview().unwrap();
+    assert!(brand_preview.svg().contains("fill=\"#bd0f72\""));
+    assert_eq!(brand_preview.diagnostics().foreground(), Foreground::Brand);
+    assert_eq!(
+        brand_preview.diagnostics().contrast_ratio(),
+        Some(ContrastRatio::from_hundredths(604))
+    );
+    assert_eq!(
+        brand_preview.diagnostics().selected_version(),
+        original.selected_version()
+    );
+    assert_eq!(brand_preview.diagnostics().mask(), original.mask());
+
+    let transparent = state
+        .select_background(Background::Transparent)
+        .expect("revision is available");
+    assert!(state.complete_preview(transparent.revision(), evaluate_preview(&transparent),));
+    let transparent_preview = state.preview().unwrap();
+    assert!(!transparent_preview.svg().contains("<rect"));
+    assert_eq!(
+        transparent_preview.diagnostics().safety(),
+        OutputSafety::Caution
+    );
+    assert_eq!(transparent_preview.diagnostics().contrast_ratio(), None);
+    assert_eq!(
+        state.caution().as_deref(),
+        Some(
+            "Transparent output has unknown effective contrast. Check it on white, light-gray, dark, and patterned placement surfaces."
+        )
+    );
     assert!(state.exports_enabled());
 }
 
@@ -271,6 +324,22 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     );
     assert!(!state.exports_enabled());
 
+    state
+        .set_payload("valid".to_owned())
+        .expect("revision is available");
+    let unsafe_contrast = state
+        .select_background(Background::Opaque(Rgba::opaque(116, 116, 116)))
+        .expect("revision is available");
+    assert!(state.complete_preview(
+        unsafe_contrast.revision(),
+        evaluate_preview(&unsafe_contrast),
+    ));
+    assert_eq!(
+        state.validation_message().as_deref(),
+        Some("Opaque QR contrast is 4.49:1; at least 4.50:1 is required."),
+    );
+    assert!(!state.exports_enabled());
+
     let over_limit = state
         .set_payload("x".repeat(4097))
         .expect("revision is available");
@@ -328,7 +397,7 @@ fn control_characters_add_a_deterministic_caution_without_changing_valid_text() 
 
     assert_eq!(state.payload(), "line one\nline two\t");
     assert_eq!(
-        state.caution(),
+        state.caution().as_deref(),
         Some("This payload contains control characters. Confirm that they are intentional."),
     );
     assert!(state.exports_enabled());

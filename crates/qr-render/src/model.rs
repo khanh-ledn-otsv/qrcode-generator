@@ -23,6 +23,7 @@ pub struct Rgba {
 
 impl Rgba {
     pub const BLACK: Self = Self::opaque(0, 0, 0);
+    pub const BRAND: Self = Self::opaque(189, 15, 114);
     pub const WHITE: Self = Self::opaque(255, 255, 255);
 
     #[must_use]
@@ -44,6 +45,66 @@ impl Rgba {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Background {
     Opaque(Rgba),
+    Transparent,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Foreground {
+    Black,
+    Brand,
+}
+
+impl Foreground {
+    #[must_use]
+    pub const fn rgba(self) -> Rgba {
+        match self {
+            Self::Black => Rgba::BLACK,
+            Self::Brand => Rgba::BRAND,
+        }
+    }
+}
+
+pub const APPROVED_FOREGROUNDS: [Foreground; 2] = [Foreground::Black, Foreground::Brand];
+pub const APPROVED_BACKGROUNDS: [Background; 2] =
+    [Background::Opaque(Rgba::WHITE), Background::Transparent];
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct ContrastRatio(u16);
+
+impl ContrastRatio {
+    pub const MINIMUM_OPAQUE: Self = Self::from_hundredths(450);
+
+    #[must_use]
+    pub const fn from_hundredths(hundredths: u16) -> Self {
+        Self(hundredths)
+    }
+
+    #[must_use]
+    pub const fn hundredths(self) -> u16 {
+        self.0
+    }
+
+    fn between(first: Rgba, second: Rgba) -> Self {
+        let ratio = contrast_value(first, second);
+        Self((ratio * 100.0).round() as u16)
+    }
+}
+
+fn contrast_value(first: Rgba, second: Rgba) -> f64 {
+    let first_luminance = relative_luminance(first);
+    let second_luminance = relative_luminance(second);
+    let (lighter, darker) = if first_luminance >= second_luminance {
+        (first_luminance, second_luminance)
+    } else {
+        (second_luminance, first_luminance)
+    };
+    (lighter + 0.05) / (darker + 0.05)
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum OutputSafety {
+    Safe,
+    Caution,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -83,11 +144,43 @@ pub struct RenderOptions {
 
 impl RenderOptions {
     pub fn safe(profile: OutputProfile) -> Result<Self, RenderError> {
+        Self::approved(profile, Foreground::Black, Background::Opaque(Rgba::WHITE))
+    }
+
+    pub fn approved(
+        profile: OutputProfile,
+        foreground: Foreground,
+        background: Background,
+    ) -> Result<Self, RenderError> {
+        Self::try_new(profile, foreground.rgba(), background)
+    }
+
+    pub fn try_new(
+        profile: OutputProfile,
+        foreground: Rgba,
+        background: Background,
+    ) -> Result<Self, RenderError> {
         profile.validate().map_err(RenderError::InvalidProfile)?;
+        if let Background::Opaque(background_color) = background {
+            let actual = ContrastRatio::between(foreground, background_color);
+            if contrast_value(foreground, background_color) < 4.5 {
+                return Err(RenderError::UnsafeContrast {
+                    actual,
+                    minimum: ContrastRatio::MINIMUM_OPAQUE,
+                });
+            }
+        }
+        if !APPROVED_FOREGROUNDS
+            .into_iter()
+            .any(|approved| approved.rgba() == foreground)
+            || !APPROVED_BACKGROUNDS.contains(&background)
+        {
+            return Err(RenderError::UnapprovedColorCombination);
+        }
         Ok(Self {
             profile,
-            foreground: Rgba::BLACK,
-            background: Background::Opaque(Rgba::WHITE),
+            foreground,
+            background,
             data_module_style: DataModuleStyle::Square,
             function_module_style: FunctionModuleStyle::Square,
             finder_style: FinderStyle::StandardSquare,
@@ -128,6 +221,38 @@ impl RenderOptions {
     #[must_use]
     pub const fn logo_style(self) -> LogoStyle {
         self.logo_style
+    }
+
+    #[must_use]
+    pub const fn safety(self) -> OutputSafety {
+        match self.background {
+            Background::Opaque(_) => OutputSafety::Safe,
+            Background::Transparent => OutputSafety::Caution,
+        }
+    }
+
+    #[must_use]
+    pub fn contrast_ratio(self) -> Option<ContrastRatio> {
+        match self.background {
+            Background::Opaque(background) => {
+                Some(ContrastRatio::between(self.foreground, background))
+            }
+            Background::Transparent => None,
+        }
+    }
+}
+
+fn relative_luminance(color: Rgba) -> f64 {
+    let [red, green, blue, _] = color.channels();
+    0.2126 * linear_channel(red) + 0.7152 * linear_channel(green) + 0.0722 * linear_channel(blue)
+}
+
+fn linear_channel(channel: u8) -> f64 {
+    let value = f64::from(channel) / 255.0;
+    if value <= 0.04045 {
+        value / 12.92
+    } else {
+        ((value + 0.055) / 1.055).powf(2.4)
     }
 }
 
@@ -462,6 +587,11 @@ pub enum RenderError {
         required_bytes: u64,
         maximum_bytes: u64,
     },
+    UnsafeContrast {
+        actual: ContrastRatio,
+        minimum: ContrastRatio,
+    },
+    UnapprovedColorCombination,
     RenderFailure,
 }
 
@@ -478,6 +608,17 @@ impl fmt::Display for RenderError {
                 formatter,
                 "render buffer requires {required_bytes} bytes; maximum is {maximum_bytes} bytes"
             ),
+            Self::UnsafeContrast { actual, minimum } => write!(
+                formatter,
+                "opaque foreground/background contrast is {}.{:02}:1; minimum is {}.{:02}:1",
+                actual.hundredths() / 100,
+                actual.hundredths() % 100,
+                minimum.hundredths() / 100,
+                minimum.hundredths() % 100,
+            ),
+            Self::UnapprovedColorCombination => {
+                formatter.write_str("the foreground/background combination is not approved")
+            }
             Self::RenderFailure => formatter.write_str("rendering failed"),
         }
     }

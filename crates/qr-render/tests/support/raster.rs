@@ -8,6 +8,7 @@ pub fn rasterize_svg(
     let tree = resvg::usvg::Tree::from_str(svg, &resvg::usvg::Options::default())?;
     let mut pixmap =
         resvg::tiny_skia::Pixmap::new(width, height).ok_or("could not allocate SVG pixmap")?;
+    pixmap.fill(resvg::tiny_skia::Color::WHITE);
     resvg::render(
         &tree,
         resvg::tiny_skia::Transform::identity(),

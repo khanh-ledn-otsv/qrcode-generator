@@ -5,7 +5,10 @@ mod versions;
 
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
-use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, Version, render_svg};
+use qr_render::{
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions, Rgba,
+    SUPPORTED_PROFILES, Version, render_svg,
+};
 use sha2::{Digest, Sha256};
 
 #[test]
@@ -65,6 +68,56 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
             assert!(!attribute.name().starts_with("on"));
             assert!(!matches!(attribute.name(), "href" | "stroke" | "style"));
             assert!(!attribute.value().contains("://"));
+        }
+    }
+}
+
+#[test]
+fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic() {
+    let encoded = encoded_qr("APPROVED SVG APPEARANCE");
+
+    for profile in SUPPORTED_PROFILES {
+        let safe_model = RenderModel::new(&encoded, RenderOptions::safe(profile).unwrap()).unwrap();
+        let safe_svg = render_svg(&safe_model).unwrap();
+        let safe_document = roxmltree::Document::parse(&safe_svg).unwrap();
+        let safe_path = safe_document
+            .descendants()
+            .find(|node| node.has_tag_name("path"))
+            .and_then(|node| node.attribute("d"))
+            .unwrap();
+
+        for foreground in APPROVED_FOREGROUNDS {
+            for background in APPROVED_BACKGROUNDS {
+                let options = RenderOptions::approved(profile, foreground, background).unwrap();
+                let model = RenderModel::new(&encoded, options).unwrap();
+                let first = render_svg(&model).unwrap();
+                assert_eq!(first, render_svg(&model).unwrap());
+
+                let document = roxmltree::Document::parse(&first).unwrap();
+                let root = document.root_element();
+                let rect = root.children().find(|node| node.has_tag_name("rect"));
+                match background {
+                    Background::Opaque(Rgba::WHITE) => {
+                        assert_eq!(
+                            rect.and_then(|node| node.attribute("fill")),
+                            Some("#ffffff")
+                        );
+                    }
+                    Background::Transparent => assert!(rect.is_none()),
+                    Background::Opaque(_) => panic!("only approved backgrounds are enumerated"),
+                }
+                let path = root
+                    .children()
+                    .find(|node| node.has_tag_name("path"))
+                    .unwrap();
+                assert_eq!(path.attribute("d"), Some(safe_path));
+                let expected_foreground = if foreground.rgba() == Rgba::BLACK {
+                    "#000000"
+                } else {
+                    "#bd0f72"
+                };
+                assert_eq!(path.attribute("fill"), Some(expected_foreground));
+            }
         }
     }
 }

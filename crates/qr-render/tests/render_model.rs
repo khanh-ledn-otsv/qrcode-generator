@@ -5,9 +5,10 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    Background, DataModuleStyle, FinderStyle, FunctionModuleStyle, LogoStyle,
-    MAX_RGBA_BUFFER_BYTES, OutputProfile, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, Version,
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, ContrastRatio, DataModuleStyle,
+    FinderStyle, Foreground, FunctionModuleStyle, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile,
+    OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
+    Version,
 };
 
 #[test]
@@ -36,6 +37,83 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
     );
     assert_eq!(model.options().finder_style(), FinderStyle::StandardSquare);
     assert_eq!(model.options().logo_style(), LogoStyle::None);
+}
+
+#[test]
+fn approved_color_and_background_options_have_measurable_safety() {
+    let profile = SUPPORTED_PROFILES[1];
+
+    let safe = RenderOptions::approved(profile, Foreground::Black, Background::Opaque(Rgba::WHITE))
+        .unwrap();
+    assert_eq!(safe.foreground(), Rgba::BLACK);
+    assert_eq!(safe.safety(), OutputSafety::Safe);
+    assert_eq!(
+        safe.contrast_ratio(),
+        Some(ContrastRatio::from_hundredths(2_100))
+    );
+
+    let brand =
+        RenderOptions::approved(profile, Foreground::Brand, Background::Opaque(Rgba::WHITE))
+            .unwrap();
+    assert_eq!(brand.foreground(), Rgba::BRAND);
+    assert_eq!(brand.safety(), OutputSafety::Safe);
+    assert_eq!(
+        brand.contrast_ratio(),
+        Some(ContrastRatio::from_hundredths(604))
+    );
+
+    let transparent =
+        RenderOptions::approved(profile, Foreground::Brand, Background::Transparent).unwrap();
+    assert_eq!(transparent.safety(), OutputSafety::Caution);
+    assert_eq!(transparent.contrast_ratio(), None);
+}
+
+#[test]
+fn only_approved_combinations_can_be_rendered_and_unsafe_contrast_is_typed() {
+    let profile = SUPPORTED_PROFILES[1];
+    let unsafe_gray = Rgba::opaque(119, 119, 119);
+
+    assert_eq!(
+        RenderOptions::try_new(profile, unsafe_gray, Background::Opaque(Rgba::WHITE)),
+        Err(RenderError::UnsafeContrast {
+            actual: ContrastRatio::from_hundredths(448),
+            minimum: ContrastRatio::MINIMUM_OPAQUE,
+        })
+    );
+    assert_eq!(
+        RenderOptions::try_new(
+            profile,
+            Rgba::opaque(119, 118, 124),
+            Background::Opaque(Rgba::WHITE),
+        ),
+        Err(RenderError::UnsafeContrast {
+            actual: ContrastRatio::from_hundredths(450),
+            minimum: ContrastRatio::MINIMUM_OPAQUE,
+        })
+    );
+    assert_eq!(
+        RenderOptions::try_new(
+            profile,
+            Rgba::opaque(0, 96, 0),
+            Background::Opaque(Rgba::WHITE),
+        ),
+        Err(RenderError::UnapprovedColorCombination)
+    );
+}
+
+#[test]
+fn generated_approved_color_background_profile_matrix_is_complete() {
+    let combinations =
+        SUPPORTED_PROFILES.len() * APPROVED_FOREGROUNDS.len() * APPROVED_BACKGROUNDS.len();
+    assert_eq!(combinations, 16);
+
+    for profile in SUPPORTED_PROFILES {
+        for foreground in APPROVED_FOREGROUNDS {
+            for background in APPROVED_BACKGROUNDS {
+                RenderOptions::approved(profile, foreground, background).unwrap();
+            }
+        }
+    }
 }
 
 #[test]
