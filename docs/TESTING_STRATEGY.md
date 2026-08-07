@@ -335,7 +335,7 @@ Decode the emitted PNG as a file and inspect:
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
 - exact square-module rectangles with no intermediate colors in safe mode;
-- approved edge coverage only for rounded/dot styles;
+- approved edge coverage only for rounded/dot QR data styles and the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
 - byte-for-byte equality for repeated requests on native and WASM where encoder output is specified to be cross-target identical.
 
 Decode the resulting pixels through ZXing-C++; do not declare success merely because the same `png` crate can read its own output.

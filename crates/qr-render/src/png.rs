@@ -3,6 +3,9 @@ use png::{BitDepth, ColorType, Compression, Encoder, Filter};
 use crate::logo::{logo_contains_source_point, source_view_box};
 use crate::{Background, DataModuleStyle, PixelDimensions, RenderError, RenderModel, Rgba};
 
+const LOGO_SAMPLES_PER_AXIS: u32 = 4;
+const LOGO_SAMPLE_COUNT: u32 = LOGO_SAMPLES_PER_AXIS * LOGO_SAMPLES_PER_AXIS;
+
 const COVERAGE_SAMPLES_PER_AXIS: u32 = 8;
 const FULL_COVERAGE: u32 = COVERAGE_SAMPLES_PER_AXIS * COVERAGE_SAMPLES_PER_AXIS;
 
@@ -118,13 +121,25 @@ fn render_logo(
     let canvas_width = u64::from(dimensions.width().get());
     for y in y_start..y_end {
         for x in x_start..x_end {
-            let source_x = f64::from(view_box_left)
-                + (f64::from(x) + 0.5 - source_left_pixels) * f64::from(view_box_width)
-                    / source_width_pixels;
-            let source_y = f64::from(view_box_top)
-                + (f64::from(y) + 0.5 - source_top_pixels) * f64::from(view_box_height)
-                    / source_height_pixels;
-            if !logo_contains_source_point(source_x, source_y) {
+            let mut covered_samples = 0;
+            for sample_y in 0..LOGO_SAMPLES_PER_AXIS {
+                for sample_x in 0..LOGO_SAMPLES_PER_AXIS {
+                    let pixel_x = f64::from(x)
+                        + (f64::from(sample_x) + 0.5) / f64::from(LOGO_SAMPLES_PER_AXIS);
+                    let pixel_y = f64::from(y)
+                        + (f64::from(sample_y) + 0.5) / f64::from(LOGO_SAMPLES_PER_AXIS);
+                    let source_x = f64::from(view_box_left)
+                        + (pixel_x - source_left_pixels) * f64::from(view_box_width)
+                            / source_width_pixels;
+                    let source_y = f64::from(view_box_top)
+                        + (pixel_y - source_top_pixels) * f64::from(view_box_height)
+                            / source_height_pixels;
+                    if logo_contains_source_point(source_x, source_y) {
+                        covered_samples += 1;
+                    }
+                }
+            }
+            if covered_samples == 0 {
                 continue;
             }
             let offset = u64::from(y)
@@ -136,10 +151,30 @@ fn render_logo(
             pixels
                 .get_mut(offset..offset + 4)
                 .ok_or(RenderError::RenderFailure)?
-                .copy_from_slice(&Rgba::BRAND.channels());
+                .copy_from_slice(&logo_pixel(covered_samples)?);
         }
     }
     Ok(())
+}
+
+fn logo_pixel(covered_samples: u32) -> Result<[u8; 4], RenderError> {
+    if covered_samples == LOGO_SAMPLE_COUNT {
+        return Ok(Rgba::BRAND.channels());
+    }
+    let [red, green, blue, _] = Rgba::BRAND.channels();
+    Ok([
+        blend_logo_channel(red, covered_samples)?,
+        blend_logo_channel(green, covered_samples)?,
+        blend_logo_channel(blue, covered_samples)?,
+        u8::MAX,
+    ])
+}
+
+fn blend_logo_channel(channel: u8, covered_samples: u32) -> Result<u8, RenderError> {
+    let uncovered_samples = LOGO_SAMPLE_COUNT - covered_samples;
+    let blended = u32::from(channel) * covered_samples + 255 * uncovered_samples;
+    u8::try_from((blended + LOGO_SAMPLE_COUNT / 2) / LOGO_SAMPLE_COUNT)
+        .map_err(|_| RenderError::RenderFailure)
 }
 
 fn fill_rectangle(

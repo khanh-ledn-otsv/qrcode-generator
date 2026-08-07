@@ -95,6 +95,9 @@ fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() 
             .chunks_exact(4)
             .any(|pixel| pixel == [189, 15, 114, 255])
     );
+    assert!(pixels.chunks_exact(4).any(|pixel| {
+        pixel[3] == 255 && pixel != [255, 255, 255, 255] && pixel != [189, 15, 114, 255]
+    }));
     let row_bytes = usize::try_from(output.width).unwrap() * 4;
     assert!(
         pixels[..row_bytes]
