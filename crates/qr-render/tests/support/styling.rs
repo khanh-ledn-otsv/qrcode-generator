@@ -13,13 +13,13 @@ pub struct ApprovedStyleTuple {
     pub profile_index: usize,
     pub foreground_index: usize,
     pub background_index: usize,
-    pub function_style_index: usize,
+    pub module_style_index: usize,
     pub finder_index: usize,
     pub logo_index: usize,
     pub profile: OutputProfile,
     pub foreground: Foreground,
     pub background: Background,
-    pub function_style: ModuleStyle,
+    pub module_style: ModuleStyle,
     pub finder: FinderStyle,
     pub logo: LogoStyle,
 }
@@ -28,7 +28,7 @@ impl ApprovedStyleTuple {
     pub fn options(self) -> Result<RenderOptions, RenderError> {
         let options = RenderOptions::approved(self.profile, self.foreground, self.background)?
             .with_logo(self.logo)?;
-        if options.module_style() != self.function_style || options.finder_style() != self.finder {
+        if options.module_style() != self.module_style || options.finder_style() != self.finder {
             return Err(RenderError::RenderFailure);
         }
         Ok(options)
@@ -56,7 +56,7 @@ impl ApprovedStyleTuple {
             self.profile_index,
             self.foreground_index,
             self.background_index,
-            self.function_style_index,
+            self.module_style_index,
             self.finder_index,
             self.logo_index,
         )
@@ -68,7 +68,7 @@ pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
             for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                for (function_style_index, function_style) in
+                for (module_style_index, module_style) in
                     APPROVED_MODULE_STYLES.into_iter().enumerate()
                 {
                     for (finder_index, finder) in APPROVED_FINDERS.into_iter().enumerate() {
@@ -77,13 +77,13 @@ pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
                                 profile_index,
                                 foreground_index,
                                 background_index,
-                                function_style_index,
+                                module_style_index,
                                 finder_index,
                                 logo_index,
                                 profile,
                                 foreground,
                                 background,
-                                function_style,
+                                module_style,
                                 finder,
                                 logo,
                             });
@@ -246,13 +246,13 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
             profile_index,
             foreground_index: 0,
             background_index: 0,
-            function_style_index: 0,
+            module_style_index: 0,
             finder_index: 0,
             logo_index: 0,
             profile,
             foreground: Foreground::Brand,
             background: APPROVED_BACKGROUNDS[0],
-            function_style: APPROVED_MODULE_STYLES[0],
+            module_style: APPROVED_MODULE_STYLES[0],
             finder: APPROVED_FINDERS[0],
             logo: LogoStyle::None,
         };
