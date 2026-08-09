@@ -40,6 +40,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             let encoded = encode(EncodeRequest {
                 text: &text,
                 ecc: ErrorCorrection::High,
+                min_version: qr_core::Version::MINIMUM,
                 max_version: Version::try_from(version)?,
             })?;
             let expected = DecodeExpectation {
@@ -86,6 +87,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             let encoded = encode(EncodeRequest {
                 text: &text,
                 ecc: ErrorCorrection::High,
+                min_version: qr_core::Version::MINIMUM,
                 max_version: profile.maximum_version(),
             })?;
             let expected = DecodeExpectation {
@@ -146,6 +148,7 @@ fn required_logo_payloads(
         if encode(EncodeRequest {
             text: &text,
             ecc: ErrorCorrection::High,
+            min_version: qr_core::Version::MINIMUM,
             max_version: profile.maximum_version(),
         })
         .is_ok()
@@ -159,6 +162,7 @@ fn required_logo_payloads(
     let dense = encode(EncodeRequest {
         text: &dense_url,
         ecc: ErrorCorrection::High,
+        min_version: qr_core::Version::MINIMUM,
         max_version: profile.maximum_version(),
     })?;
     if dense.version() != profile.maximum_version() {

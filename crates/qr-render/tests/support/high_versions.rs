@@ -9,6 +9,7 @@ pub fn payload_for_high_version(version: u8) -> Result<String, Box<dyn Error>> {
         if encode(EncodeRequest {
             text: &text,
             ecc: ErrorCorrection::High,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::try_from(version)?,
         })
         .is_ok_and(|encoded| encoded.version().number() == version)

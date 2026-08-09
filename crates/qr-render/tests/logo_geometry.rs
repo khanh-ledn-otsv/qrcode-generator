@@ -17,6 +17,7 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
             let encoded = encode(EncodeRequest {
                 text: &text,
                 ecc: ErrorCorrection::High,
+                min_version: qr_core::Version::MINIMUM,
                 max_version: Version::new(version_number).unwrap(),
             })
             .unwrap();
@@ -95,6 +96,7 @@ fn logo_requires_high_ecc_and_opaque_white() {
     let encoded = encode(EncodeRequest {
         text: "logo",
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: profile.maximum_version(),
     })
     .unwrap();

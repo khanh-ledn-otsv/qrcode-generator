@@ -22,6 +22,10 @@ const SAFE_OUTPUT_GUIDANCE: &str =
     "Use SVG when resizing and validate the QR code in its final environment.";
 const PRINT_OUTPUT_GUIDANCE: &str =
     "Place at 25–30 mm or larger; validate for the actual environment.";
+const BRANDED_MINIMUM_VERSION: Version = match Version::new(6) {
+    Ok(version) => version,
+    Err(_) => panic!("the approved branded minimum must be a valid QR version"),
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProfilePresentation {
@@ -105,6 +109,15 @@ impl PreviewRequest {
             ErrorCorrection::Medium
         }
     }
+
+    #[must_use]
+    pub const fn minimum_version(&self) -> Version {
+        if self.logo_enabled {
+            BRANDED_MINIMUM_VERSION
+        } else {
+            Version::MINIMUM
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -112,8 +125,10 @@ pub struct Diagnostics {
     mode: DataMode,
     ecc: ErrorCorrection,
     mask: MaskId,
+    minimum_version: Version,
     maximum_version: Version,
     selected_version: Version,
+    branding_increased_version: bool,
     used_data_bits: u32,
     available_data_bits: u32,
     data_codewords: u16,
@@ -152,6 +167,11 @@ impl Diagnostics {
     }
 
     #[must_use]
+    pub const fn minimum_version(self) -> Version {
+        self.minimum_version
+    }
+
+    #[must_use]
     pub const fn maximum_version(self) -> Version {
         self.maximum_version
     }
@@ -159,6 +179,11 @@ impl Diagnostics {
     #[must_use]
     pub const fn selected_version(self) -> Version {
         self.selected_version
+    }
+
+    #[must_use]
+    pub const fn branding_increased_version(self) -> bool {
+        self.branding_increased_version
     }
 
     #[must_use]
@@ -347,6 +372,11 @@ pub enum WorkflowFailure {
         minimum: ContrastRatio,
     },
     LogoRequiresOpaqueWhite,
+    LogoMinimumUnavailable {
+        minimum_version: Version,
+        maximum_version: Version,
+        profile_name: &'static str,
+    },
     UnsafeLogoGeometry,
     Internal,
 }
@@ -374,6 +404,15 @@ impl WorkflowFailure {
             Self::LogoRequiresOpaqueWhite => {
                 "Logo mode requires an opaque white QR background.".to_owned()
             }
+            Self::LogoMinimumUnavailable {
+                minimum_version,
+                maximum_version,
+                profile_name,
+            } => format!(
+                "Logo mode requires QR version {} or larger, but {profile_name} supports up to version {}.",
+                minimum_version.number(),
+                maximum_version.number(),
+            ),
             Self::UnsafeLogoGeometry => {
                 "Logo mode is unavailable because no safe placement exists for this QR version."
                     .to_owned()
@@ -635,9 +674,10 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
     let encoded = encode(EncodeRequest {
         text: request.payload(),
         ecc: request.ecc(),
+        min_version: request.minimum_version(),
         max_version: profile.maximum_version(),
     })
-    .map_err(|error| classify_encode_error(error, profile.maximum_version()))?;
+    .map_err(|error| classify_encode_error(error, request, profile))?;
     let options = RenderOptions::approved(profile, request.foreground, request.background)
         .and_then(|options| {
             options.with_logo(if request.logo_enabled {
@@ -667,8 +707,10 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             mode: encoded.mode(),
             ecc: encoded.ecc(),
             mask: encoded.mask(),
+            minimum_version: request.minimum_version(),
             maximum_version: profile.maximum_version(),
             selected_version: encoded.version(),
+            branding_increased_version: request.logo_enabled && encoded.minimum_version_applied(),
             used_data_bits: encoded.data_bits_used(),
             available_data_bits: encoded.data_bits_capacity(),
             data_codewords,
@@ -712,13 +754,35 @@ pub const fn ecc_label(ecc: ErrorCorrection) -> &'static str {
     }
 }
 
+#[must_use]
+pub fn version_label(diagnostics: Diagnostics) -> String {
+    if diagnostics.branding_increased_version() {
+        format!(
+            "V{} / V{} max · raised to V{} for branding",
+            diagnostics.selected_version().number(),
+            diagnostics.maximum_version().number(),
+            diagnostics.minimum_version().number(),
+        )
+    } else {
+        format!(
+            "V{} / V{} max",
+            diagnostics.selected_version().number(),
+            diagnostics.maximum_version().number(),
+        )
+    }
+}
+
 fn supported_profile(profile_id: ProfileId) -> Option<OutputProfile> {
     SUPPORTED_PROFILES
         .into_iter()
         .find(|profile| profile.id() == profile_id)
 }
 
-fn classify_encode_error(error: EncodeError, maximum_version: Version) -> WorkflowFailure {
+fn classify_encode_error(
+    error: EncodeError,
+    request: &PreviewRequest,
+    profile: OutputProfile,
+) -> WorkflowFailure {
     match error {
         EncodeError::Payload(EncodingError::EmptyPayload) => WorkflowFailure::EmptyPayload,
         EncodeError::Payload(EncodingError::InputLimitExceeded {
@@ -730,7 +794,18 @@ fn classify_encode_error(error: EncodeError, maximum_version: Version) -> Workfl
         },
         EncodeError::Payload(
             EncodingError::PayloadTooLargeForProfile { .. } | EncodingError::PayloadTooLargeForQr,
-        ) => WorkflowFailure::OverCapacity { maximum_version },
+        ) => WorkflowFailure::OverCapacity {
+            maximum_version: profile.maximum_version(),
+        },
+        EncodeError::Payload(EncodingError::InvalidVersionRange { minimum, maximum })
+            if request.logo_enabled =>
+        {
+            WorkflowFailure::LogoMinimumUnavailable {
+                minimum_version: minimum,
+                maximum_version: maximum,
+                profile_name: profile_presentation(profile.id()).name(),
+            }
+        }
         _ => WorkflowFailure::Internal,
     }
 }

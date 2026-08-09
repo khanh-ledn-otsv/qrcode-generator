@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let encoded = encode(EncodeRequest {
         text: &text,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(40)?,
     })?;
     println!(

@@ -37,11 +37,12 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.subarray(0, 8)).toEqual(Buffer.from("89504e470d0a1a0a", "hex"));
   expect(png.readUInt32BE(16)).toBe(360);
   expect(png.readUInt32BE(20)).toBe(360);
+  // These hashes pin the default Content-profile V6 branded artifacts.
   expect(await sha256(svg)).toBe(
-    "6d6f319323229ef8cd924bce952cda49163de7c482311c6cd5eaad0906c713c7",
+    "a100700e43bc6eb1881c7a2cdb94a0c370845b0dc79b167c23ae480cd3977405",
   );
   expect(await sha256(png)).toBe(
-    "3495a59c2a4f841fe784961f99c86eecdae9c9e63e02aceec06e01494325f7e5",
+    "0a04d1af3deb289c5c7cba419e2813e0550a2bcc9be5b9aa5f46982d2c7652bf",
   );
 });
 

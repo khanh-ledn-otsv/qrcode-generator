@@ -44,6 +44,7 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
             let encoded = encode(EncodeRequest {
                 text: &text,
                 ecc: ErrorCorrection::Medium,
+                min_version: qr_core::Version::MINIMUM,
                 max_version: Version::try_from(version)?,
             })?;
             if encoded.version().number() != version {

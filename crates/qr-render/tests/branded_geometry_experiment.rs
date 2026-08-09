@@ -135,6 +135,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
                     let encoded = encode(EncodeRequest {
                         text: &text,
                         ecc: ErrorCorrection::Medium,
+                        min_version: qr_core::Version::MINIMUM,
                         max_version: profile.maximum_version(),
                     })?;
                     for transparent in [false, true] {
@@ -455,6 +456,7 @@ fn payload_cases_for_version(version: u8) -> Result<Vec<EncodedPayloadCase>, Box
         let encoded = encode(EncodeRequest {
             text: &text,
             ecc: ErrorCorrection::High,
+            min_version: qr_core::Version::MINIMUM,
             max_version: target,
         })?;
         if encoded.version() != target {
@@ -479,6 +481,7 @@ fn first_selecting_version(
         if encode(EncodeRequest {
             text: &candidate,
             ecc,
+            min_version: qr_core::Version::MINIMUM,
             max_version: version,
         })
         .is_ok_and(|encoded| encoded.version() == version)
@@ -501,6 +504,7 @@ fn largest_fitting(
         if encode(EncodeRequest {
             text: &candidate,
             ecc,
+            min_version: qr_core::Version::MINIMUM,
             max_version: maximum,
         })
         .is_ok()

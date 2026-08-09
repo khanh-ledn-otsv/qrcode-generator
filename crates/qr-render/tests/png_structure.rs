@@ -293,6 +293,7 @@ fn encoded_qr_at_version(version: u8) -> EncodedQr {
     encode(EncodeRequest {
         text: &text,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::try_from(version).unwrap(),
     })
     .unwrap()

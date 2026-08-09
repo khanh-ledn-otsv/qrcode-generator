@@ -31,6 +31,7 @@ impl EciAssignment {
 pub struct EncodeRequest<'a> {
     pub text: &'a str,
     pub ecc: ErrorCorrection,
+    pub min_version: Version,
     pub max_version: Version,
 }
 
@@ -42,6 +43,7 @@ pub struct EncodedData {
     eci_assignment: Option<EciAssignment>,
     data_bits_used: u32,
     data_bits_capacity: u32,
+    minimum_version_applied: bool,
     data_codewords: Vec<u8>,
 }
 
@@ -77,12 +79,23 @@ impl EncodedData {
     }
 
     #[must_use]
+    pub const fn minimum_version_applied(&self) -> bool {
+        self.minimum_version_applied
+    }
+
+    #[must_use]
     pub fn data_codewords(&self) -> &[u8] {
         &self.data_codewords
     }
 }
 
 pub fn encode(request: EncodeRequest<'_>) -> Result<EncodedData, EncodingError> {
+    if request.min_version > request.max_version {
+        return Err(EncodingError::InvalidVersionRange {
+            minimum: request.min_version,
+            maximum: request.max_version,
+        });
+    }
     let payload = request.text.as_bytes();
     if payload.is_empty() {
         return Err(EncodingError::EmptyPayload);
@@ -96,14 +109,20 @@ pub fn encode(request: EncodeRequest<'_>) -> Result<EncodedData, EncodingError> 
 
     let segment = PreparedSegment::new(payload, request.text.is_ascii())?;
     let first_fit = first_fitting_version(&segment, request.ecc)?;
-    if first_fit > request.max_version {
+    let selected_version = first_fit.max(request.min_version);
+    if selected_version > request.max_version {
         return Err(EncodingError::PayloadTooLargeForProfile {
             required: first_fit,
             maximum: request.max_version,
         });
     }
 
-    encode_at_version(&segment, request.ecc, first_fit)
+    encode_at_version(
+        &segment,
+        request.ecc,
+        selected_version,
+        selected_version > first_fit,
+    )
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -231,6 +250,7 @@ fn encode_at_version(
     segment: &PreparedSegment<'_>,
     error_correction: ErrorCorrection,
     version: Version,
+    minimum_version_applied: bool,
 ) -> Result<EncodedData, EncodingError> {
     let row = lookup(version, error_correction)?;
     let capacity_bits = u32::from(row.data_codewords())
@@ -271,6 +291,7 @@ fn encode_at_version(
         eci_assignment: segment.eci_assignment,
         data_bits_used,
         data_bits_capacity: capacity_bits,
+        minimum_version_applied,
         data_codewords,
     })
 }
@@ -351,6 +372,7 @@ fn alphanumeric_value(byte: u8) -> Option<u8> {
 pub enum EncodingError {
     EmptyPayload,
     InputLimitExceeded { byte_length: usize, maximum: usize },
+    InvalidVersionRange { minimum: Version, maximum: Version },
     PayloadTooLargeForProfile { required: Version, maximum: Version },
     PayloadTooLargeForQr,
     MalformedPayload { mode: DataMode },
@@ -370,6 +392,12 @@ impl fmt::Display for EncodingError {
             } => write!(
                 formatter,
                 "QR payload is {byte_length} bytes; the input limit is {maximum} bytes"
+            ),
+            Self::InvalidVersionRange { minimum, maximum } => write!(
+                formatter,
+                "minimum QR version {} exceeds maximum version {}",
+                minimum.number(),
+                maximum.number()
             ),
             Self::PayloadTooLargeForProfile { required, maximum } => write!(
                 formatter,

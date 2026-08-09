@@ -26,6 +26,7 @@ fuzz_target!(|data: &[u8]| {
     let Ok(encoded) = encode(EncodeRequest {
         text,
         ecc,
+        min_version: qr_core::Version::MINIMUM,
         max_version: profile.maximum_version(),
     }) else {
         return;

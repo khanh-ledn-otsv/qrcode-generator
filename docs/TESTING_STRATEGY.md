@@ -412,7 +412,8 @@ Keep form state and validation derivation in plain Rust where possible. Unit-tes
 
 - every input-to-derived-state transition;
 - profile changes recalculate version, limits, sizes, logo availability, and warnings;
-- logo toggling changes ECC to H before version selection;
+- logo toggling changes ECC to H and the minimum to Version 6 before version selection, then restores ECC M and the Version 1 minimum when disabled;
+- diagnostics explain when the branded minimum, rather than payload capacity, enlarged the symbol;
 - invalid states always disable both exports;
 - stale debounced work cannot overwrite newer input state;
 - warning ordering and severity are deterministic;
@@ -439,6 +440,7 @@ Test through the user-visible UI:
 - character count versus UTF-8 byte count;
 - all profile selections and displayed diagnostics;
 - version/ECC changes, including logo-triggered H;
+- the default logo workflow selects at least Version 6, explains a branding-raised version, and keeps valid exports enabled;
 - invalid capacity and unsafe-style states;
 - transparent/background warnings;
 - keyboard-only operation and visible focus;
@@ -476,7 +478,8 @@ Core properties:
 - encode success implies all matrix cells assigned and all dimensions valid;
 - encode failure is typed and never panics;
 - encode → safe render → independent decode returns identical bytes/text;
-- version selected is the first fitting version under the request limit;
+- version selected is the greater of the first fitting version and the checked request minimum, without exceeding the request maximum;
+- inverted version ranges return a typed error, and `min == max`, exact-fit, one-over, and naturally larger cases stay capacity-correct;
 - increasing the maximum version cannot turn a successful request into capacity failure;
 - identical requests produce identical matrix, SVG, PNG, diagnostics, and hashes;
 - branding never changes encoded matrix values or module classification;

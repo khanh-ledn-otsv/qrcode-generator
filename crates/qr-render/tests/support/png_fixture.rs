@@ -10,6 +10,7 @@ pub fn artifact() -> Vec<u8> {
     let encoded = encode(EncodeRequest {
         text: PAYLOAD,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::try_from(8).unwrap(),
     })
     .unwrap();

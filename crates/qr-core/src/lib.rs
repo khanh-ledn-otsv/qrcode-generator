@@ -29,6 +29,7 @@ pub struct Version(u8);
 impl Version {
     pub const MIN: u8 = 1;
     pub const MAX: u8 = 40;
+    pub const MINIMUM: Self = Self(Self::MIN);
 
     pub const fn new(number: u8) -> Result<Self, VersionError> {
         if number < Self::MIN || number > Self::MAX {

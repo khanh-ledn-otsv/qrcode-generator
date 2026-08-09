@@ -4,11 +4,82 @@ use qr_core::encoding::{EciAssignment, EncodeRequest, EncodingError, encode};
 use qr_core::tables::{DataMode, ErrorCorrection};
 
 #[test]
+fn minimum_version_raises_a_small_payload_without_changing_its_encoding_policy() {
+    let encoded = encode(EncodeRequest {
+        text: "brand me",
+        ecc: ErrorCorrection::High,
+        min_version: Version::new(6).expect("Version 6 is valid"),
+        max_version: Version::new(8).expect("Version 8 is valid"),
+    })
+    .expect("small payload fits the requested range");
+
+    assert_eq!(encoded.version().number(), 6);
+    assert_eq!(encoded.mode(), DataMode::Byte);
+    assert_eq!(encoded.eci_assignment(), None);
+    assert_eq!(encoded.data_bits_used(), 76);
+    assert!(encoded.minimum_version_applied());
+}
+
+#[test]
+fn checked_version_range_covers_exact_one_over_natural_fit_and_inversion() {
+    let version_six = Version::new(6).expect("Version 6 is valid");
+    let version_eight = Version::new(8).expect("Version 8 is valid");
+    let exact = "a".repeat(58);
+    let one_over = "a".repeat(59);
+
+    let exact = encode(EncodeRequest {
+        text: &exact,
+        ecc: ErrorCorrection::High,
+        min_version: version_six,
+        max_version: version_six,
+    })
+    .expect("58 byte-mode characters fit Version 6-H");
+    assert_eq!(exact.version(), version_six);
+    assert_eq!(exact.data_bits_used(), 476);
+    assert_eq!(exact.data_bits_capacity(), 480);
+
+    assert!(matches!(
+        encode(EncodeRequest {
+            text: &one_over,
+            ecc: ErrorCorrection::High,
+            min_version: version_six,
+            max_version: version_six,
+        }),
+        Err(EncodingError::PayloadTooLargeForProfile { required, maximum })
+            if required.number() == 7 && maximum == version_six
+    ));
+
+    let natural_fit = encode(EncodeRequest {
+        text: &one_over,
+        ecc: ErrorCorrection::High,
+        min_version: version_six,
+        max_version: version_eight,
+    })
+    .expect("the range permits the naturally larger fit");
+    assert_eq!(natural_fit.version().number(), 7);
+    assert!(!natural_fit.minimum_version_applied());
+
+    assert_eq!(
+        encode(EncodeRequest {
+            text: "unchanged",
+            ecc: ErrorCorrection::High,
+            min_version: version_eight,
+            max_version: version_six,
+        }),
+        Err(EncodingError::InvalidVersionRange {
+            minimum: version_eight,
+            maximum: version_six,
+        })
+    );
+}
+
+#[test]
 fn numeric_payload_uses_the_first_fitting_version_and_exact_padded_codewords() {
     // The literal was checked against pinned qrcodegen 1.8.0 and qrcode 8.2.
     let encoded = encode(EncodeRequest {
         text: "01234567",
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(40).expect("Version 40 is valid"),
     })
     .expect("numeric payload fits");
@@ -55,6 +126,7 @@ fn numeric_groups_of_one_two_and_three_digits_match_oracle_codewords() {
         let encoded = encode(EncodeRequest {
             text,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(1).expect("Version 1 is valid"),
         })
         .expect("numeric group fits");
@@ -102,6 +174,7 @@ fn whole_payload_mode_selection_and_eci_match_oracle_codewords() {
         let encoded = encode(EncodeRequest {
             text,
             ecc: error_correction,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         })
         .expect("test payload fits");
@@ -116,6 +189,7 @@ fn whitespace_and_line_breaks_are_encoded_without_trimming_or_normalization() {
     let encoded = encode(EncodeRequest {
         text: "\nhello ",
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(1).expect("Version 1 is valid"),
     })
     .expect("preserved payload fits");
@@ -135,6 +209,7 @@ fn complete_alphanumeric_alphabet_is_selected_as_one_segment() {
     let encoded = encode(EncodeRequest {
         text: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:",
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(40).expect("Version 40 is valid"),
     })
     .expect("alphanumeric alphabet fits");
@@ -155,6 +230,7 @@ fn version_selection_uses_the_requested_error_correction_capacity() {
         let encoded = encode(EncodeRequest {
             text: &payload,
             ecc: error_correction,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         })
         .expect("payload fits");
@@ -172,12 +248,14 @@ fn truncated_terminator_fit_stays_in_version_one_and_one_more_digit_selects_vers
     let exact = encode(EncodeRequest {
         text: &exact,
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: maximum,
     })
     .expect("41 digits fit Version 1-L");
     let one_more = encode(EncodeRequest {
         text: &one_more,
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: maximum,
     })
     .expect("42 digits fit Version 2-L");
@@ -197,12 +275,14 @@ fn exact_bit_capacity_fit_has_no_terminator_or_pad_and_one_more_selects_version_
     let exact = encode(EncodeRequest {
         text: &exact_payload,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: maximum,
     })
     .expect("34 digits exactly fill Version 1-M");
     let one_more = encode(EncodeRequest {
         text: &one_more_payload,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: maximum,
     })
     .expect("35 digits fit Version 2-M");
@@ -223,6 +303,7 @@ fn profile_ceiling_versions_fit_and_one_byte_more_returns_required_version() {
         let encoded = encode(EncodeRequest {
             text: &exact_payload,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: maximum_version,
         })
         .expect("exact profile ceiling fits");
@@ -232,6 +313,7 @@ fn profile_ceiling_versions_fit_and_one_byte_more_returns_required_version() {
             encode(EncodeRequest {
                 text: &one_more_payload,
                 ecc: ErrorCorrection::Low,
+                min_version: qr_core::Version::MINIMUM,
                 max_version: maximum_version,
             }),
             Err(EncodingError::PayloadTooLargeForProfile { required, maximum })
@@ -246,6 +328,7 @@ fn character_count_width_transitions_are_used_at_versions_ten_and_twenty_seven()
     let byte_encoded = encode(EncodeRequest {
         text: &byte_payload,
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(40).expect("Version 40 is valid"),
     })
     .expect("byte payload fits");
@@ -256,6 +339,7 @@ fn character_count_width_transitions_are_used_at_versions_ten_and_twenty_seven()
     let numeric_encoded = encode(EncodeRequest {
         text: &numeric_payload,
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(40).expect("Version 40 is valid"),
     })
     .expect("numeric payload fits");
@@ -269,6 +353,7 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
     let encoded = encode(EncodeRequest {
         text: &version_forty_payload,
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: Version::new(40).expect("Version 40 is valid"),
     })
     .expect("maximum byte payload fits Version 40-L");
@@ -281,6 +366,7 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
         encode(EncodeRequest {
             text: &qr_overflow,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         }),
         Err(EncodingError::PayloadTooLargeForQr)
@@ -291,6 +377,7 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
         encode(EncodeRequest {
             text: &at_input_limit,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         })
         .is_ok()
@@ -301,6 +388,7 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
         encode(EncodeRequest {
             text: &over_input_limit,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         }),
         Err(EncodingError::InputLimitExceeded {
@@ -315,6 +403,7 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
         encode(EncodeRequest {
             text: &multibyte_at_limit,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         }),
         Err(EncodingError::PayloadTooLargeForQr)
@@ -324,6 +413,7 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
         encode(EncodeRequest {
             text: &multibyte_over_limit,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         }),
         Err(EncodingError::InputLimitExceeded {
@@ -339,6 +429,7 @@ fn empty_payload_is_a_typed_error() {
         encode(EncodeRequest {
             text: "",
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(1).expect("Version 1 is valid"),
         }),
         Err(EncodingError::EmptyPayload)
@@ -420,7 +511,7 @@ proptest! {
         maximum_number in maximum_version_strategy(),
     ) {
         let maximum = Version::new(maximum_number).expect("strategy emits valid versions");
-        let request = EncodeRequest { text: &text, ecc, max_version: maximum };
+        let request = EncodeRequest { text: &text, ecc, min_version: qr_core::Version::MINIMUM, max_version: maximum };
         let first = encode(request);
         prop_assert_eq!(&first, &encode(request));
 
@@ -435,7 +526,7 @@ proptest! {
                 let previous = Version::new(encoded.version().number() - 1)
                     .expect("preceding version is valid");
                 let rejects_previous = matches!(
-                    encode(EncodeRequest { text: &text, ecc, max_version: previous }),
+                    encode(EncodeRequest { text: &text, ecc, min_version: qr_core::Version::MINIMUM, max_version: previous }),
                     Err(EncodingError::PayloadTooLargeForProfile { required, maximum })
                         if required == encoded.version() && maximum == previous
                 );
@@ -446,6 +537,7 @@ proptest! {
         let unrestricted = encode(EncodeRequest {
             text: &text,
             ecc,
+            min_version: qr_core::Version::MINIMUM,
             max_version: Version::new(40).expect("Version 40 is valid"),
         });
         if first.is_ok() {
@@ -459,7 +551,7 @@ proptest! {
         ecc in error_correction_strategy(),
     ) {
         let maximum = Version::new(40).expect("Version 40 is valid");
-        let original = encode(EncodeRequest { text: &text, ecc, max_version: maximum });
+        let original = encode(EncodeRequest { text: &text, ecc, min_version: qr_core::Version::MINIMUM, max_version: maximum });
         if let Ok(original) = original {
             let suffix = match (original.mode(), original.eci_assignment()) {
                 (DataMode::Numeric, _) => "1",
@@ -473,6 +565,7 @@ proptest! {
                 && let Ok(appended) = encode(EncodeRequest {
                     text: &appended,
                     ecc,
+                    min_version: qr_core::Version::MINIMUM,
                     max_version: maximum,
                 })
             {

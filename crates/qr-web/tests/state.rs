@@ -305,10 +305,17 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
 
     let logo_request = state.set_logo_enabled(true).expect("revision is available");
     assert_eq!(logo_request.ecc(), ErrorCorrection::High);
+    assert_eq!(logo_request.minimum_version().number(), 6);
     assert!(state.complete_preview(logo_request.revision(), evaluate_preview(&logo_request),));
     let logo_diagnostics = state.preview().expect("logo preview fits").diagnostics();
     assert_eq!(logo_diagnostics.ecc(), ErrorCorrection::High);
-    assert_eq!(logo_diagnostics.selected_version().number(), 4);
+    assert_eq!(logo_diagnostics.minimum_version().number(), 6);
+    assert_eq!(logo_diagnostics.selected_version().number(), 6);
+    assert!(logo_diagnostics.branding_increased_version());
+    assert_eq!(logo_diagnostics.used_data_bits(), 252);
+    assert_eq!(logo_diagnostics.available_data_bits(), 480);
+    assert_eq!(logo_diagnostics.data_codewords(), 60);
+    assert_eq!(logo_diagnostics.matrix_modules(), 41);
     assert_eq!(logo_diagnostics.logo_style(), qr_render::LogoStyle::Bundled);
     assert!(logo_diagnostics.logo_placement().is_some());
     assert_eq!(logo_diagnostics.safety(), OutputSafety::Caution);
@@ -320,11 +327,13 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
             .contains("data-role=\"bundled-logo\"")
     );
     assert!(state.caution().unwrap().contains("bundled logo obscures"));
+    assert!(state.exports_enabled());
 
     let restored_request = state
         .set_logo_enabled(false)
         .expect("revision is available");
     assert_eq!(restored_request.ecc(), ErrorCorrection::Medium);
+    assert_eq!(restored_request.minimum_version().number(), 1);
     assert!(state.complete_preview(
         restored_request.revision(),
         evaluate_preview(&restored_request),
@@ -335,6 +344,24 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
         .diagnostics();
     assert_eq!(restored.ecc(), ErrorCorrection::Medium);
     assert_eq!(restored.selected_version().number(), 3);
+    assert!(!restored.branding_increased_version());
+}
+
+#[test]
+fn logo_mode_reports_when_a_profile_cannot_admit_the_branded_minimum() {
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    let request = state
+        .set_payload("small payload".to_owned())
+        .expect("revision is available");
+
+    assert_eq!(request.ecc(), ErrorCorrection::High);
+    assert_eq!(request.minimum_version().number(), 6);
+    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+    assert_eq!(
+        state.validation_message().as_deref(),
+        Some("Logo mode requires QR version 6 or larger, but Inline supports up to version 5."),
+    );
+    assert!(!state.exports_enabled());
 }
 
 #[test]

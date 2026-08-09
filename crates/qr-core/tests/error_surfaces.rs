@@ -219,6 +219,10 @@ fn every_public_core_error_variant_has_stable_context_and_source_chaining() {
             byte_length: 4_097,
             maximum: 4_096,
         },
+        EncodingError::InvalidVersionRange {
+            minimum: version_two,
+            maximum: version_one,
+        },
         EncodingError::PayloadTooLargeForProfile {
             required: version_two,
             maximum: version_one,
@@ -235,6 +239,7 @@ fn every_public_core_error_variant_has_stable_context_and_source_chaining() {
     for (error, (fragment, has_source)) in encoding_errors.iter().zip([
         ("must not be empty", false),
         ("4097 bytes", false),
+        ("minimum QR version 2 exceeds maximum version 1", false),
         ("above profile maximum", false),
         ("Version 40", false),
         ("malformed", false),

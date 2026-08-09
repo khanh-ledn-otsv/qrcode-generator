@@ -21,13 +21,27 @@ fn seeded_safe_artifacts_decode_exact_bytes_and_eci_metadata() -> Result<(), Box
 
 fn run_cases(reader: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
     let mut cases = vec![
-        ("8675309".to_owned(), ErrorCorrection::Low),
-        ("HELLO WORLD".to_owned(), ErrorCorrection::Medium),
+        ("8675309".to_owned(), ErrorCorrection::Low, Version::MINIMUM),
+        (
+            "HELLO WORLD".to_owned(),
+            ErrorCorrection::Medium,
+            Version::MINIMUM,
+        ),
         (
             "byte_mode@example.test".to_owned(),
             ErrorCorrection::Quartile,
+            Version::MINIMUM,
         ),
-        ("Xin chào QR".to_owned(), ErrorCorrection::High),
+        (
+            "Xin chào QR".to_owned(),
+            ErrorCorrection::High,
+            Version::MINIMUM,
+        ),
+        (
+            "  branded payload\r\nkeeps bytes  ".to_owned(),
+            ErrorCorrection::High,
+            Version::new(6)?,
+        ),
     ];
     let mut state = 0x8a5c_2d71_u32;
     for index in 0..128 {
@@ -45,18 +59,23 @@ fn run_cases(reader: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
             2 => ErrorCorrection::Quartile,
             _ => ErrorCorrection::High,
         };
-        cases.push((text, ecc));
+        cases.push((text, ecc, Version::MINIMUM));
     }
     for version in [2, 7, 10, 27, 40] {
-        cases.push((payload_for_version(version)?, ErrorCorrection::Low));
+        cases.push((
+            payload_for_version(version)?,
+            ErrorCorrection::Low,
+            Version::MINIMUM,
+        ));
     }
 
     let mut masks = BTreeSet::new();
     let mut versions = BTreeSet::new();
-    for (index, (text, ecc)) in cases.iter().enumerate() {
+    for (index, (text, ecc, minimum)) in cases.iter().enumerate() {
         let encoded = encode(EncodeRequest {
             text,
             ecc: *ecc,
+            min_version: *minimum,
             max_version: Version::new(40)?,
         })?;
         masks.insert(encoded.mask().number());
@@ -128,6 +147,7 @@ fn payload_for_version(target: u8) -> Result<String, Box<dyn Error>> {
         let encoded = encode(EncodeRequest {
             text: &text,
             ecc: ErrorCorrection::Low,
+            min_version: qr_core::Version::MINIMUM,
             max_version: maximum,
         })?;
         if encoded.version().number() < target {
@@ -140,6 +160,7 @@ fn payload_for_version(target: u8) -> Result<String, Box<dyn Error>> {
     let selected = encode(EncodeRequest {
         text: &text,
         ecc: ErrorCorrection::Low,
+        min_version: qr_core::Version::MINIMUM,
         max_version: maximum,
     })?;
     if selected.version().number() != target {

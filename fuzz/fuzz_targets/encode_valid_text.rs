@@ -16,11 +16,13 @@ fuzz_target!(|text: &str| {
     let first = encode(EncodeRequest {
         text,
         ecc,
+        min_version: Version::MINIMUM,
         max_version,
     });
     let second = encode(EncodeRequest {
         text,
         ecc,
+        min_version: Version::MINIMUM,
         max_version,
     });
     assert_eq!(first, second);

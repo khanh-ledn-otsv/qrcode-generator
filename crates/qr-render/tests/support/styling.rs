@@ -279,6 +279,7 @@ fn prepare_decode_case(
     let encoded = encode(EncodeRequest {
         text: &case.text,
         ecc: tuple.ecc(),
+        min_version: qr_core::Version::MINIMUM,
         max_version: tuple.profile.maximum_version(),
     })
     .map_err(|_| RenderError::RenderFailure)?;
@@ -369,6 +370,7 @@ fn dense_url_at_profile_ceiling(
         if encode(EncodeRequest {
             text: &candidate,
             ecc,
+            min_version: qr_core::Version::MINIMUM,
             max_version: profile.maximum_version(),
         })
         .is_ok()
@@ -385,6 +387,7 @@ fn dense_url_at_profile_ceiling(
     let encoded = encode(EncodeRequest {
         text: &text,
         ecc,
+        min_version: qr_core::Version::MINIMUM,
         max_version: profile.maximum_version(),
     })?;
     if encoded.version() != profile.maximum_version() {

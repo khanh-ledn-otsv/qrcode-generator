@@ -40,6 +40,7 @@ fn committed_fuzz_regressions_replay_intended_paths_without_panics() {
         let result = encode(EncodeRequest {
             text,
             ecc,
+            min_version: qr_core::Version::MINIMUM,
             max_version: maximum,
         });
         match expected {

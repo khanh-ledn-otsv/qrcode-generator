@@ -12,6 +12,9 @@ use web_sys::Response;
 #[wasm_bindgen_test(async)]
 async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
     let mut state = WorkflowState::new(ProfileId::Inline);
+    state
+        .set_logo_enabled(false)
+        .expect("Inline can use ordinary no-logo fitting");
     let request = state
         .set_payload("browser artifact".to_owned())
         .expect("revision is available");
@@ -28,6 +31,24 @@ async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
     assert_eq!(read_url(&url).await, artifact.bytes());
     drop(object_url);
     assert!(fetch(&url).await.is_err(), "dropped URL must be revoked");
+}
+
+#[wasm_bindgen_test]
+fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
+    let mut state = WorkflowState::new(ProfileId::Content);
+    let request = state
+        .set_payload("browser logo".to_owned())
+        .expect("revision is available");
+    assert_eq!(request.minimum_version().number(), 6);
+    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+
+    let diagnostics = state
+        .preview()
+        .expect("logo preview is ready")
+        .diagnostics();
+    assert_eq!(diagnostics.selected_version().number(), 6);
+    assert!(diagnostics.branding_increased_version());
+    assert!(state.exports_enabled());
 }
 
 #[wasm_bindgen_test(async)]

@@ -21,12 +21,14 @@ fuzz_target!(|data: &[u8]| {
     let _ = encode(EncodeRequest {
         text: &lossy,
         ecc,
+        min_version: qr_core::Version::MINIMUM,
         max_version: version,
     });
     if let Ok(valid) = std::str::from_utf8(payload) {
         let _ = encode(EncodeRequest {
             text: valid,
             ecc,
+            min_version: qr_core::Version::MINIMUM,
             max_version: version,
         });
     }

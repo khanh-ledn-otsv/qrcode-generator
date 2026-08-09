@@ -55,9 +55,9 @@ Mixed-mode dynamic programming is deferred. Add it later only if telemetry-free 
 
 ### 2.4 Safe-workflow error-correction policy
 
-Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics but is not user-selectable. Output profiles define only canvas dimensions and a maximum version; they do not silently change ECC. For an exact payload and selected profile, the workflow requests ECC M and chooses the first fitting version up to the profile ceiling.
+Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics but is not user-selectable. Output profiles define only canvas dimensions and a maximum version; they do not silently change ECC. For an exact payload and selected profile, the workflow requests ECC M with Version 1 as its minimum and chooses the first fitting version up to the profile ceiling.
 
-Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H before version fitting, then recalculates the selected version and all capacity diagnostics. Disabling the logo restores ECC M and refits. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
+Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
 ### 2.5 PNG renderer
 
@@ -212,6 +212,7 @@ Separate encoding from branded generation:
 pub struct EncodeRequest<'a> {
     pub text: &'a str,
     pub ecc: ErrorCorrection,
+    pub min_version: Version,
     pub max_version: Version,
 }
 
@@ -222,6 +223,7 @@ pub struct EncodedQr {
     pub mask: MaskId,
     pub data_bits_used: u32,
     pub data_bits_capacity: u32,
+    pub minimum_version_applied: bool,
     pub modules: ModuleMatrix,
 }
 

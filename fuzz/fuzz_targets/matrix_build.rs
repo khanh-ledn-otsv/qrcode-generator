@@ -52,6 +52,7 @@ fuzz_target!(|data: &[u8]| {
     let Ok(encoded) = encoding::encode(EncodeRequest {
         text,
         ecc,
+        min_version: Version::MINIMUM,
         max_version,
     }) else {
         return;

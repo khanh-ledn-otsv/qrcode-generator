@@ -128,6 +128,9 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
 
   await expect(logo).toBeChecked();
   await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
+  await expect
+    .poll(() => diagnostic(page, "Version"))
+    .toBe("V6 / V8 max · raised to V6 for branding");
   await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");
   await expect.poll(() => diagnostic(page, "Logo")).toContain("ONE lettermark");
   await expect(transparent).toBeDisabled();

@@ -46,6 +46,7 @@ fn adverse_transforms_are_reproducible_and_preserve_canvas_dimensions() -> Resul
     let encoded = encode(EncodeRequest {
         text: "https://example.test/adverse",
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: SUPPORTED_PROFILES[1].maximum_version(),
     })?;
     let options = RenderOptions::approved(
@@ -93,6 +94,7 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     let safe_encoded = encode(EncodeRequest {
         text: safe_payload,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: SUPPORTED_PROFILES[1].maximum_version(),
     })?;
     let safe_source = render_png(&RenderModel::new(
@@ -114,6 +116,7 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     let transparent_encoded = encode(EncodeRequest {
         text: transparent_payload,
         ecc: ErrorCorrection::Medium,
+        min_version: qr_core::Version::MINIMUM,
         max_version: SUPPORTED_PROFILES[1].maximum_version(),
     })?;
     let transparent_source = render_png(&RenderModel::new(
@@ -136,6 +139,7 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     let logo_encoded = encode(EncodeRequest {
         text: logo_payload,
         ecc: ErrorCorrection::High,
+        min_version: qr_core::Version::MINIMUM,
         max_version: SUPPORTED_PROFILES[1].maximum_version(),
     })?;
     let logo_source = render_png(&RenderModel::new(

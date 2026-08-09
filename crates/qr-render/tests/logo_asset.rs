@@ -49,6 +49,7 @@ fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() 
     let encoded = encode(EncodeRequest {
         text: "logo",
         ecc: ErrorCorrection::High,
+        min_version: qr_core::Version::MINIMUM,
         max_version: SUPPORTED_PROFILES[0].maximum_version(),
     })
     .unwrap();
