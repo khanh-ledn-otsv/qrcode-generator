@@ -134,7 +134,7 @@ impl OutputProfile {
 }
 
 pub const SUPPORTED_PROFILES: [OutputProfile; 4] = [
-    OutputProfile::compiled(ProfileId::Inline, 90, 270, 5),
+    OutputProfile::compiled(ProfileId::Inline, 100, 300, 6),
     OutputProfile::compiled(ProfileId::Content, 120, 360, 8),
     OutputProfile::compiled(ProfileId::Landing, 150, 450, 12),
     OutputProfile::compiled(ProfileId::Print, 160, 480, 13),
@@ -182,10 +182,10 @@ mod tests {
     #[test]
     fn compiled_profile_constructor_matches_its_arguments() {
         let constructor: fn(ProfileId, u32, u32, u8) -> OutputProfile = OutputProfile::compiled;
-        let profile = std::hint::black_box(constructor)(ProfileId::Inline, 90, 270, 5);
+        let profile = std::hint::black_box(constructor)(ProfileId::Inline, 100, 300, 6);
         assert_eq!(profile.id(), ProfileId::Inline);
-        assert_eq!(profile.base_dimensions().width().get(), 90);
-        assert_eq!(profile.png_dimensions().width().get(), 270);
-        assert_eq!(profile.maximum_version().number(), 5);
+        assert_eq!(profile.base_dimensions().width().get(), 100);
+        assert_eq!(profile.png_dimensions().width().get(), 300);
+        assert_eq!(profile.maximum_version().number(), 6);
     }
 }

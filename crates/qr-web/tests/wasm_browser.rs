@@ -35,7 +35,7 @@ async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
 
 #[wasm_bindgen_test]
 fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
-    let mut state = WorkflowState::new(ProfileId::Content);
+    let mut state = WorkflowState::new(ProfileId::Inline);
     let request = state
         .set_payload("browser logo".to_owned())
         .expect("revision is available");
@@ -47,6 +47,9 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
         .expect("logo preview is ready")
         .diagnostics();
     assert_eq!(diagnostics.selected_version().number(), 6);
+    assert_eq!(diagnostics.maximum_version().number(), 6);
+    assert_eq!(diagnostics.svg_side_pixels(), 100);
+    assert_eq!(diagnostics.png_side_pixels(), 300);
     assert!(diagnostics.branding_increased_version());
     let placement = diagnostics
         .logo_placement()

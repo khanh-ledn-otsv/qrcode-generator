@@ -8,7 +8,7 @@ use qr_render::{
 #[test]
 fn supported_profiles_match_the_approved_output_contract() {
     let expected = [
-        (ProfileId::Inline, 90, 270, 5),
+        (ProfileId::Inline, 100, 300, 6),
         (ProfileId::Content, 120, 360, 8),
         (ProfileId::Landing, 150, 450, 12),
         (ProfileId::Print, 160, 480, 13),
@@ -68,7 +68,7 @@ fn every_supported_version_has_centered_even_integer_geometry() {
 #[test]
 fn profile_ceiling_geometry_matches_the_approved_worked_examples() {
     let expected = [
-        (ProfileId::Inline, 45, 6, 0),
+        (ProfileId::Inline, 49, 6, 3),
         (ProfileId::Content, 57, 6, 9),
         (ProfileId::Landing, 73, 6, 6),
         (ProfileId::Print, 77, 6, 9),
@@ -86,7 +86,7 @@ fn profile_ceiling_geometry_matches_the_approved_worked_examples() {
 #[test]
 fn scale_transitions_are_exercised_for_each_profile() {
     let expected_scales: [&[u32]; 4] = [
-        &[8, 8, 6, 6, 6],
+        &[10, 8, 8, 6, 6, 6],
         &[12, 10, 8, 8, 8, 6, 6, 6],
         &[14, 12, 12, 10, 10, 8, 8, 6, 6, 6, 6, 6],
         &[16, 14, 12, 10, 10, 8, 8, 8, 6, 6, 6, 6, 6],
@@ -186,10 +186,10 @@ fn impossible_asymmetric_and_overflowing_geometry_return_typed_errors() {
 fn a_version_above_the_profile_ceiling_is_rejected() {
     let inline = SUPPORTED_PROFILES[0];
     assert_eq!(
-        inline.geometry(Version::try_from(6).unwrap()),
+        inline.geometry(Version::try_from(7).unwrap()),
         Err(GeometryError::VersionExceedsProfile {
-            requested: Version::try_from(6).unwrap(),
-            maximum: Version::try_from(5).unwrap(),
+            requested: Version::try_from(7).unwrap(),
+            maximum: Version::try_from(6).unwrap(),
         })
     );
 }

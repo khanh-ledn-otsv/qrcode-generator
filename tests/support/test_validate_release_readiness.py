@@ -95,9 +95,11 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         logo = logo_state_index == 1
         decoded = not logo or (
             background_index == 0
-            and profile_index > 0
             and (
-                (case_kind == "required-payload" and payload_class != "dense-url")
+                (
+                    case_kind == "required-payload"
+                    and (payload_class != "dense-url" or profile_index == 0)
+                )
                 or (case_kind == "version-coverage" and covered_version == 6)
             )
         )

@@ -14,8 +14,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    LogoStyle, OutputProfile, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
-    render_png, render_svg,
+    BRANDED_LOGO_VERSION, LogoStyle, OutputProfile, RenderError, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 #[test]
@@ -33,7 +33,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
     );
     let output = tempfile::tempdir()?;
     let mut failures = Vec::new();
-    let mut enabled_rows = 0_u8;
+    let mut enabled_rows = 0_usize;
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for version in 1..=profile.maximum_version().number() {
@@ -82,10 +82,15 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             }
         }
     }
-    if enabled_rows != 3 {
-        return Err(
-            format!("expected three enabled Version 6 profile rows, found {enabled_rows}").into(),
-        );
+    let expected_enabled_rows = SUPPORTED_PROFILES
+        .iter()
+        .filter(|profile| profile.maximum_version() >= BRANDED_LOGO_VERSION)
+        .count();
+    if enabled_rows != expected_enabled_rows {
+        return Err(format!(
+            "expected {expected_enabled_rows} enabled Version 6 profile rows, found {enabled_rows}"
+        )
+        .into());
     }
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {

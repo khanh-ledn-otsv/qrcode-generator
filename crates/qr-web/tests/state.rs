@@ -108,14 +108,14 @@ fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     let preview = state.preview().expect("valid payload has a preview");
     let diagnostics = preview.diagnostics();
     assert_eq!(diagnostics.ecc(), ErrorCorrection::Medium);
-    assert_eq!(diagnostics.maximum_version().number(), 5);
+    assert_eq!(diagnostics.maximum_version().number(), 6);
     assert_eq!(diagnostics.selected_version().number(), 1);
     assert_eq!(diagnostics.used_data_bits(), 52);
     assert_eq!(diagnostics.available_data_bits(), 128);
     assert_eq!(diagnostics.data_codewords(), 16);
     assert_eq!(diagnostics.matrix_modules(), 21);
-    assert_eq!(diagnostics.svg_side_pixels(), 90);
-    assert_eq!(diagnostics.png_side_pixels(), 270);
+    assert_eq!(diagnostics.svg_side_pixels(), 100);
+    assert_eq!(diagnostics.png_side_pixels(), 300);
     assert_eq!(diagnostics.foreground(), Foreground::Brand);
     assert_eq!(diagnostics.background(), Background::Opaque(Rgba::WHITE));
     assert_eq!(diagnostics.safety(), OutputSafety::Safe);
@@ -199,9 +199,9 @@ fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text
     assert_eq!(diagnostics.mode(), DataMode::Byte);
     assert!(diagnostics.mask().number() <= 7);
     assert_eq!(diagnostics.quiet_zone_modules(), 4);
-    assert_eq!(diagnostics.module_scale(), 8);
-    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 232);
-    assert_eq!(diagnostics.outer_padding_per_side(), 19);
+    assert_eq!(diagnostics.module_scale(), 10);
+    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 290);
+    assert_eq!(diagnostics.outer_padding_per_side(), 5);
     assert_eq!(state.export_disabled_reason(), None);
 
     let label = preview.accessible_label();
@@ -218,7 +218,7 @@ fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text
 #[test]
 fn every_profile_derives_its_limit_dimensions_and_guidance() {
     let cases = [
-        (ProfileId::Inline, 5, 90, 270, false),
+        (ProfileId::Inline, 6, 100, 300, false),
         (ProfileId::Content, 8, 120, 360, false),
         (ProfileId::Landing, 12, 150, 450, false),
         (ProfileId::Print, 13, 160, 480, true),
@@ -268,7 +268,16 @@ fn profile_changes_refit_without_changing_safe_ecc() {
         .expect("revision is available");
     assert_eq!(inline_request.ecc(), ErrorCorrection::Medium);
     assert!(state.complete_preview(inline_request.revision(), evaluate_preview(&inline_request),));
-    assert!(!state.exports_enabled());
+    assert!(state.exports_enabled());
+    assert_eq!(
+        state
+            .preview()
+            .expect("Inline now admits Version 6")
+            .diagnostics()
+            .selected_version()
+            .number(),
+        6,
+    );
 
     let print_request = state
         .select_profile(ProfileId::Print)
@@ -353,7 +362,7 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
 }
 
 #[test]
-fn logo_mode_reports_when_a_profile_cannot_admit_the_branded_minimum() {
+fn inline_logo_mode_admits_the_branded_minimum_and_enables_exports() {
     let mut state = WorkflowState::new(ProfileId::Inline);
     let request = state
         .set_payload("small payload".to_owned())
@@ -362,11 +371,19 @@ fn logo_mode_reports_when_a_profile_cannot_admit_the_branded_minimum() {
     assert_eq!(request.ecc(), ErrorCorrection::High);
     assert_eq!(request.minimum_version().number(), 6);
     assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
-    assert_eq!(
-        state.validation_message().as_deref(),
-        Some("Logo mode requires QR version 6 or larger, but Inline supports up to version 5."),
-    );
-    assert!(!state.exports_enabled());
+    assert_eq!(state.validation_message(), None);
+    let diagnostics = state
+        .preview()
+        .expect("Inline logo preview is valid")
+        .diagnostics();
+    assert_eq!(diagnostics.selected_version().number(), 6);
+    assert_eq!(diagnostics.maximum_version().number(), 6);
+    assert_eq!(diagnostics.svg_side_pixels(), 100);
+    assert_eq!(diagnostics.png_side_pixels(), 300);
+    assert_eq!(diagnostics.module_scale(), 6);
+    assert_eq!(diagnostics.outer_padding_per_side(), 3);
+    assert!(diagnostics.logo_placement().is_some());
+    assert!(state.exports_enabled());
 }
 
 #[test]
@@ -427,12 +444,12 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     assert!(!state.exports_enabled());
 
     let over_capacity = state
-        .set_payload("x".repeat(100))
+        .set_payload("x".repeat(107))
         .expect("revision is available");
     assert!(state.complete_preview(over_capacity.revision(), evaluate_preview(&over_capacity),));
     assert_eq!(
         state.validation_message().as_deref(),
-        Some("The payload does not fit this profile's maximum QR version 5."),
+        Some("The payload does not fit this profile's maximum QR version 6."),
     );
     assert!(!state.exports_enabled());
 

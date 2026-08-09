@@ -358,12 +358,12 @@ The generated coverage test must fail if a new approved enum variant is not incl
 The versioned coverage contract is
 [`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
 which is consumed by both the Rust generator test and Python readiness validator.
-The release evidence contains 248 generated scenario rows: 96 required-payload
+The release evidence contains 252 generated scenario rows: 96 required-payload
 rows (six payload classes for each compiled profile/background/logo tuple) and
-152 exact-version rows (every version admitted by each profile for the same
+156 exact-version rows (every version admitted by each profile for the same
 background/logo choices). Both the native PNG and independently rasterized SVG
 artifact are hashed and passed to the pinned decoder for each accepted row.
-There are 142 accepted rows and 106 expected-invalid rows. Accepted logo rows
+There are 151 accepted rows and 101 expected-invalid rows. Accepted logo rows
 must record the reviewed Version 6 placement facts; all other logo versions and
 profiles below the branded minimum record their typed rejection.
 
@@ -387,9 +387,9 @@ must stay strict-schema valid. A diameter/treatment is selectable only after
 every one of its 96 artifact cases decodes. The approved 0.45-module
 non-finder-dot treatment passed 96/96. Version 6 is the first branded version
 meeting the 13-module logo hierarchy, and its selected 13×4.875-module logo
-passed 36/36 artifact cases across the three profiles that admit Version 6;
-Inline is expected-invalid because its Version 5 ceiling is below the branded
-minimum. Versions 7–13 are expected-invalid exact-centering
+passed 48/48 artifact cases across all four profiles that admit Version 6.
+Inline's 100 px SVG / 300 px PNG profile retains a six-pixel PNG module scale
+at its Version 6 ceiling. Versions 7–13 are expected-invalid exact-centering
 rows because of protected alignment geometry. Exactly four quiet-zone modules
 and the absence of decorative export borders are invariant across candidates.
 
@@ -486,7 +486,7 @@ Playwright intercepts all network requests after initial navigation. Fail if gen
 Use custom `proptest` strategies that favor boundaries rather than uniformly random data:
 
 - version bands: 1, 9, 10, 26, 27, 40 and neighbors;
-- profile ceilings: 5, 8, 12, 13 and one-over cases;
+- profile ceilings: 6, 8, 12, 13 and one-over cases;
 - payload lengths around each capacity boundary;
 - mode-changing characters such as lowercase, space, `:`, non-ASCII, and multi-byte UTF-8;
 - all ECC and mask values;

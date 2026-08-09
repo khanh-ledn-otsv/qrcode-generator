@@ -13,8 +13,8 @@ use sha2::{Digest, Sha256};
 
 const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 4] = [
     [[
-        "ab838083cada2b4f111f67781fda45439ea80019e7e57962c0be222267cb8e71",
-        "1d3509f5eb6b337603295a1fcbb09543c7794800b18ca5c39624b8562d1275e2",
+        "f8a646a085a1210cbf6ad8301ad1839c36a3d80e37cba83b1e19581d2e4a7de7",
+        "3164ec58af57186d0ce11cf79b24f87314781f0cdc6b0ba8999bb6218d66d243",
     ]],
     [[
         "c16df2711bb5e1a9758a6dcbcadfe92d64350adaf85a9aa7c3bad81aec576748",

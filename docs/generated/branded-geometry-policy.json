@@ -311,9 +311,9 @@
     "opaque_white_knockout": true,
     "profile_outcomes": [
       {
-        "attempted": 0,
-        "decoded": 0,
-        "outcome": "minimum-version-exceeds-profile-ceiling",
+        "attempted": 12,
+        "decoded": 12,
+        "outcome": "decoded",
         "profile": "Inline"
       },
       {
@@ -501,29 +501,29 @@
     ],
     "selected_version_width_outcomes": [
       {
-        "attempted": 36,
-        "decoded": 36,
+        "attempted": 48,
+        "decoded": 48,
         "outcome": "decoded",
         "source_width_thousandths": 10000,
         "version": 6
       },
       {
-        "attempted": 36,
-        "decoded": 36,
+        "attempted": 48,
+        "decoded": 48,
         "outcome": "decoded",
         "source_width_thousandths": 11000,
         "version": 6
       },
       {
-        "attempted": 36,
-        "decoded": 36,
+        "attempted": 48,
+        "decoded": 48,
         "outcome": "decoded",
         "source_width_thousandths": 12000,
         "version": 6
       },
       {
-        "attempted": 36,
-        "decoded": 36,
+        "attempted": 48,
+        "decoded": 48,
         "outcome": "decoded",
         "source_width_thousandths": 13000,
         "version": 6

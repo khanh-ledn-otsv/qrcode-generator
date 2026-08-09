@@ -8,7 +8,7 @@
     "finder_styles": 1,
     "logo_states": 2
   },
-  "profile_max_versions": [5, 8, 12, 13],
+  "profile_max_versions": [6, 8, 12, 13],
   "required_payload_classes": [
     "short-url",
     "dense-url",
@@ -20,9 +20,9 @@
   "version_coverage_payload_class": "ascii-byte",
   "expected_rows": {
     "required_payload": 96,
-    "version_coverage": 152,
-    "total": 248,
-    "decoded": 142,
-    "expected_invalid": 106
+    "version_coverage": 156,
+    "total": 252,
+    "decoded": 151,
+    "expected_invalid": 101
   }
 }

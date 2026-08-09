@@ -88,11 +88,15 @@
   PNG, previews, diagnostics, and downloads now share the single decode-backed
   Version 6 centered 13×4.875-module ONE placement and 15×7 knockout; every
   other version receives a typed, user-visible geometry rejection.
-- [Ticket 27](issues/27-harden-complete-branded-output-matrix.md): A generated
-  248-row matrix pairs native PNG and independently rasterized SVG hashes,
+- [Ticket 27](issues/27-harden-complete-branded-output-matrix.md): The generated
+  matrix pairs native PNG and independently rasterized SVG hashes,
   pinned-decoder outcomes, typed rejections, and exact logo geometry across all
   selectable payload/version paths; 29 manifest-owned adverse outcomes and
   zero-retry Chromium workflows complete the automated release evidence.
+- [Ticket 28](issues/28-increase-inline-size-for-version-six-logo.md): Inline is
+  now 100 px SVG / 300 px PNG with a Version 6 ceiling and six-pixel PNG module
+  scale, so fitting logo-mode payloads use the approved centered ONE treatment
+  instead of ending in a profile/version compatibility failure.
 
 ## Notes
 

@@ -75,12 +75,12 @@ pnpm run release:evidence
 ```
 
 This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
-hashes under `target/release-evidence/`. The matrix has 248 generated scenario
-rows: 96 required-payload rows and 152 exact-version coverage rows spanning all
+hashes under `target/release-evidence/`. The matrix has 252 generated scenario
+rows: 96 required-payload rows and 156 exact-version coverage rows spanning all
 compiled profile, background, logo, payload, and enabled-version paths. Each row
-contains matched native-PNG and independently rasterized SVG evidence. The 142
+contains matched native-PNG and independently rasterized SVG evidence. The 151
 renderable rows record safety, deterministic artifact and decoder-input hashes,
-a ZXing decode, and reviewed logo geometry where applicable; the 106 unsupported
+a ZXing decode, and reviewed logo geometry where applicable; the 101 unsupported
 logo/background or centered-logo geometry rows record the expected typed
 rejection.
 The executable counts and dimensions have one versioned owner in

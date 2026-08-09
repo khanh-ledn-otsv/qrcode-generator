@@ -16,6 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("downloads fixed filenames and exact deterministic SVG and PNG bytes", async ({ page }) => {
+  await page.getByText("Inline", { exact: true }).click();
   const [svgDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.getByTestId("download-svg").click(),
@@ -31,24 +32,25 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   const png = await readFile(await pngDownload.path());
   const svgText = svg.toString("utf8");
   expect(svgText).toMatch(/^<svg /);
-  expect(svgText).toMatch(/\bwidth="120"/);
-  expect(svgText).toMatch(/\bheight="120"/);
+  expect(svgText).toMatch(/\bwidth="100"/);
+  expect(svgText).toMatch(/\bheight="100"/);
   expect(svgText).not.toContain(SAFE_PAYLOAD);
   expect(png.subarray(0, 8)).toEqual(Buffer.from("89504e470d0a1a0a", "hex"));
-  expect(png.readUInt32BE(16)).toBe(360);
-  expect(png.readUInt32BE(20)).toBe(360);
-  // These hashes pin the default Content-profile V6 branded artifacts.
+  expect(png.readUInt32BE(16)).toBe(300);
+  expect(png.readUInt32BE(20)).toBe(300);
+  // These hashes pin the Inline-profile V6 branded artifacts.
   expect(await sha256(svg)).toBe(
-    "1b6d8c0454ca8162774bfc7817ed807c18efb9d3ab34e2eff85ba4547cdaee1d",
+    "7fad56cf665cab5d92b892bfdda5e02008df7ca7f49dd2a9a7fca106fcae521e",
   );
   expect(await sha256(png)).toBe(
-    "2824fadd354ac690d2cb6d838227a0ad696ded55d43444938fbf602256e23331",
+    "223312fd10b53d8f26500bc4c679d3d9b11105f4f12233fadb1168ab86e33fb9",
   );
 });
 
 test("downloaded PNG independently decodes with the pinned reader", async ({ page }) => {
   const decodePayload = "hello";
   await enterPayload(page, decodePayload);
+  await page.getByText("Inline", { exact: true }).click();
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");
   expect(

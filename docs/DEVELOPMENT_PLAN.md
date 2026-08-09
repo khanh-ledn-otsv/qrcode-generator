@@ -119,9 +119,10 @@ candidate evidence is committed in
   opaque-white knockout is `(left 13, top 17, width 15, height 7)`, clears the
   nearest protected module by six modules, and obscures 105 data modules and
   zero remainder modules. Every integer source width from 10 through 13
-  modules decoded 36/36 native-PNG and SVG-rasterized samples across Content,
-  Landing, and Print; Inline intentionally rejects branding because its Version
-  5 ceiling is below the branded minimum. Every integer width from 14 through
+  modules decoded 48/48 native-PNG and SVG-rasterized samples across Inline,
+  Content, Landing, and Print. Inline uses a 100 px SVG / 300 px PNG canvas and
+  a Version 6 ceiling, retaining a six-pixel PNG module scale for the branded
+  symbol. Every integer width from 14 through
   18 exceeded the checked 40%-of-matrix knockout bound. A 13-module source is therefore the
   largest admitted centered ONE treatment.
 - Versions 1–5 are below the branded minimum. Versions 7–13 intentionally
@@ -140,11 +141,11 @@ candidate evidence is committed in
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
-Release evidence exhausts the selectable surface with 248 generated scenarios:
-96 required-payload rows and 152 exact-version rows. Native PNG and independently
+Release evidence exhausts the selectable surface with 252 generated scenarios:
+96 required-payload rows and 156 exact-version rows. Native PNG and independently
 rasterized SVG artifacts share one scenario identity and record deterministic
 hashes, safety, decode outcome, and Version 6 logo geometry. The resulting policy
-has 142 accepted rows and 106 typed expected rejections. Deterministic adverse
+has 151 accepted rows and 101 typed expected rejections. Deterministic adverse
 evidence separately records 29 outcomes across explicit safe opaque-Print,
 transparent-caution, and centered-logo-caution pass envelopes; it does not imply
 that every compact-dot density passes every transform.

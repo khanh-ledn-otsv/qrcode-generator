@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -229,25 +230,32 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
         Some(policy.logo.selected_minimum_version)
     );
     assert_eq!(policy.logo.selected_version_width_outcomes.len(), 9);
-    assert_eq!(policy.logo.profile_outcomes.len(), 4);
-    assert!(policy.logo.profile_outcomes.iter().any(|outcome| {
-        outcome.profile == "Inline"
-            && outcome.attempted == 0
-            && outcome.decoded == 0
-            && outcome.outcome == "minimum-version-exceeds-profile-ceiling"
-    }));
+    assert_eq!(policy.logo.profile_outcomes.len(), policy.sample.profiles);
     assert_eq!(
         policy
             .logo
             .profile_outcomes
             .iter()
-            .filter(|outcome| outcome.outcome == "decoded")
+            .map(|outcome| outcome.profile.as_str())
+            .collect::<HashSet<_>>()
+            .len(),
+        policy.sample.profiles
+    );
+    let expected_per_profile =
+        policy.sample.payload_classes.len() * policy.sample.artifact_paths.len();
+    assert_eq!(
+        policy
+            .logo
+            .profile_outcomes
+            .iter()
             .map(|outcome| {
+                assert_eq!(outcome.outcome, "decoded");
+                assert_eq!(outcome.attempted, expected_per_profile);
                 assert_eq!(outcome.decoded, outcome.attempted);
                 outcome.decoded
             })
             .sum::<usize>(),
-        36
+        policy.sample.profiles * expected_per_profile
     );
     let selected_width = policy
         .logo

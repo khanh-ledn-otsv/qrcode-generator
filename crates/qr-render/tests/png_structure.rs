@@ -15,8 +15,8 @@ use qr_render::{
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const APPROVED_PNG_SHA256: [[[&str; 2]; 1]; 4] = [
     [[
-        "b05e2f7a1a5e7c8a3dcbbc6e7d5759a8007a6ce515cfff97e13a7a70ea6963e8",
-        "11869c3755e6a80e2d08243b2938f6e720250ba4585f9fadd2fd2db1e1ddc1d7",
+        "46f262231af36abfccfd1534267feb9ce5156424036dbf01fa048af0180d807a",
+        "3ca9a91bc3b27e8dcb55dfefb10e62c9eb888b9066923e7cd9b28cdfae13aa7d",
     ]],
     [[
         "c49d0359bae6f0c3c209e1d27124bdf1413f71468db98d382ae86385c6fde703",

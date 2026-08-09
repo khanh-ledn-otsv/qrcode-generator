@@ -166,13 +166,13 @@ fn shared_symbol_geometry_drives_tight_svg_and_fixed_canvas_png_placement() {
     let png = model.png_placement();
     assert_eq!(png.canvas_dimensions(), profile.png_dimensions());
     assert_eq!(png.symbol(), model.symbol());
-    assert_eq!(png.module_scale().get(), 8);
-    assert_eq!(png.outer_padding().left.get(), 19);
-    assert_eq!(png.outer_padding().right.get(), 19);
-    assert_eq!(png.outer_padding().top.get(), 19);
-    assert_eq!(png.outer_padding().bottom.get(), 19);
-    assert_eq!(png.matrix_origin().x().get(), 51);
-    assert_eq!(png.matrix_origin().y().get(), 51);
+    assert_eq!(png.module_scale().get(), 10);
+    assert_eq!(png.outer_padding().left.get(), 5);
+    assert_eq!(png.outer_padding().right.get(), 5);
+    assert_eq!(png.outer_padding().top.get(), 5);
+    assert_eq!(png.outer_padding().bottom.get(), 5);
+    assert_eq!(png.matrix_origin().x().get(), 45);
+    assert_eq!(png.matrix_origin().y().get(), 45);
 }
 
 #[test]

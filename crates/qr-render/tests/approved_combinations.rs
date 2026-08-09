@@ -101,6 +101,20 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
     assert_eq!(expected_rows["version_coverage"], tuple_version_rows);
     assert_eq!(expected_rows["total"], records.len());
     assert_eq!(
+        expected_rows["decoded"],
+        records
+            .iter()
+            .filter(|record| record.outcome.is_renderable())
+            .count()
+    );
+    assert_eq!(
+        expected_rows["expected_invalid"],
+        records
+            .iter()
+            .filter(|record| record.outcome.is_expected_invalid())
+            .count()
+    );
+    assert_eq!(
         records
             .iter()
             .map(styling::ApprovedCombinationRecord::label)

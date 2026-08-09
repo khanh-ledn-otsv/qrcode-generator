@@ -72,16 +72,26 @@ test("profile controls work by keyboard", async ({ page }) => {
 
 test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await enterPayload(page, "real-size preview");
+  await page.getByText("Inline", { exact: true }).click();
 
   const preview = page
     .getByTestId("qr-preview")
     .locator('svg:visible:not([data-role="bundled-logo"])');
-  await expect(preview).toHaveAttribute("width", "120");
-  await expect(preview).toHaveAttribute("height", "120");
+  await expect(page.getByRole("radio", { name: /Inline/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Inline/ })).toHaveAccessibleName(
+    /100 px SVG · 300 px PNG · up to V6/,
+  );
+  await expect(preview).toHaveAttribute("width", "100");
+  await expect(preview).toHaveAttribute("height", "100");
   const box = await preview.boundingBox();
   expect(box).not.toBeNull();
-  expect(box!.width).toBeCloseTo(120, 2);
-  expect(box!.height).toBeCloseTo(120, 2);
+  expect(box!.width).toBeCloseTo(100, 2);
+  expect(box!.height).toBeCloseTo(100, 2);
+  await expect
+    .poll(() => diagnostic(page, "Version"))
+    .toBe("V6 / V6 max · raised to V6 for branding");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
 test("uses only magenta and shows transparent placement cautions", async ({ page }) => {
