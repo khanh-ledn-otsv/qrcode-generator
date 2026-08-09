@@ -4,6 +4,8 @@ use wasm_bindgen_test::wasm_bindgen_test;
 
 #[path = "support/branded_artifact_fixture.rs"]
 mod branded_artifact_fixture;
+#[path = "support/inline_version_six_artifact_fixture.rs"]
+mod inline_version_six_artifact_fixture;
 #[path = "support/png_fixture.rs"]
 mod png_fixture;
 
@@ -25,6 +27,14 @@ fn branded_svg_and_png_bytes_match_every_enabled_native_fixture() {
     assert_eq!(
         branded_artifact_fixture::hashes(),
         branded_artifact_fixture::SHA256
+    );
+}
+
+#[wasm_bindgen_test]
+fn unbranded_inline_version_six_svg_and_png_match_the_native_fixture() {
+    assert_eq!(
+        inline_version_six_artifact_fixture::hashes(),
+        inline_version_six_artifact_fixture::SHA256
     );
 }
 

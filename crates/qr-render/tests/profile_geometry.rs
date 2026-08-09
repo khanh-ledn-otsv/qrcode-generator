@@ -1,9 +1,20 @@
+#[path = "support/inline_version_six_artifact_fixture.rs"]
+mod inline_version_six_artifact_fixture;
+
 use proptest::prelude::*;
 use proptest::test_runner::RngSeed;
 use qr_render::{
     CanvasGeometry, GeometryError, ModuleCount, OutputProfile, PaddingContent, PixelDimensions,
     ProfileError, ProfileId, SUPPORTED_PROFILES, Version,
 };
+
+#[test]
+fn unbranded_inline_version_six_hashes_are_pinned_on_native() {
+    assert_eq!(
+        inline_version_six_artifact_fixture::hashes(),
+        inline_version_six_artifact_fixture::SHA256
+    );
+}
 
 #[test]
 fn supported_profiles_match_the_approved_output_contract() {

@@ -6,6 +6,8 @@ without reducing the six-pixel PNG module scale.
 
 **Blocked by:** none.
 
+**Type:** task
+
 **Status:** resolved
 
 - [x] Inline uses a 100×100 px SVG canvas, a 300×300 px PNG canvas, and a
