@@ -276,12 +276,11 @@ fn prepare_decode_case(
 ) -> Result<PreparedDecodeCase, RenderError> {
     let payload_class = case.class;
     let options = tuple.options()?;
-    let encoded = encode(EncodeRequest {
-        text: &case.text,
-        ecc: tuple.ecc(),
-        min_version: qr_core::Version::MINIMUM,
-        max_version: tuple.profile.maximum_version(),
-    })
+    let encoded = encode(EncodeRequest::first_fit(
+        &case.text,
+        tuple.ecc(),
+        tuple.profile.maximum_version(),
+    ))
     .map_err(|_| RenderError::RenderFailure)?;
     if case
         .expected_version
@@ -367,12 +366,11 @@ fn dense_url_at_profile_ceiling(
     while first_unknown < first_rejected {
         let suffix_length = first_unknown + (first_rejected - first_unknown) / 2;
         let candidate = format!("{prefix}{}", "a".repeat(suffix_length));
-        if encode(EncodeRequest {
-            text: &candidate,
+        if encode(EncodeRequest::first_fit(
+            &candidate,
             ecc,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: profile.maximum_version(),
-        })
+            profile.maximum_version(),
+        ))
         .is_ok()
         {
             first_unknown = suffix_length + 1;
@@ -384,12 +382,11 @@ fn dense_url_at_profile_ceiling(
         .checked_sub(1)
         .ok_or("profile cannot fit the dense URL prefix")?;
     let text = format!("{prefix}{}", "a".repeat(fitting_suffix));
-    let encoded = encode(EncodeRequest {
-        text: &text,
+    let encoded = encode(EncodeRequest::first_fit(
+        &text,
         ecc,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: profile.maximum_version(),
-    })?;
+        profile.maximum_version(),
+    ))?;
     if encoded.version() != profile.maximum_version() {
         return Err("dense URL did not select the profile ceiling version".into());
     }

@@ -671,12 +671,12 @@ impl WorkflowState {
 
 pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFailure> {
     let profile = supported_profile(request.profile_id).ok_or(WorkflowFailure::Internal)?;
-    let encoded = encode(EncodeRequest {
-        text: request.payload(),
-        ecc: request.ecc(),
-        min_version: request.minimum_version(),
-        max_version: profile.maximum_version(),
-    })
+    let encoded = encode(EncodeRequest::with_version_range(
+        request.payload(),
+        request.ecc(),
+        request.minimum_version(),
+        profile.maximum_version(),
+    ))
     .map_err(|error| classify_encode_error(error, request, profile))?;
     let options = RenderOptions::approved(profile, request.foreground, request.background)
         .and_then(|options| {
@@ -710,7 +710,8 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             minimum_version: request.minimum_version(),
             maximum_version: profile.maximum_version(),
             selected_version: encoded.version(),
-            branding_increased_version: request.logo_enabled && encoded.minimum_version_applied(),
+            branding_increased_version: request.logo_enabled
+                && encoded.minimum_version_increased_selection(),
             used_data_bits: encoded.data_bits_used(),
             available_data_bits: encoded.data_bits_capacity(),
             data_codewords,

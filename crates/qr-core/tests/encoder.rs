@@ -6,12 +6,11 @@ use qr_core::{EncodeError, EncodeRequest, Version, encode};
 
 #[test]
 fn public_encoder_returns_diagnostics_and_a_complete_immutable_matrix() {
-    let encoded = encode(EncodeRequest {
-        text: "HELLO WORLD",
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::new(40).expect("Version 40 is valid"),
-    })
+    let encoded = encode(EncodeRequest::first_fit(
+        "HELLO WORLD",
+        ErrorCorrection::Medium,
+        Version::new(40).expect("Version 40 is valid"),
+    ))
     .expect("representative payload encodes");
 
     assert_eq!(
@@ -33,31 +32,28 @@ fn public_encoder_returns_diagnostics_and_a_complete_immutable_matrix() {
 #[test]
 fn public_encoder_reports_typed_profile_boundaries() {
     let version_one = Version::new(1).expect("Version 1 is valid");
-    let exact_fit = encode(EncodeRequest {
-        text: "1".repeat(34).as_str(),
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: version_one,
-    });
+    let exact_fit = encode(EncodeRequest::first_fit(
+        "1".repeat(34).as_str(),
+        ErrorCorrection::Medium,
+        version_one,
+    ));
     assert!(exact_fit.is_ok());
 
     let one_over = "1".repeat(35);
     assert!(matches!(
-        encode(EncodeRequest {
-            text: &one_over,
-            ecc: ErrorCorrection::Medium,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: version_one,
-        }),
+        encode(EncodeRequest::first_fit(
+            &one_over,
+            ErrorCorrection::Medium,
+            version_one
+        )),
         Err(EncodeError::Payload(_))
     ));
     assert!(matches!(
-        encode(EncodeRequest {
-            text: "",
-            ecc: ErrorCorrection::Medium,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: version_one,
-        }),
+        encode(EncodeRequest::first_fit(
+            "",
+            ErrorCorrection::Medium,
+            version_one
+        )),
         Err(EncodeError::Payload(_))
     ));
 }
@@ -66,23 +62,23 @@ fn public_encoder_reports_typed_profile_boundaries() {
 fn public_encoder_honors_and_checks_the_complete_version_range() {
     let version_six = Version::new(6).expect("Version 6 is valid");
     let version_eight = Version::new(8).expect("Version 8 is valid");
-    let encoded = encode(EncodeRequest {
-        text: "public range",
-        ecc: ErrorCorrection::High,
-        min_version: version_six,
-        max_version: version_eight,
-    })
+    let encoded = encode(EncodeRequest::with_version_range(
+        "public range",
+        ErrorCorrection::High,
+        version_six,
+        version_eight,
+    ))
     .expect("the payload fits the checked range");
 
     assert_eq!(encoded.version(), version_six);
-    assert!(encoded.minimum_version_applied());
+    assert!(encoded.minimum_version_increased_selection());
     assert!(matches!(
-        encode(EncodeRequest {
-            text: "public range",
-            ecc: ErrorCorrection::High,
-            min_version: version_eight,
-            max_version: version_six,
-        }),
+        encode(EncodeRequest::with_version_range(
+            "public range",
+            ErrorCorrection::High,
+            version_eight,
+            version_six,
+        )),
         Err(EncodeError::Payload(EncodingError::InvalidVersionRange {
             minimum,
             maximum,
@@ -108,12 +104,11 @@ fn public_encoder_matches_dual_oracle_composed_matrix_goldens() {
             "H" => ErrorCorrection::High,
             value => panic!("unknown golden ECC {value}"),
         };
-        let encoded = encode(EncodeRequest {
+        let encoded = encode(EncodeRequest::first_fit(
             text,
             ecc,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: Version::new(40).expect("Version 40 is valid"),
-        })
+            Version::new(40).expect("Version 40 is valid"),
+        ))
         .expect("golden payload encodes");
         let expected_mode = match fields[1] {
             "numeric" => DataMode::Numeric,
@@ -197,17 +192,12 @@ proptest! {
         let lower = Version::new(lower_max).expect("generated lower version is valid");
         let upper_number = lower_max.saturating_add(extra).min(40);
         let upper = Version::new(upper_number).expect("generated upper version is valid");
-        let request = EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::Medium,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: lower,
-        };
+        let request = EncodeRequest::first_fit(&text, ErrorCorrection::Medium, lower);
         let first = encode(request);
         let second = encode(request);
         prop_assert_eq!(&first, &second);
         if let Ok(encoded) = first {
-            let expanded = encode(EncodeRequest { min_version: qr_core::Version::MINIMUM, max_version: upper, ..request })
+            let expanded = encode(EncodeRequest::first_fit(&text, ErrorCorrection::Medium, upper))
                 .expect("a larger maximum preserves a successful fit");
             prop_assert_eq!(expanded.version(), encoded.version());
             prop_assert_eq!(&expanded, &encoded);

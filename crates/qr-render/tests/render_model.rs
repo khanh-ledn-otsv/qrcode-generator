@@ -126,12 +126,7 @@ proptest! {
         background_index in 0_usize..APPROVED_BACKGROUNDS.len(),
     ) {
         let profile = SUPPORTED_PROFILES[profile_index];
-        let encoded = encode(EncodeRequest {
-            text: &payload,
-            ecc: ErrorCorrection::Medium,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: profile.maximum_version(),
-        }).unwrap();
+        let encoded = encode(EncodeRequest::first_fit(&payload, ErrorCorrection::Medium, profile.maximum_version())).unwrap();
         let original = encoded.clone();
         let options = RenderOptions::approved(
             profile,
@@ -320,12 +315,11 @@ fn visible_symbol_glyphs_are_row_major_and_retain_module_ownership() {
 
 #[test]
 fn logo_knockout_is_applied_before_visible_glyphs_reach_artifact_adapters() {
-    let encoded = encode(EncodeRequest {
-        text: "logo",
-        ecc: ErrorCorrection::High,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(8).unwrap(),
-    })
+    let encoded = encode(EncodeRequest::first_fit(
+        "logo",
+        ErrorCorrection::High,
+        Version::try_from(8).unwrap(),
+    ))
     .unwrap();
     let options = RenderOptions::safe(SUPPORTED_PROFILES[1])
         .unwrap()
@@ -392,23 +386,21 @@ fn impractical_allocations_have_a_target_independent_typed_failure() {
 }
 
 fn encoded_qr(text: &str) -> EncodedQr {
-    encode(EncodeRequest {
+    encode(EncodeRequest::first_fit(
         text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(8).unwrap(),
-    })
+        ErrorCorrection::Medium,
+        Version::try_from(8).unwrap(),
+    ))
     .unwrap()
 }
 
 fn encoded_qr_at_version(version: u8) -> EncodedQr {
     let length = versions::first_byte_length(version);
     let text = "a".repeat(length);
-    encode(EncodeRequest {
-        text: &text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(version).unwrap(),
-    })
+    encode(EncodeRequest::first_fit(
+        &text,
+        ErrorCorrection::Medium,
+        Version::try_from(version).unwrap(),
+    ))
     .unwrap()
 }

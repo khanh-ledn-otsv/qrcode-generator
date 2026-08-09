@@ -18,18 +18,8 @@ fuzz_target!(|data: &[u8]| {
         return;
     };
     let lossy = String::from_utf8_lossy(payload);
-    let _ = encode(EncodeRequest {
-        text: &lossy,
-        ecc,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: version,
-    });
+    let _ = encode(EncodeRequest::first_fit(&lossy, ecc, version));
     if let Ok(valid) = std::str::from_utf8(payload) {
-        let _ = encode(EncodeRequest {
-            text: valid,
-            ecc,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: version,
-        });
+        let _ = encode(EncodeRequest::first_fit(valid, ecc, version));
     }
 });

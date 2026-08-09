@@ -37,12 +37,11 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for version in 1..=profile.maximum_version().number() {
             let text = high_versions::payload_for_high_version(version)?;
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::High,
-                min_version: qr_core::Version::MINIMUM,
-                max_version: Version::try_from(version)?,
-            })?;
+            let encoded = encode(EncodeRequest::first_fit(
+                &text,
+                ErrorCorrection::High,
+                Version::try_from(version)?,
+            ))?;
             let expected = DecodeExpectation {
                 payload: text.into_bytes(),
                 version: QrVersion::new(version)?,
@@ -84,12 +83,11 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for (payload_label, text) in required_logo_payloads(profile)? {
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::High,
-                min_version: qr_core::Version::MINIMUM,
-                max_version: profile.maximum_version(),
-            })?;
+            let encoded = encode(EncodeRequest::first_fit(
+                &text,
+                ErrorCorrection::High,
+                profile.maximum_version(),
+            ))?;
             let expected = DecodeExpectation {
                 payload: text.into_bytes(),
                 version: QrVersion::new(encoded.version().number())?,
@@ -145,12 +143,11 @@ fn required_logo_payloads(
     let mut dense_url = None;
     for suffix_length in 0..=1_000 {
         let text = format!("{dense_prefix}{}", "a".repeat(suffix_length));
-        if encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: profile.maximum_version(),
-        })
+        if encode(EncodeRequest::first_fit(
+            &text,
+            ErrorCorrection::High,
+            profile.maximum_version(),
+        ))
         .is_ok()
         {
             dense_url = Some(text);
@@ -159,12 +156,11 @@ fn required_logo_payloads(
         }
     }
     let dense_url = dense_url.ok_or("logo profile cannot fit the dense URL prefix")?;
-    let dense = encode(EncodeRequest {
-        text: &dense_url,
-        ecc: ErrorCorrection::High,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: profile.maximum_version(),
-    })?;
+    let dense = encode(EncodeRequest::first_fit(
+        &dense_url,
+        ErrorCorrection::High,
+        profile.maximum_version(),
+    ))?;
     if dense.version() != profile.maximum_version() {
         return Err("dense logo URL did not select the profile ceiling version".into());
     }

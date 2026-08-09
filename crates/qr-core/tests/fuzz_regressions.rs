@@ -37,12 +37,7 @@ fn committed_fuzz_regressions_replay_intended_paths_without_panics() {
             _ => ErrorCorrection::High,
         };
         let maximum = Version::new(control % 40 + 1).expect("control always maps to Version 1-40");
-        let result = encode(EncodeRequest {
-            text,
-            ecc,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: maximum,
-        });
+        let result = encode(EncodeRequest::first_fit(text, ecc, maximum));
         match expected {
             None => assert!(matches!(
                 result,

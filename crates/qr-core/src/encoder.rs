@@ -20,7 +20,7 @@ pub struct EncodedQr {
     mask: MaskId,
     data_bits_used: u32,
     data_bits_capacity: u32,
-    minimum_version_applied: bool,
+    minimum_version_increased_selection: bool,
     modules: ModuleMatrix,
 }
 
@@ -61,8 +61,8 @@ impl EncodedQr {
     }
 
     #[must_use]
-    pub const fn minimum_version_applied(&self) -> bool {
-        self.minimum_version_applied
+    pub const fn minimum_version_increased_selection(&self) -> bool {
+        self.minimum_version_increased_selection
     }
 
     #[must_use]
@@ -88,7 +88,7 @@ pub fn encode(request: EncodeRequest<'_>) -> Result<EncodedQr, EncodeError> {
         mask,
         data_bits_used: encoded.data_bits_used(),
         data_bits_capacity: encoded.data_bits_capacity(),
-        minimum_version_applied: encoded.minimum_version_applied(),
+        minimum_version_increased_selection: encoded.minimum_version_increased_selection(),
         modules: selected.into_matrix(),
     })
 }

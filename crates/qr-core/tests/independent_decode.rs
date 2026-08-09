@@ -72,12 +72,12 @@ fn run_cases(reader: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
     let mut masks = BTreeSet::new();
     let mut versions = BTreeSet::new();
     for (index, (text, ecc, minimum)) in cases.iter().enumerate() {
-        let encoded = encode(EncodeRequest {
+        let encoded = encode(EncodeRequest::with_version_range(
             text,
-            ecc: *ecc,
-            min_version: *minimum,
-            max_version: Version::new(40)?,
-        })?;
+            *ecc,
+            *minimum,
+            Version::new(40)?,
+        ))?;
         masks.insert(encoded.mask().number());
         versions.insert(encoded.version().number());
         let artifact = output.join(format!("case-{index:02}.pgm"));
@@ -144,12 +144,11 @@ fn payload_for_version(target: u8) -> Result<String, Box<dyn Error>> {
     while low < high {
         let length = low + (high - low) / 2;
         let text = "a".repeat(length);
-        let encoded = encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::Low,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: maximum,
-        })?;
+        let encoded = encode(EncodeRequest::first_fit(
+            &text,
+            ErrorCorrection::Low,
+            maximum,
+        ))?;
         if encoded.version().number() < target {
             low = length + 1;
         } else {
@@ -157,12 +156,11 @@ fn payload_for_version(target: u8) -> Result<String, Box<dyn Error>> {
         }
     }
     let text = "a".repeat(low);
-    let selected = encode(EncodeRequest {
-        text: &text,
-        ecc: ErrorCorrection::Low,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: maximum,
-    })?;
+    let selected = encode(EncodeRequest::first_fit(
+        &text,
+        ErrorCorrection::Low,
+        maximum,
+    ))?;
     if selected.version().number() != target {
         return Err(format!("no synthetic payload selected Version {target}").into());
     }

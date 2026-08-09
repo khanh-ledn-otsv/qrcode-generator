@@ -290,11 +290,10 @@ fn decode_rgba(bytes: &[u8]) -> (u32, u32, Vec<u8>) {
 
 fn encoded_qr_at_version(version: u8) -> EncodedQr {
     let text = "a".repeat(versions::first_byte_length(version));
-    encode(EncodeRequest {
-        text: &text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(version).unwrap(),
-    })
+    encode(EncodeRequest::first_fit(
+        &text,
+        ErrorCorrection::Medium,
+        Version::try_from(version).unwrap(),
+    ))
     .unwrap()
 }

@@ -132,12 +132,11 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
             let mut decoded = 0;
             for profile in SUPPORTED_PROFILES {
                 for (label, text) in payload_cases(profile, ErrorCorrection::Medium)? {
-                    let encoded = encode(EncodeRequest {
-                        text: &text,
-                        ecc: ErrorCorrection::Medium,
-                        min_version: qr_core::Version::MINIMUM,
-                        max_version: profile.maximum_version(),
-                    })?;
+                    let encoded = encode(EncodeRequest::first_fit(
+                        &text,
+                        ErrorCorrection::Medium,
+                        profile.maximum_version(),
+                    ))?;
                     for transparent in [false, true] {
                         attempted += 2;
                         let stem = format!(
@@ -453,12 +452,11 @@ fn payload_cases_for_version(version: u8) -> Result<Vec<EncodedPayloadCase>, Box
     let mut cases = Vec::new();
     for (label, prefix, unit) in specifications {
         let text = first_selecting_version(prefix, unit, target, ErrorCorrection::High)?;
-        let encoded = encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: target,
-        })?;
+        let encoded = encode(EncodeRequest::first_fit(
+            &text,
+            ErrorCorrection::High,
+            target,
+        ))?;
         if encoded.version() != target {
             return Err(format!("{label} did not select version {version}").into());
         }
@@ -478,13 +476,8 @@ fn first_selecting_version(
 ) -> Result<String, Box<dyn Error>> {
     for count in 1..=4_096 / unit.len() {
         let candidate = format!("{prefix}{}", unit.repeat(count));
-        if encode(EncodeRequest {
-            text: &candidate,
-            ecc,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: version,
-        })
-        .is_ok_and(|encoded| encoded.version() == version)
+        if encode(EncodeRequest::first_fit(&candidate, ecc, version))
+            .is_ok_and(|encoded| encoded.version() == version)
         {
             return Ok(candidate);
         }
@@ -501,14 +494,7 @@ fn largest_fitting(
     let mut selected = None;
     for count in 0..=4_096usize.saturating_sub(prefix.len()) / unit.len() {
         let candidate = format!("{prefix}{}", unit.repeat(count));
-        if encode(EncodeRequest {
-            text: &candidate,
-            ecc,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: maximum,
-        })
-        .is_ok()
-        {
+        if encode(EncodeRequest::first_fit(&candidate, ecc, maximum)).is_ok() {
             selected = Some(candidate);
         } else {
             break;

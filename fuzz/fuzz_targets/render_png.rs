@@ -23,12 +23,7 @@ fuzz_target!(|data: &[u8]| {
     } else {
         ErrorCorrection::Medium
     };
-    let Ok(encoded) = encode(EncodeRequest {
-        text,
-        ecc,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: profile.maximum_version(),
-    }) else {
+    let Ok(encoded) = encode(EncodeRequest::first_fit(text, ecc, profile.maximum_version())) else {
         return;
     };
     let Ok(mut options) = RenderOptions::safe(profile) else {

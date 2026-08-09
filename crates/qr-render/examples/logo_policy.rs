@@ -16,12 +16,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
             let text = payload_for_high_version(version_number)?;
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::High,
-                min_version: qr_core::Version::MINIMUM,
-                max_version: Version::try_from(version_number)?,
-            })?;
+            let encoded = encode(EncodeRequest::first_fit(
+                &text,
+                ErrorCorrection::High,
+                Version::try_from(version_number)?,
+            ))?;
             let options = RenderOptions::safe(profile)?.with_logo(LogoStyle::Bundled)?;
             let Ok(model) = RenderModel::new(&encoded, options) else {
                 println!(
@@ -63,12 +62,11 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn payload_for_high_version(version: u8) -> Result<String, Box<dyn Error>> {
     for length in 1..=1_000 {
         let text = "a".repeat(length);
-        if encode(EncodeRequest {
-            text: &text,
-            ecc: ErrorCorrection::High,
-            min_version: qr_core::Version::MINIMUM,
-            max_version: Version::try_from(version)?,
-        })
+        if encode(EncodeRequest::first_fit(
+            &text,
+            ErrorCorrection::High,
+            Version::try_from(version)?,
+        ))
         .is_ok_and(|encoded| encoded.version().number() == version)
         {
             return Ok(text);

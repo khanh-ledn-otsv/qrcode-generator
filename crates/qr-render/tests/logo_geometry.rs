@@ -14,12 +14,11 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
             let text = high_versions::payload_for_high_version(version_number).unwrap();
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::High,
-                min_version: qr_core::Version::MINIMUM,
-                max_version: Version::new(version_number).unwrap(),
-            })
+            let encoded = encode(EncodeRequest::first_fit(
+                &text,
+                ErrorCorrection::High,
+                Version::new(version_number).unwrap(),
+            ))
             .unwrap();
             assert_eq!(encoded.version().number(), version_number);
 
@@ -93,12 +92,11 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
 #[test]
 fn logo_requires_high_ecc_and_opaque_white() {
     let profile = SUPPORTED_PROFILES[0];
-    let encoded = encode(EncodeRequest {
-        text: "logo",
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: profile.maximum_version(),
-    })
+    let encoded = encode(EncodeRequest::first_fit(
+        "logo",
+        ErrorCorrection::Medium,
+        profile.maximum_version(),
+    ))
     .unwrap();
     let options = RenderOptions::safe(profile)
         .unwrap()

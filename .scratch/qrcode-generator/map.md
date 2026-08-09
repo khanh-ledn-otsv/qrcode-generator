@@ -80,15 +80,16 @@
   module as an exact centered 0.45-module dot while retaining full-cell square
   finders, blank separators, unchanged placement/privacy, and a single compiled
   appearance.
+- [Ticket 25](issues/25-select-branded-minimum-version-in-logo-mode.md): Checked
+  encoder ranges preserve ordinary first fitting while logo mode requests ECC H
+  and at least Version 6; diagnostics identify branding-enlarged symbols and
+  profiles below the branded minimum receive a specific validation failure.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
 
 ## Planned work
 
-- [Ticket 25](issues/25-select-branded-minimum-version-in-logo-mode.md) carries
-  checked minimum-version selection through logo mode and is blocked by Ticket
-  23.
 - [Ticket 26](issues/26-enlarge-exactly-centered-one-logo.md) enlarges the exact
   centered ONE logo and is blocked by Tickets 24 and 25.
 - [Ticket 27](issues/27-harden-complete-branded-output-matrix.md) completes the

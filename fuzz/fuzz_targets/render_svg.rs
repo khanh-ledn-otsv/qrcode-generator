@@ -13,12 +13,7 @@ fuzz_target!(|data: &[u8]| {
     };
     let text = String::from_utf8_lossy(payload);
     let profile = SUPPORTED_PROFILES[usize::from(control & 0b11)];
-    let Ok(encoded) = encode(EncodeRequest {
-        text: &text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: profile.maximum_version(),
-    }) else {
+    let Ok(encoded) = encode(EncodeRequest::first_fit(&text, ErrorCorrection::Medium, profile.maximum_version())) else {
         return;
     };
     let background = if control & 0b100 == 0 {

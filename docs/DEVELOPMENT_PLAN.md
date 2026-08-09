@@ -209,11 +209,20 @@ qr-web ------------> qr-core
 Separate encoding from branded generation:
 
 ```rust
-pub struct EncodeRequest<'a> {
-    pub text: &'a str,
-    pub ecc: ErrorCorrection,
-    pub min_version: Version,
-    pub max_version: Version,
+pub struct EncodeRequest<'a> { /* private fields */ }
+
+impl<'a> EncodeRequest<'a> {
+    pub const fn first_fit(
+        text: &'a str,
+        ecc: ErrorCorrection,
+        max_version: Version,
+    ) -> Self;
+    pub const fn with_version_range(
+        text: &'a str,
+        ecc: ErrorCorrection,
+        min_version: Version,
+        max_version: Version,
+    ) -> Self;
 }
 
 pub struct EncodedQr {
@@ -223,7 +232,7 @@ pub struct EncodedQr {
     pub mask: MaskId,
     pub data_bits_used: u32,
     pub data_bits_capacity: u32,
-    pub minimum_version_applied: bool,
+    pub minimum_version_increased_selection: bool,
     pub modules: ModuleMatrix,
 }
 

@@ -251,23 +251,21 @@ fn svg_uses_full_cell_finders_and_exact_centered_compact_dots() {
 }
 
 fn encoded_qr(text: &str) -> EncodedQr {
-    encode(EncodeRequest {
+    encode(EncodeRequest::first_fit(
         text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(8).unwrap(),
-    })
+        ErrorCorrection::Medium,
+        Version::try_from(8).unwrap(),
+    ))
     .unwrap()
 }
 
 fn encoded_qr_at_version(version: u8) -> EncodedQr {
     let text = "a".repeat(versions::first_byte_length(version));
-    encode(EncodeRequest {
-        text: &text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(version).unwrap(),
-    })
+    encode(EncodeRequest::first_fit(
+        &text,
+        ErrorCorrection::Medium,
+        Version::try_from(version).unwrap(),
+    ))
     .unwrap()
 }
 

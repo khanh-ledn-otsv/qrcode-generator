@@ -49,12 +49,7 @@ fuzz_target!(|data: &[u8]| {
     let _ = malformed.write(x, y, Module::new(false, kind));
     let _ = malformed.reserve(x, y, kind);
     let _ = malformed.finish();
-    let Ok(encoded) = encoding::encode(EncodeRequest {
-        text,
-        ecc,
-        min_version: Version::MINIMUM,
-        max_version,
-    }) else {
+    let Ok(encoded) = encoding::encode(EncodeRequest::first_fit(text, ecc, max_version)) else {
         return;
     };
     let Ok(stream) = construct(CodewordStreamRequest {

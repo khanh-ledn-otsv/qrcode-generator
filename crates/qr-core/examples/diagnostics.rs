@@ -6,12 +6,11 @@ use std::io::{self, Read};
 fn main() -> Result<(), Box<dyn Error>> {
     let mut text = String::new();
     io::stdin().read_to_string(&mut text)?;
-    let encoded = encode(EncodeRequest {
-        text: &text,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::new(40)?,
-    })?;
+    let encoded = encode(EncodeRequest::first_fit(
+        &text,
+        ErrorCorrection::Medium,
+        Version::new(40)?,
+    ))?;
     println!(
         "version={} ecc={:?} mode={:?} mask={} bits={}/{} size={}",
         encoded.version().number(),

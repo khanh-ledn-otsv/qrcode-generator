@@ -7,12 +7,11 @@ pub const PAYLOAD: &str = r#"safe/<script>alert("payload")</script>"#;
 pub const SHA256: &str = "84fbe86bf19f9d1b4aff3416e784d9ac5969e3163145779ccc9a16805b43111c";
 
 pub fn artifact() -> Vec<u8> {
-    let encoded = encode(EncodeRequest {
-        text: PAYLOAD,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: Version::try_from(8).unwrap(),
-    })
+    let encoded = encode(EncodeRequest::first_fit(
+        PAYLOAD,
+        ErrorCorrection::Medium,
+        Version::try_from(8).unwrap(),
+    ))
     .unwrap();
     let model = RenderModel::new(
         &encoded,

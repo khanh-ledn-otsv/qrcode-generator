@@ -13,17 +13,7 @@ fuzz_target!(|text: &str| {
         ErrorCorrection::High,
     ][usize::from(control & 0b11)];
     let max_version = Version::new(control % 40 + 1).expect("derived version is valid");
-    let first = encode(EncodeRequest {
-        text,
-        ecc,
-        min_version: Version::MINIMUM,
-        max_version,
-    });
-    let second = encode(EncodeRequest {
-        text,
-        ecc,
-        min_version: Version::MINIMUM,
-        max_version,
-    });
+    let first = encode(EncodeRequest::first_fit(text, ecc, max_version));
+    let second = encode(EncodeRequest::first_fit(text, ecc, max_version));
     assert_eq!(first, second);
 });

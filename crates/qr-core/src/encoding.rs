@@ -29,10 +29,32 @@ impl EciAssignment {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct EncodeRequest<'a> {
-    pub text: &'a str,
-    pub ecc: ErrorCorrection,
-    pub min_version: Version,
-    pub max_version: Version,
+    text: &'a str,
+    ecc: ErrorCorrection,
+    min_version: Version,
+    max_version: Version,
+}
+
+impl<'a> EncodeRequest<'a> {
+    #[must_use]
+    pub const fn first_fit(text: &'a str, ecc: ErrorCorrection, max_version: Version) -> Self {
+        Self::with_version_range(text, ecc, Version::MINIMUM, max_version)
+    }
+
+    #[must_use]
+    pub const fn with_version_range(
+        text: &'a str,
+        ecc: ErrorCorrection,
+        min_version: Version,
+        max_version: Version,
+    ) -> Self {
+        Self {
+            text,
+            ecc,
+            min_version,
+            max_version,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -43,7 +65,7 @@ pub struct EncodedData {
     eci_assignment: Option<EciAssignment>,
     data_bits_used: u32,
     data_bits_capacity: u32,
-    minimum_version_applied: bool,
+    minimum_version_increased_selection: bool,
     data_codewords: Vec<u8>,
 }
 
@@ -79,8 +101,8 @@ impl EncodedData {
     }
 
     #[must_use]
-    pub const fn minimum_version_applied(&self) -> bool {
-        self.minimum_version_applied
+    pub const fn minimum_version_increased_selection(&self) -> bool {
+        self.minimum_version_increased_selection
     }
 
     #[must_use]
@@ -250,7 +272,7 @@ fn encode_at_version(
     segment: &PreparedSegment<'_>,
     error_correction: ErrorCorrection,
     version: Version,
-    minimum_version_applied: bool,
+    minimum_version_increased_selection: bool,
 ) -> Result<EncodedData, EncodingError> {
     let row = lookup(version, error_correction)?;
     let capacity_bits = u32::from(row.data_codewords())
@@ -291,7 +313,7 @@ fn encode_at_version(
         eci_assignment: segment.eci_assignment,
         data_bits_used,
         data_bits_capacity: capacity_bits,
-        minimum_version_applied,
+        minimum_version_increased_selection,
         data_codewords,
     })
 }

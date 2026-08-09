@@ -43,12 +43,11 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
 #[test]
 fn adverse_transforms_are_reproducible_and_preserve_canvas_dimensions() -> Result<(), Box<dyn Error>>
 {
-    let encoded = encode(EncodeRequest {
-        text: "https://example.test/adverse",
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: SUPPORTED_PROFILES[1].maximum_version(),
-    })?;
+    let encoded = encode(EncodeRequest::first_fit(
+        "https://example.test/adverse",
+        ErrorCorrection::Medium,
+        SUPPORTED_PROFILES[1].maximum_version(),
+    ))?;
     let options = RenderOptions::approved(
         SUPPORTED_PROFILES[1],
         Foreground::Brand,
@@ -91,12 +90,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         manifest.decoder().source_commit(),
     );
     let safe_payload = "https://example.test/adverse-envelope";
-    let safe_encoded = encode(EncodeRequest {
-        text: safe_payload,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: SUPPORTED_PROFILES[1].maximum_version(),
-    })?;
+    let safe_encoded = encode(EncodeRequest::first_fit(
+        safe_payload,
+        ErrorCorrection::Medium,
+        SUPPORTED_PROFILES[1].maximum_version(),
+    ))?;
     let safe_source = render_png(&RenderModel::new(
         &safe_encoded,
         RenderOptions::approved(
@@ -113,12 +111,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     };
 
     let transparent_payload = "https://example.test/transparent-caution";
-    let transparent_encoded = encode(EncodeRequest {
-        text: transparent_payload,
-        ecc: ErrorCorrection::Medium,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: SUPPORTED_PROFILES[1].maximum_version(),
-    })?;
+    let transparent_encoded = encode(EncodeRequest::first_fit(
+        transparent_payload,
+        ErrorCorrection::Medium,
+        SUPPORTED_PROFILES[1].maximum_version(),
+    ))?;
     let transparent_source = render_png(&RenderModel::new(
         &transparent_encoded,
         RenderOptions::approved(
@@ -136,12 +133,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     };
 
     let logo_payload = "https://example.test/logo-caution";
-    let logo_encoded = encode(EncodeRequest {
-        text: logo_payload,
-        ecc: ErrorCorrection::High,
-        min_version: qr_core::Version::MINIMUM,
-        max_version: SUPPORTED_PROFILES[1].maximum_version(),
-    })?;
+    let logo_encoded = encode(EncodeRequest::first_fit(
+        logo_payload,
+        ErrorCorrection::High,
+        SUPPORTED_PROFILES[1].maximum_version(),
+    ))?;
     let logo_source = render_png(&RenderModel::new(
         &logo_encoded,
         RenderOptions::safe(SUPPORTED_PROFILES[1])?.with_logo(LogoStyle::Bundled)?,

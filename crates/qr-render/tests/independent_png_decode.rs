@@ -41,12 +41,11 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for version in 1..=profile.maximum_version().number() {
             let text = payload_for_version(version, case_index);
-            let encoded = encode(EncodeRequest {
-                text: &text,
-                ecc: ErrorCorrection::Medium,
-                min_version: qr_core::Version::MINIMUM,
-                max_version: Version::try_from(version)?,
-            })?;
+            let encoded = encode(EncodeRequest::first_fit(
+                &text,
+                ErrorCorrection::Medium,
+                Version::try_from(version)?,
+            ))?;
             if encoded.version().number() != version {
                 return Err(format!("case {case_index} selected the wrong version").into());
             }
