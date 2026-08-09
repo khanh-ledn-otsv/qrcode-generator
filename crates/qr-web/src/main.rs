@@ -534,7 +534,7 @@ fn background_presentation(background: Background) -> BackgroundPresentation {
 
 const fn function_module_style_label(style: FunctionModuleStyle) -> &'static str {
     match style {
-        FunctionModuleStyle::Square => "Square",
+        FunctionModuleStyle::CompactDots => "Compact dots",
     }
 }
 

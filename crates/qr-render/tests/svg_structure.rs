@@ -6,27 +6,27 @@ mod versions;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, Version, render_svg,
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, GlyphOwnership, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES, Version, render_svg,
 };
 use sha2::{Digest, Sha256};
 
 const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 4] = [
     [[
-        "f15791b686846369c2f3de449981d355081e2e29f4418e39270555427d035afe",
-        "85416319a20dd1ad017d1c0ca46ab938a2e2ff1d7ab7c49b4b70a6aa69833e8c",
+        "9cda15326dba305e98a352cfeebe6bf5264b540fde1d128301e408f405b234a2",
+        "a1406e83cb39a206c07065114f6f9fdd8cd3e2447605e25b86f19e1893ea345e",
     ]],
     [[
-        "3d697c5aa8dc6f3866856347916b572fd6959e6355c2bf67ec0560203cf2bf9a",
-        "d537ed10eab59f09e68461bc66c5a9845824a4496114a5bd45e03f428bbbec31",
+        "7d08d8838071ceeb1c3b3cdc95b04244efc02e973bd54738d0296cf7ff93ac83",
+        "9772f92e866cabe994dc2498e50059bb151484dc1f1c4f0656d3b1a1e2fe3ad1",
     ]],
     [[
-        "d8dd346c543097fd8c44162eb38d95000d0fcb9c183e4f41bb8f6c74442afcce",
-        "acf7b3c425ddd8b2a5313bb88b77c0130fecd271aa9f7a17bed312f02ba8bcf8",
+        "3a957742f63dbc6d8191e822636dae2ee8658d6e37496894a143b59e019c75d1",
+        "7c68066c66e154b8daaaaf32efe43d7a497bb1efd25881cacc7e512e19b8bd3c",
     ]],
     [[
-        "0906bb118e0b059fda652eb8d4504b3522cedc9021276b6518a38c69279bff91",
-        "542925ca846e3d148229f32ab94187f3b7dc4f70f6aa033730dda23a95b94a7b",
+        "ac5cccfa03d8fe5a3c4c51f7e0f1e241a2565c6f9a7bf335d62dc76b23f87f5c",
+        "1ba90f81bdfe9329f76fab4dcff82d138b94d4de231f740c4efe865740ecdd5c",
     ]],
 ];
 
@@ -42,7 +42,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(first.as_bytes(), second.as_bytes());
     assert_eq!(
         sha256_hex(first.as_bytes()),
-        "25ce72a4028cfe0aedc855d4cd63df074957a5438b968a774b64a0c556678dae"
+        "724308b9771136b5957ca37151dcd0bd482cdf4e8af24990949252d8c2c46a5d"
     );
     assert!(!first.contains(payload));
 
@@ -141,7 +141,7 @@ fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic
 }
 
 #[test]
-fn every_supported_profile_version_has_stable_in_bounds_module_paths() {
+fn every_supported_profile_version_has_stable_in_bounds_glyph_paths() {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
             let encoded = encoded_qr_at_version(version_number);
@@ -201,6 +201,53 @@ fn independent_rasterization_preserves_background_quiet_zone_and_square_modules(
     );
 }
 
+#[test]
+fn svg_uses_full_cell_finders_and_exact_centered_compact_dots() {
+    let encoded = encoded_qr("COMPACT DOT SVG");
+    let model = RenderModel::new(
+        &encoded,
+        RenderOptions::safe(SUPPORTED_PROFILES[1]).unwrap(),
+    )
+    .unwrap();
+    let svg = render_svg(&model).unwrap();
+    let path = roxmltree::Document::parse(&svg)
+        .unwrap()
+        .descendants()
+        .find(|node| node.has_tag_name("path"))
+        .and_then(|node| node.attribute("d"))
+        .unwrap()
+        .to_owned();
+    let quiet = model.symbol().quiet_zone_modules_per_side().get();
+    let finder = model
+        .glyphs()
+        .find(|glyph| glyph.ownership() == GlyphOwnership::Finder)
+        .unwrap();
+    let dot = model
+        .glyphs()
+        .find(|glyph| glyph.ownership() != GlyphOwnership::Finder)
+        .unwrap();
+
+    let finder_x = u32::from(finder.x()) + quiet;
+    let finder_y = u32::from(finder.y()) + quiet;
+    assert!(path.contains(format!("M{finder_x} {finder_y}h1v1h-1z").as_str()));
+
+    let dot_left = u32::from(dot.x()) + quiet;
+    let dot_top = u32::from(dot.y()) + quiet;
+    assert!(
+        path.contains(
+            format!("M{dot_left}.275 {dot_top}.500a.225 .225 0 1 0 .450 0a.225 .225 0 1 0-.450 0z")
+                .as_str()
+        )
+    );
+    assert_eq!(
+        path.matches("h1v1h-1z").count(),
+        model
+            .glyphs()
+            .filter(|glyph| glyph.ownership() == GlyphOwnership::Finder)
+            .count()
+    );
+}
+
 fn encoded_qr(text: &str) -> EncodedQr {
     encode(EncodeRequest {
         text,
@@ -224,9 +271,19 @@ fn dark_module_coordinates(path: &str) -> Vec<(u32, u32)> {
     path.split('M')
         .filter(|command| !command.is_empty())
         .map(|command| {
-            let coordinates = command.strip_suffix("h1v1h-1z").unwrap();
-            let (x, y) = coordinates.split_once(' ').unwrap();
-            (x.parse().unwrap(), y.parse().unwrap())
+            if let Some(coordinates) = command.strip_suffix("h1v1h-1z") {
+                let (x, y) = coordinates.split_once(' ').unwrap();
+                (x.parse().unwrap(), y.parse().unwrap())
+            } else {
+                let coordinates = command
+                    .strip_suffix("a.225 .225 0 1 0 .450 0a.225 .225 0 1 0-.450 0z")
+                    .unwrap();
+                let (left, center_y) = coordinates.split_once(' ').unwrap();
+                (
+                    left.strip_suffix(".275").unwrap().parse().unwrap(),
+                    center_y.strip_suffix(".500").unwrap().parse().unwrap(),
+                )
+            }
         })
         .collect()
 }

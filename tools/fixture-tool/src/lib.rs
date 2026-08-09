@@ -1042,7 +1042,9 @@ impl ZxingDecoder {
             "-binarizer",
             "fixed",
             "-mode",
-            "eci",
+            // Plain mode exposes JSON-quoted Unicode. ECI mode emits an AIM/ECI
+            // control sequence; raw bytes and HasECI are checked separately.
+            "plain",
             artifact
                 .to_str()
                 .ok_or_else(|| VerificationError::new("artifact path is not valid UTF-8"))?,

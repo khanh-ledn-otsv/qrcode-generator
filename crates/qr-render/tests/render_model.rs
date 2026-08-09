@@ -33,7 +33,7 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
     );
     assert_eq!(
         model.options().function_module_style(),
-        FunctionModuleStyle::Square
+        FunctionModuleStyle::CompactDots
     );
     assert_eq!(model.options().finder_style(), FinderStyle::StandardSquare);
     assert_eq!(model.options().logo_style(), LogoStyle::None);
@@ -111,7 +111,10 @@ fn generated_approved_color_background_profile_matrix_is_complete() {
         for foreground in APPROVED_FOREGROUNDS {
             for background in APPROVED_BACKGROUNDS {
                 let options = RenderOptions::approved(profile, foreground, background).unwrap();
-                assert_eq!(options.function_module_style(), FunctionModuleStyle::Square);
+                assert_eq!(
+                    options.function_module_style(),
+                    FunctionModuleStyle::CompactDots
+                );
                 assert_eq!(options.finder_style(), FinderStyle::StandardSquare);
             }
         }

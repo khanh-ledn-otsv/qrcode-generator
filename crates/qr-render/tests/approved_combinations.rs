@@ -21,7 +21,7 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
     );
     assert_eq!(
         APPROVED_FUNCTION_MODULE_STYLES,
-        [FunctionModuleStyle::Square]
+        [FunctionModuleStyle::CompactDots]
     );
     assert_eq!(APPROVED_FINDERS, [FinderStyle::StandardSquare]);
     assert_eq!(APPROVED_LOGO_STYLES, [LogoStyle::None, LogoStyle::Bundled]);

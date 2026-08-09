@@ -166,19 +166,17 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
   expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
 });
 
-test("uses square modules and standard square finders without a shape control", async ({
-  page,
-}) => {
+test("uses compact dots and standard square finders without a shape control", async ({ page }) => {
   await enterPayload(page, "approved styling workflow");
 
   await expect(page.getByRole("group", { name: "Data module shape" })).toHaveCount(0);
-  await expect.poll(() => diagnostic(page, "Function modules")).toBe("Square");
+  await expect.poll(() => diagnostic(page, "Function modules")).toBe("Compact dots");
   await expect.poll(() => diagnostic(page, "Finders")).toBe("Standard square");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
     "d",
-    /M\d+ \d+h1v1h-1z/,
+    /M\d+\.275 \d+\.500a\.225 \.225 0 1 0 \.450 0/,
   );
 });
 

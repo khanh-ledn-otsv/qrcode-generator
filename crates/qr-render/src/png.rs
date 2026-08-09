@@ -1,10 +1,13 @@
 use png::{BitDepth, ColorType, Compression, Encoder, Filter};
 
 use crate::logo::{logo_contains_source_point, source_view_box};
-use crate::{Background, PixelDimensions, RenderError, RenderModel, Rgba};
+use crate::{Background, GlyphOwnership, PixelDimensions, RenderError, RenderModel, Rgba};
 
 const LOGO_SAMPLES_PER_AXIS: u32 = 4;
 const LOGO_SAMPLE_COUNT: u32 = LOGO_SAMPLES_PER_AXIS * LOGO_SAMPLES_PER_AXIS;
+const DOT_SAMPLES_PER_AXIS: u32 = 8;
+const DOT_SAMPLE_COUNT: u32 = DOT_SAMPLES_PER_AXIS * DOT_SAMPLES_PER_AXIS;
+const DOT_DIAMETER_THOUSANDTHS: u32 = 450;
 
 /// Renders the validated model as a deterministic, metadata-free PNG artifact.
 pub fn render_png(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
@@ -39,14 +42,28 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
             .checked_mul(scale)
             .and_then(|offset| origin.y().get().checked_add(offset))
             .ok_or(RenderError::DimensionOverflow)?;
-        fill_square(
-            &mut pixels,
-            dimensions,
-            x,
-            y,
-            scale,
-            model.options().foreground(),
-        )?;
+        match glyph.ownership() {
+            GlyphOwnership::Finder => fill_square(
+                &mut pixels,
+                dimensions,
+                x,
+                y,
+                scale,
+                model.options().foreground(),
+            )?,
+            GlyphOwnership::Separator => return Err(RenderError::RenderFailure),
+            GlyphOwnership::OtherFunction | GlyphOwnership::Data | GlyphOwnership::Remainder => {
+                fill_dot(
+                    &mut pixels,
+                    dimensions,
+                    x,
+                    y,
+                    scale,
+                    model.options().foreground(),
+                    model.options().background(),
+                )?;
+            }
+        }
     }
     if let Some(logo) = model.logo_placement() {
         render_logo(&mut pixels, dimensions, origin, scale, logo)?;
@@ -231,6 +248,120 @@ fn fill_square(
         }
     }
     Ok(())
+}
+
+fn fill_dot(
+    pixels: &mut [u8],
+    dimensions: PixelDimensions,
+    x: u32,
+    y: u32,
+    side: u32,
+    foreground: Rgba,
+    background: Background,
+) -> Result<(), RenderError> {
+    let x_end = x.checked_add(side).ok_or(RenderError::DimensionOverflow)?;
+    let y_end = y.checked_add(side).ok_or(RenderError::DimensionOverflow)?;
+    if x_end > dimensions.width().get() || y_end > dimensions.height().get() {
+        return Err(RenderError::RenderFailure);
+    }
+
+    let center = u64::from(side)
+        .checked_mul(u64::from(DOT_SAMPLES_PER_AXIS))
+        .ok_or(RenderError::DimensionOverflow)?;
+    let scaled_radius = center
+        .checked_mul(u64::from(DOT_DIAMETER_THOUSANDTHS))
+        .ok_or(RenderError::DimensionOverflow)?;
+    let radius_squared = scaled_radius
+        .checked_mul(scaled_radius)
+        .ok_or(RenderError::DimensionOverflow)?;
+    for offset_y in 0..side {
+        for offset_x in 0..side {
+            let mut covered_samples = 0;
+            for sample_y in 0..DOT_SAMPLES_PER_AXIS {
+                for sample_x in 0..DOT_SAMPLES_PER_AXIS {
+                    let sample_x = u64::from(offset_x)
+                        .checked_mul(u64::from(DOT_SAMPLES_PER_AXIS) * 2)
+                        .and_then(|value| value.checked_add(u64::from(sample_x) * 2 + 1))
+                        .ok_or(RenderError::DimensionOverflow)?;
+                    let sample_y = u64::from(offset_y)
+                        .checked_mul(u64::from(DOT_SAMPLES_PER_AXIS) * 2)
+                        .and_then(|value| value.checked_add(u64::from(sample_y) * 2 + 1))
+                        .ok_or(RenderError::DimensionOverflow)?;
+                    let dx = sample_x.abs_diff(center);
+                    let dy = sample_y.abs_diff(center);
+                    let distance_squared = dx
+                        .checked_mul(dx)
+                        .and_then(|value| dy.checked_mul(dy).and_then(|dy| value.checked_add(dy)))
+                        .and_then(|value| value.checked_mul(1_000_000))
+                        .ok_or(RenderError::DimensionOverflow)?;
+                    if distance_squared <= radius_squared {
+                        covered_samples += 1;
+                    }
+                }
+            }
+            if covered_samples > 0 {
+                blend_dot_pixel(
+                    pixels,
+                    dimensions,
+                    x + offset_x,
+                    y + offset_y,
+                    foreground,
+                    background,
+                    covered_samples,
+                )?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn blend_dot_pixel(
+    pixels: &mut [u8],
+    dimensions: PixelDimensions,
+    x: u32,
+    y: u32,
+    foreground: Rgba,
+    background: Background,
+    covered_samples: u32,
+) -> Result<(), RenderError> {
+    let width = u64::from(dimensions.width().get());
+    let offset = u64::from(y)
+        .checked_mul(width)
+        .and_then(|value| value.checked_add(u64::from(x)))
+        .and_then(|value| value.checked_mul(4))
+        .and_then(|value| usize::try_from(value).ok())
+        .ok_or(RenderError::DimensionOverflow)?;
+    let pixel = pixels
+        .get_mut(offset..offset + 4)
+        .ok_or(RenderError::RenderFailure)?;
+    let foreground = foreground.channels();
+    match background {
+        Background::Transparent => {
+            pixel[..3].copy_from_slice(&foreground[..3]);
+            pixel[3] = blend_dot_channel(u8::MAX, 0, covered_samples)?;
+        }
+        Background::Opaque(background) => {
+            let background = background.channels();
+            for channel in 0..3 {
+                pixel[channel] =
+                    blend_dot_channel(foreground[channel], background[channel], covered_samples)?;
+            }
+            pixel[3] = u8::MAX;
+        }
+    }
+    Ok(())
+}
+
+fn blend_dot_channel(
+    foreground: u8,
+    background: u8,
+    covered_samples: u32,
+) -> Result<u8, RenderError> {
+    let uncovered_samples = DOT_SAMPLE_COUNT - covered_samples;
+    let blended =
+        u32::from(foreground) * covered_samples + u32::from(background) * uncovered_samples;
+    u8::try_from((blended + DOT_SAMPLE_COUNT / 2) / DOT_SAMPLE_COUNT)
+        .map_err(|_| RenderError::RenderFailure)
 }
 
 fn serialize_png(dimensions: PixelDimensions, pixels: &[u8]) -> Result<Vec<u8>, RenderError> {

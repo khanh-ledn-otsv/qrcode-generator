@@ -75,14 +75,17 @@
   square finders, a Version 6 branded minimum, and a 13×4.875-module exactly
   centered ONE source with a function-safe 15×7 white knockout; Versions 7–13
   intentionally reject centered-logo geometry.
+- [Ticket 24](issues/24-render-compact-dots-with-square-finders.md): Production
+  SVG and deterministic direct-RGBA PNG now render every visible non-finder
+  module as an exact centered 0.45-module dot while retaining full-cell square
+  finders, blank separators, unchanged placement/privacy, and a single compiled
+  appearance.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
 
 ## Planned work
 
-- [Ticket 24](issues/24-render-compact-dots-with-square-finders.md) ships compact
-  dots with prominent square finders and is the ready frontier.
 - [Ticket 25](issues/25-select-branded-minimum-version-in-logo-mode.md) carries
   checked minimum-version selection through logo mode and is blocked by Ticket
   23.

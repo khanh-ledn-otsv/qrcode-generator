@@ -76,8 +76,7 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 
 These release-1 defaults use the approved ONE treatment. The decode-backed
 geometry below was accepted on 2026-08-09 for implementation by Tickets 24–26;
-the square production renderer remains the compatibility baseline until those
-tickets land.
+the production renderer now applies the selected dot treatment from Ticket 24.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
 - Visible data, remainder, timing, alignment, format, version, and fixed-dark
@@ -412,7 +411,7 @@ The following ticket slices are small enough for review and preserve dependency 
 16. Leptos state model, payload/profile workflow, and preview.
 17. Diagnostics, validation, accessibility, and downloads.
 18. Approved color/contrast and transparency previews.
-19. Square data modules with standard square finders.
+19. Compact 0.45-module non-finder dots with standard square finders.
 20. Bundled magenta ONE lettermark, knockout, overlap checks, and decode matrix.
 21. Hardening, automated release evidence, and docs.
 

@@ -8,27 +8,27 @@ use std::io::Cursor;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, RenderModel, RenderOptions,
-    SUPPORTED_PROFILES, render_png,
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, GlyphOwnership, RenderModel,
+    RenderOptions, SUPPORTED_PROFILES, render_png,
 };
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const APPROVED_PNG_SHA256: [[[&str; 2]; 1]; 4] = [
     [[
-        "06b69a797867104775f6dad478d7cc302d1a6a3e99c658721fae88fd79e8dc39",
-        "0a87a239c1065f93023aa36387ce0a7e7cc812c3e190c9428d5b7eab40221817",
+        "b05e2f7a1a5e7c8a3dcbbc6e7d5759a8007a6ce515cfff97e13a7a70ea6963e8",
+        "11869c3755e6a80e2d08243b2938f6e720250ba4585f9fadd2fd2db1e1ddc1d7",
     ]],
     [[
-        "9ec9e03d33e55cfa776818d24b5b624cf4d88a7ec53e593f60d8109090a097fa",
-        "39e43edbf4743ad65ef00efcc7407972a3d5b08a35d6b0fea6cb40d4fb9f6a9b",
+        "c49d0359bae6f0c3c209e1d27124bdf1413f71468db98d382ae86385c6fde703",
+        "184a95ff139de35bc853138d8a7a772d1e25a25d263724ab00846c87884222c8",
     ]],
     [[
-        "8421fc5b37de3fb8ddf27106f17c960ebd58574744f5651f1945e29760cbb47e",
-        "2b18d59aea715b62b8b25895417432aad56268c728d47809e0da3b0b590f9c90",
+        "e464d40e46ef154fa20a830dffae00980454b14525eeb9bf4176c853e899410c",
+        "0f984f28462febe76332c4df24f15a19155858b207241704597ddbc093b65f6a",
     ]],
     [[
-        "aebef13859038d6659b7eb8eefa4f763db15bfbf4d32a6c0552933c19d3f071c",
-        "740fa986a67c577109621a226111d385b991310c3e9b17562cd6bd7f76d914bf",
+        "497bb7bfd94d7c4719eeae748ecdfcc78b769fcf216b5f9208b686c3b720647c",
+        "596449c63573908606467378aa3d82b40fa472768365cb3f1c971fbbc3b022bc",
     ]],
 ];
 
@@ -66,7 +66,7 @@ fn safe_png_has_fixed_structure_and_deterministic_bytes() {
 }
 
 #[test]
-fn decoded_pixels_are_exact_background_or_integer_module_rectangles() {
+fn decoded_pixels_keep_quiet_space_blank_and_glyphs_inside_their_cells() {
     for profile in SUPPORTED_PROFILES {
         for version in 1..=profile.maximum_version().number() {
             let encoded = encoded_qr_at_version(version);
@@ -84,29 +84,33 @@ fn decoded_pixels_are_exact_background_or_integer_module_rectangles() {
             let scale = placement.module_scale().get();
             let matrix_size = u32::from(model.matrix().size());
 
-            for y in 0..height {
-                for x in 0..width {
-                    let expected = if x >= origin_x
-                        && y >= origin_y
-                        && x < origin_x + matrix_size * scale
-                        && y < origin_y + matrix_size * scale
-                    {
-                        let module_x = u16::try_from((x - origin_x) / scale).unwrap();
-                        let module_y = u16::try_from((y - origin_y) / scale).unwrap();
-                        if model
-                            .matrix()
-                            .module(module_x, module_y)
-                            .is_some_and(|module| module.is_dark())
-                        {
-                            [189, 15, 114, 255]
-                        } else {
-                            [255, 255, 255, 255]
-                        }
-                    } else {
-                        [255, 255, 255, 255]
-                    };
-                    let offset = usize::try_from((y * width + x) * 4).unwrap();
-                    assert_eq!(&pixels[offset..offset + 4], &expected);
+            assert_eq!(pixel(&pixels, width, 0, 0), [255; 4]);
+            assert_eq!(
+                pixel(
+                    &pixels,
+                    width,
+                    origin_x + matrix_size * scale,
+                    origin_y + matrix_size * scale,
+                ),
+                [255; 4]
+            );
+            for cell in model.cells() {
+                let x = origin_x + u32::from(cell.x()) * scale;
+                let y = origin_y + u32::from(cell.y()) * scale;
+                let expected_corner = if cell
+                    .glyph()
+                    .is_some_and(|glyph| glyph.ownership() == GlyphOwnership::Finder)
+                {
+                    [189, 15, 114, 255]
+                } else {
+                    [255; 4]
+                };
+                assert_eq!(pixel(&pixels, width, x, y), expected_corner);
+                if cell.glyph().is_some() {
+                    assert_eq!(
+                        pixel(&pixels, width, x + scale / 2 - 1, y + scale / 2 - 1),
+                        [189, 15, 114, 255]
+                    );
                 }
             }
         }
@@ -136,7 +140,10 @@ fn approved_png_color_background_profile_tuples_are_structural_and_deterministic
                 };
                 assert_eq!(&pixels[0..4], &background_pixel);
 
-                let dark = model.cells().find(|cell| cell.module().is_dark()).unwrap();
+                let dark = model
+                    .glyphs()
+                    .find(|glyph| glyph.ownership() == GlyphOwnership::Finder)
+                    .unwrap();
                 let placement = model.png_placement();
                 let scale = placement.module_scale().get();
                 let x = placement.matrix_origin().x().get() + u32::from(dark.x()) * scale;
@@ -150,6 +157,80 @@ fn approved_png_color_background_profile_tuples_are_structural_and_deterministic
             }
         }
     }
+}
+
+#[test]
+fn png_uses_solid_finders_and_antialiased_compact_dots_within_their_envelope() {
+    let encoded = encoded_qr_at_version(1);
+    let profile = SUPPORTED_PROFILES[0];
+
+    for background in [
+        Background::Opaque(qr_render::Rgba::WHITE),
+        Background::Transparent,
+    ] {
+        let model = RenderModel::new(
+            &encoded,
+            RenderOptions::approved(profile, qr_render::Foreground::Brand, background).unwrap(),
+        )
+        .unwrap();
+        let (width, _, pixels) = decode_rgba(&render_png(&model).unwrap());
+        let placement = model.png_placement();
+        let scale = placement.module_scale().get();
+        assert_eq!(scale, 8);
+
+        let finder = model
+            .glyphs()
+            .find(|glyph| glyph.ownership() == GlyphOwnership::Finder)
+            .unwrap();
+        let finder_x = placement.matrix_origin().x().get() + u32::from(finder.x()) * scale;
+        let finder_y = placement.matrix_origin().y().get() + u32::from(finder.y()) * scale;
+        for y in finder_y..finder_y + scale {
+            for x in finder_x..finder_x + scale {
+                assert_eq!(pixel(&pixels, width, x, y), [189, 15, 114, 255]);
+            }
+        }
+
+        let dot = model
+            .glyphs()
+            .find(|glyph| glyph.ownership() != GlyphOwnership::Finder)
+            .unwrap();
+        let dot_x = placement.matrix_origin().x().get() + u32::from(dot.x()) * scale;
+        let dot_y = placement.matrix_origin().y().get() + u32::from(dot.y()) * scale;
+        let expected_background = match background {
+            Background::Opaque(color) => color.channels(),
+            Background::Transparent => [0, 0, 0, 0],
+        };
+        for offset_y in 0..scale {
+            for offset_x in 0..scale {
+                let actual = pixel(&pixels, width, dot_x + offset_x, dot_y + offset_y);
+                if !(2..=5).contains(&offset_x) || !(2..=5).contains(&offset_y) {
+                    assert_eq!(actual, expected_background);
+                }
+            }
+        }
+        let mut dot_pixels = Vec::new();
+        for offset_y in 2..=5 {
+            for offset_x in 2..=5 {
+                dot_pixels.push(pixel(&pixels, width, dot_x + offset_x, dot_y + offset_y));
+            }
+        }
+        assert!(dot_pixels.contains(&[189, 15, 114, 255]));
+        match background {
+            Background::Opaque(_) => assert!(dot_pixels.iter().any(|pixel| {
+                pixel[3] == 255 && *pixel != [189, 15, 114, 255] && *pixel != [255; 4]
+            })),
+            Background::Transparent => assert!(
+                dot_pixels
+                    .iter()
+                    .any(|pixel| { pixel[..3] == [189, 15, 114] && (1..255).contains(&pixel[3]) })
+            ),
+        }
+    }
+}
+
+fn pixel(pixels: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
+    let offset = usize::try_from((y * width + x) * 4).unwrap();
+    pixels[offset..offset + 4].try_into().unwrap()
 }
 
 struct PngChunk<'bytes> {

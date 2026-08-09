@@ -109,10 +109,11 @@ pub enum OutputSafety {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FunctionModuleStyle {
-    Square,
+    CompactDots,
 }
 
-pub const APPROVED_FUNCTION_MODULE_STYLES: [FunctionModuleStyle; 1] = [FunctionModuleStyle::Square];
+pub const APPROVED_FUNCTION_MODULE_STYLES: [FunctionModuleStyle; 1] =
+    [FunctionModuleStyle::CompactDots];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FinderStyle {
@@ -182,7 +183,7 @@ impl RenderOptions {
             profile,
             foreground,
             background,
-            function_module_style: FunctionModuleStyle::Square,
+            function_module_style: FunctionModuleStyle::CompactDots,
             finder_style: FinderStyle::StandardSquare,
             logo_style: LogoStyle::None,
         })

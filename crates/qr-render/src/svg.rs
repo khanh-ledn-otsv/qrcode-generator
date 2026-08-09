@@ -1,6 +1,8 @@
 use std::fmt::Write;
 
-use crate::{Background, RenderError, RenderModel, Rgba, logo::bundled_logo_body};
+use crate::{Background, GlyphOwnership, RenderError, RenderModel, Rgba, logo::bundled_logo_body};
+
+const DOT_RADIUS_THOUSANDTHS: u32 = 225;
 
 /// Renders the validated model as deterministic, payload-free UTF-8 SVG.
 pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
@@ -41,12 +43,7 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
         )
         .map_err(|_| RenderError::RenderFailure)?;
     }
-    write!(
-        svg,
-        "<path fill=\"{}\" shape-rendering=\"crispEdges\" d=\"",
-        foreground
-    )
-    .map_err(|_| RenderError::RenderFailure)?;
+    write!(svg, "<path fill=\"{}\" d=\"", foreground).map_err(|_| RenderError::RenderFailure)?;
 
     for glyph in model.glyphs() {
         let x = u32::from(glyph.x())
@@ -55,7 +52,29 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
         let y = u32::from(glyph.y())
             .checked_add(origin.y().get())
             .ok_or(RenderError::DimensionOverflow)?;
-        write!(svg, "M{x} {y}h1v1h-1z").map_err(|_| RenderError::RenderFailure)?;
+        match glyph.ownership() {
+            GlyphOwnership::Finder => {
+                write!(svg, "M{x} {y}h1v1h-1z").map_err(|_| RenderError::RenderFailure)?;
+            }
+            GlyphOwnership::Separator => return Err(RenderError::RenderFailure),
+            GlyphOwnership::OtherFunction | GlyphOwnership::Data | GlyphOwnership::Remainder => {
+                let left = x
+                    .checked_mul(1_000)
+                    .and_then(|value| value.checked_add(500 - DOT_RADIUS_THOUSANDTHS))
+                    .ok_or(RenderError::DimensionOverflow)?;
+                let center_y = y
+                    .checked_mul(1_000)
+                    .and_then(|value| value.checked_add(500))
+                    .ok_or(RenderError::DimensionOverflow)?;
+                write!(
+                    svg,
+                    "M{} {}a.225 .225 0 1 0 .450 0a.225 .225 0 1 0-.450 0z",
+                    decimal_thousandths(left),
+                    decimal_thousandths(center_y),
+                )
+                .map_err(|_| RenderError::RenderFailure)?;
+            }
+        }
     }
     svg.push_str("\"/>");
     if let Some(logo) = model.logo_placement() {

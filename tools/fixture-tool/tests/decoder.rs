@@ -13,8 +13,8 @@ if [ "$1" = "-version" ]; then
   echo "ZXingReader version 3.0.2"
 elif printf '%s\n' "$@" | grep -q -- '-bytes'; then
   printf 'SYNTHETIC-FIXTURE-01'
-elif ! printf '%s\n' "$@" | grep -qx -- 'eci'; then
-  echo 'expected lowercase eci mode' >&2
+elif ! printf '%s\n' "$@" | grep -qx -- 'plain'; then
+  echo 'expected lowercase plain mode' >&2
   exit 2
 else
   cat <<'EOF'
@@ -114,6 +114,8 @@ fn install_fake_decoder(script: &str) -> (tempfile::TempDir, std::path::PathBuf,
             "user.name=Fixture Test",
             "-c",
             "user.email=fixture@example.invalid",
+            "-c",
+            "commit.gpgsign=false",
             "commit",
             "--quiet",
             "-m",
