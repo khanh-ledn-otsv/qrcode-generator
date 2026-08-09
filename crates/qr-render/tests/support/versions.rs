@@ -1,16 +1,23 @@
+use qr_core::Version;
 use qr_core::tables::ErrorCorrection;
+use qr_core::tables::lookup;
 
 pub fn first_byte_length(version: u8) -> usize {
     first_byte_length_at_ecc(version, ErrorCorrection::Medium)
 }
 
 pub fn first_byte_length_at_ecc(version: u8, ecc: ErrorCorrection) -> usize {
-    const MEDIUM: [usize; 13] = [1, 15, 27, 43, 63, 85, 107, 123, 153, 181, 214, 252, 288];
-    const HIGH: [usize; 13] = [1, 8, 15, 25, 35, 45, 59, 65, 85, 99, 120, 138, 156];
-    let lengths = match ecc {
-        ErrorCorrection::Medium => MEDIUM,
-        ErrorCorrection::High => HIGH,
-        unexpected => panic!("no approved byte-version fixture for {unexpected:?}"),
-    };
-    lengths[usize::from(version - 1)]
+    if version == Version::MINIMUM.number() {
+        return 1;
+    }
+    let previous = Version::new(version - 1).expect("matrix cases use supported QR versions");
+    let capacity_bits = usize::from(
+        lookup(previous, ecc)
+            .expect("matrix cases use supported QR ECC rows")
+            .data_codewords(),
+    ) * 8;
+    // ISO/IEC 18004:2024, 7.4.3 and 7.4.7 define the mode/count overhead;
+    // 7.5.1 defines the capacity represented by the dual-oracle table row.
+    let count_bits = if previous.number() <= 9 { 8 } else { 16 };
+    (capacity_bits - 4 - count_bits) / 8 + 1
 }

@@ -224,15 +224,18 @@ pub fn decoded_evidence(
     artifact_sha256: String,
     decoder_input_sha256: String,
 ) -> serde_json::Value {
+    let metadata = EvidenceMetadata {
+        id: &case.label,
+        case_label: &case.case_label,
+        tuple: case.tuple,
+        payload_class: case.payload_class,
+        case_kind: case.case_kind,
+        version: Some(case.encoded.version().number()),
+        safety: Some(case.options.safety()),
+        logo_placement: case.logo_placement,
+    };
     evidence_row(
-        &case.label,
-        &case.case_label,
-        case.tuple,
-        case.payload_class,
-        case.case_kind,
-        Some(case.encoded.version().number()),
-        Some(case.options.safety()),
-        case.logo_placement,
+        metadata,
         serde_json::json!({
             "format": format,
             "outcome": "decoded",
@@ -247,15 +250,19 @@ pub fn invalid_evidence(
     format: &'static str,
     error: RenderError,
 ) -> serde_json::Value {
+    let id = record.label();
+    let metadata = EvidenceMetadata {
+        id: &id,
+        case_label: &record.case_label,
+        tuple: record.tuple,
+        payload_class: record.payload_class,
+        case_kind: record.case_kind,
+        version: record.version,
+        safety: None,
+        logo_placement: None,
+    };
     evidence_row(
-        &record.label(),
-        &record.case_label,
-        record.tuple,
-        record.payload_class,
-        record.case_kind,
-        record.version,
-        None,
-        None,
+        metadata,
         serde_json::json!({
             "format": format,
             "outcome": "expected-invalid",
@@ -266,18 +273,28 @@ pub fn invalid_evidence(
     )
 }
 
-#[allow(clippy::too_many_arguments)]
-fn evidence_row(
-    id: &str,
-    case_label: &str,
+struct EvidenceMetadata<'a> {
+    id: &'a str,
+    case_label: &'a str,
     tuple: ApprovedStyleTuple,
     payload_class: PayloadClass,
     case_kind: MatrixCaseKind,
     version: Option<u8>,
     safety: Option<OutputSafety>,
     logo_placement: Option<LogoPlacement>,
-    artifact: serde_json::Value,
-) -> serde_json::Value {
+}
+
+fn evidence_row(metadata: EvidenceMetadata<'_>, artifact: serde_json::Value) -> serde_json::Value {
+    let EvidenceMetadata {
+        id,
+        case_label,
+        tuple,
+        payload_class,
+        case_kind,
+        version,
+        safety,
+        logo_placement,
+    } = metadata;
     let profile = tuple.profile;
     serde_json::json!({
         "id": id,

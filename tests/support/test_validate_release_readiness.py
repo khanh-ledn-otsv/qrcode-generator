@@ -93,20 +93,17 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
 
 def adverse_outcomes() -> list[dict[str, str]]:
     outcomes = []
-    for configuration, safety, count in (
-        ("print-compact-dots", "safe", 13),
-        ("transparent-compact-dots", "caution", 10),
-        ("centered-logo", "caution", 6),
-    ):
+    manifest = json.loads(Path("tests/adverse/parameters.json").read_text())
+    for envelope in manifest["pass_envelopes"]:
         outcomes.extend(
             {
-                "configuration": configuration,
-                "safety": safety,
-                "transform": f"transform-{index}",
+                "configuration": envelope["configuration"],
+                "safety": envelope["safety"],
+                "transform": transform,
                 "decoder": "ZXingReader version 3.0.2",
                 "outcome": "decoded",
             }
-            for index in range(count)
+            for transform in envelope["transforms"]
         )
     return outcomes
 
@@ -127,6 +124,25 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             )
 
             with self.assertRaises(ResultEvidenceError):
+                validate_adverse_evidence(evidence)
+
+    def test_adverse_evidence_requires_exact_manifest_transform_membership(self) -> None:
+        with TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "adverse.json"
+            outcomes = adverse_outcomes()
+            outcomes[0]["transform"] = "invented-transform"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "parameters": "tests/adverse/parameters.json",
+                        "seed": 20260807,
+                        "outcomes": outcomes,
+                    }
+                )
+            )
+
+            with self.assertRaisesRegex(ResultEvidenceError, "pass envelope"):
                 validate_adverse_evidence(evidence)
 
     def test_critical_workflow_gate_names_the_final_branded_browser_behaviors(self) -> None:

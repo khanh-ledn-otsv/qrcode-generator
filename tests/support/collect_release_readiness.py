@@ -34,11 +34,7 @@ CRITICAL_WORKFLOW_TESTS = {
 EXPECTED_MATRIX_ROWS = 248
 EXPECTED_DECODED_ROWS = 142
 EXPECTED_INVALID_ROWS = 106
-EXPECTED_ADVERSE_ENVELOPES = {
-    "print-compact-dots": ("safe", 13),
-    "transparent-compact-dots": ("caution", 10),
-    "centered-logo": ("caution", 6),
-}
+WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _mapping(value: object, label: str) -> dict[str, Any]:
@@ -154,27 +150,52 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
 def validate_adverse_evidence(path: Path) -> int:
     document = _mapping(json.loads(path.read_text()), "adverse decoder evidence")
     outcomes = document.get("outcomes")
+    parameters = document.get("parameters")
     if (
         document.get("schema_version") != 1
-        or document.get("parameters") != "tests/adverse/parameters.json"
+        or parameters != "tests/adverse/parameters.json"
         or document.get("seed") != 20260807
         or not isinstance(outcomes, list)
     ):
         raise ResultEvidenceError("adverse decoder evidence has invalid metadata")
+    manifest = _mapping(
+        json.loads((WORKSPACE_ROOT / parameters).read_text()), "adverse transform manifest"
+    )
+    envelopes = manifest.get("pass_envelopes")
+    if manifest.get("schema_version") != 1 or manifest.get("seed") != document.get("seed"):
+        raise ResultEvidenceError("adverse transform manifest has invalid metadata")
+    if not isinstance(envelopes, list):
+        raise ResultEvidenceError("adverse transform manifest is missing pass envelopes")
+    expected: dict[str, tuple[str, set[str]]] = {}
+    for value in envelopes:
+        envelope = _mapping(value, "adverse pass envelope")
+        configuration = envelope.get("configuration")
+        safety = envelope.get("safety")
+        transforms = envelope.get("transforms")
+        if (
+            not isinstance(configuration, str)
+            or safety not in {"safe", "caution"}
+            or not isinstance(transforms, list)
+            or not transforms
+            or not all(isinstance(transform, str) for transform in transforms)
+            or len(set(transforms)) != len(transforms)
+            or configuration in expected
+        ):
+            raise ResultEvidenceError("adverse transform manifest has an invalid pass envelope")
+        expected[configuration] = (safety, set(transforms))
     grouped: dict[str, list[dict[str, Any]]] = {}
     for value in outcomes:
         if not isinstance(value, dict) or not isinstance(value.get("configuration"), str):
             raise ResultEvidenceError("adverse decoder evidence contains an invalid outcome")
         grouped.setdefault(value["configuration"], []).append(value)
-    if grouped.keys() != EXPECTED_ADVERSE_ENVELOPES.keys():
+    if grouped.keys() != expected.keys():
         raise ResultEvidenceError("adverse decoder evidence has incomplete pass envelopes")
-    for configuration, (safety, count) in EXPECTED_ADVERSE_ENVELOPES.items():
+    for configuration, (safety, expected_transforms) in expected.items():
         rows = grouped[configuration]
         transforms = {row.get("transform") for row in rows}
         if (
-            len(rows) != count
-            or len(transforms) != count
-            or None in transforms
+            len(rows) != len(expected_transforms)
+            or transforms != expected_transforms
             or any(
                 row.get("safety") != safety
                 or row.get("outcome") != "decoded"
