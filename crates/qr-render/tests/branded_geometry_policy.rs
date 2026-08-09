@@ -89,6 +89,13 @@ struct LogoWidthOutcome {
 struct MinimumVersionRow {
     version: u8,
     maximum_safe_source_width_thousandths: u32,
+    source_left_ten_thousandths: u32,
+    source_top_ten_thousandths: u32,
+    source_height_ten_thousandths: u32,
+    knockout: [u32; 4],
+    protected_clearance_modules: u32,
+    obscured_data_modules: u32,
+    obscured_remainder_modules: u32,
     requested_minimum_source_width_thousandths: u32,
     meets_requested_hierarchy: bool,
 }
@@ -97,8 +104,10 @@ struct MinimumVersionRow {
 #[serde(deny_unknown_fields)]
 struct LogoRow {
     version: u8,
-    source_width_thousandths: Option<u32>,
-    source_height_thousandths: Option<u32>,
+    source_left_ten_thousandths: Option<u32>,
+    source_top_ten_thousandths: Option<u32>,
+    source_width_ten_thousandths: Option<u32>,
+    source_height_ten_thousandths: Option<u32>,
     knockout: Option<[u32; 4]>,
     protected_clearance_modules: Option<u32>,
     obscured_data_modules: Option<u32>,
@@ -116,7 +125,10 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
     assert_eq!(policy.schema_version, 1);
     assert_eq!(policy.decoder.tool, "ZXing-C++ ZXingReader");
     assert_eq!(policy.decoder.version, "3.0.2");
-    assert_eq!(policy.decoder.source_commit.len(), 40);
+    assert_eq!(
+        policy.decoder.source_commit,
+        "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825"
+    );
     assert_eq!(policy.sample.profiles, 4);
     assert_eq!(
         policy.sample.payload_classes,
@@ -169,6 +181,8 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
         })
         .expect("selected dot policy must be present");
     assert_eq!(selected.decoded, selected.attempted);
+    assert_eq!(policy.dots.selected_diameter_thousandths, 450);
+    assert_eq!(policy.dots.selected_function_treatment, "non-finder-dots");
     assert!(!policy.dots.outcomes.iter().any(|outcome| {
         outcome.function_treatment == policy.dots.selected_function_treatment
             && outcome.diameter_thousandths < policy.dots.selected_diameter_thousandths
@@ -191,6 +205,19 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
             row.maximum_safe_source_width_thousandths
                 >= row.requested_minimum_source_width_thousandths
         );
+        let matrix_units = u32::from(17 + row.version * 4) * 10_000;
+        assert_eq!(
+            row.source_left_ten_thousandths * 2 + row.maximum_safe_source_width_thousandths * 10,
+            matrix_units
+        );
+        assert_eq!(
+            row.source_top_ten_thousandths * 2 + row.source_height_ten_thousandths,
+            matrix_units
+        );
+        assert!(row.knockout[2] > 0 && row.knockout[3] > 0);
+        assert!(row.protected_clearance_modules > 0);
+        assert!(row.obscured_data_modules > 0);
+        assert_eq!(row.obscured_remainder_modules, 0);
     }
     assert_eq!(
         policy
@@ -201,7 +228,7 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
             .map(|row| row.version),
         Some(policy.logo.selected_minimum_version)
     );
-    assert_eq!(policy.logo.selected_version_width_outcomes.len(), 5);
+    assert_eq!(policy.logo.selected_version_width_outcomes.len(), 9);
     assert_eq!(policy.logo.profile_outcomes.len(), 4);
     assert!(policy.logo.profile_outcomes.iter().any(|outcome| {
         outcome.profile == "Inline"
@@ -227,7 +254,8 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
         .selected_sizes
         .iter()
         .find(|row| row.version == policy.logo.selected_minimum_version)
-        .and_then(|row| row.source_width_thousandths)
+        .and_then(|row| row.source_width_ten_thousandths)
+        .map(|width| width / 10)
         .expect("selected version must have a logo width");
     for outcome in &policy.logo.selected_version_width_outcomes {
         assert_eq!(outcome.version, policy.logo.selected_minimum_version);
@@ -259,16 +287,23 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
         match row.outcome.as_str() {
             "decoded" => {
                 assert!(row.version >= policy.logo.selected_minimum_version);
-                assert!(row.source_width_thousandths.is_some());
-                assert!(row.source_height_thousandths.is_some());
+                let left = row.source_left_ten_thousandths.unwrap();
+                let top = row.source_top_ten_thousandths.unwrap();
+                let width = row.source_width_ten_thousandths.unwrap();
+                let height = row.source_height_ten_thousandths.unwrap();
+                let matrix_units = u32::from(17 + row.version * 4) * 10_000;
+                assert_eq!(left * 2 + width, matrix_units);
+                assert_eq!(top * 2 + height, matrix_units);
                 assert!(row.knockout.is_some());
                 assert!(row.protected_clearance_modules.is_some());
                 assert!(row.obscured_data_modules.is_some());
                 assert!(row.obscured_remainder_modules.is_some());
             }
             "below-branded-minimum" | "unsafe-protected-module-intersection" => {
-                assert!(row.source_width_thousandths.is_none());
-                assert!(row.source_height_thousandths.is_none());
+                assert!(row.source_left_ten_thousandths.is_none());
+                assert!(row.source_top_ten_thousandths.is_none());
+                assert!(row.source_width_ten_thousandths.is_none());
+                assert!(row.source_height_ten_thousandths.is_none());
                 assert!(row.knockout.is_none());
                 assert!(row.protected_clearance_modules.is_none());
                 assert!(row.obscured_data_modules.is_none());

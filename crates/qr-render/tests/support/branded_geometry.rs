@@ -7,7 +7,7 @@ use qr_core::matrix::{ModuleKind, ModuleMatrix};
 use qr_render::{OutputProfile, PixelDimensions, Rgba};
 
 const QUIET_ZONE: u32 = 4;
-const UNITS: u32 = 1_000;
+const UNITS: u32 = 10_000;
 const SAMPLES: u32 = 8;
 const LOGO_BODY: &str = include_str!("../../../../assets/RGB-one-lettermark-magenta.svg");
 
@@ -116,10 +116,22 @@ impl LogoCandidate {
     }
 
     pub const fn source_width_thousandths(self) -> u32 {
+        self.source_width / 10
+    }
+
+    pub const fn source_left_ten_thousandths(self) -> u32 {
+        self.source_left
+    }
+
+    pub const fn source_top_ten_thousandths(self) -> u32 {
+        self.source_top
+    }
+
+    pub const fn source_width_ten_thousandths(self) -> u32 {
         self.source_width
     }
 
-    pub const fn source_height_thousandths(self) -> u32 {
+    pub const fn source_height_ten_thousandths(self) -> u32 {
         self.source_height
     }
 
@@ -176,7 +188,7 @@ pub fn render_candidate_svg(
         } else {
             let center_x = x * UNITS + UNITS / 2;
             let center_y = y * UNITS + UNITS / 2;
-            let radius = u32::from(appearance.dot_diameter_thousandths) / 2;
+            let radius = u32::from(appearance.dot_diameter_thousandths) * UNITS / 2_000;
             write!(
                 svg,
                 "<circle cx=\"{}\" cy=\"{}\" r=\"{}\"/>",
@@ -349,10 +361,12 @@ fn paint_logo(
     scale: u32,
     logo: LogoCandidate,
 ) -> Result<(), Box<dyn Error>> {
-    let left = f64::from(origin_x) + f64::from(logo.source_left) * f64::from(scale) / 1_000.0;
-    let top = f64::from(origin_y) + f64::from(logo.source_top) * f64::from(scale) / 1_000.0;
-    let width = f64::from(logo.source_width) * f64::from(scale) / 1_000.0;
-    let height = f64::from(logo.source_height) * f64::from(scale) / 1_000.0;
+    let left =
+        f64::from(origin_x) + f64::from(logo.source_left) * f64::from(scale) / f64::from(UNITS);
+    let top =
+        f64::from(origin_y) + f64::from(logo.source_top) * f64::from(scale) / f64::from(UNITS);
+    let width = f64::from(logo.source_width) * f64::from(scale) / f64::from(UNITS);
+    let height = f64::from(logo.source_height) * f64::from(scale) / f64::from(UNITS);
     for y in top.floor() as u32..(top + height).ceil() as u32 {
         for x in left.floor() as u32..(left + width).ceil() as u32 {
             let mut covered = 0;
@@ -378,7 +392,7 @@ fn paint_logo(
 fn logo_contains(x: f64, y: f64) -> bool {
     let outer_o = (191.6667..=383.3334).contains(&x) && (192.6667..=409.3334).contains(&y);
     let inner_o = (237.5..=337.5).contains(&x) && (234.3334..=367.6667).contains(&y);
-    let e = [
+    let letter_e_polygon = [
         (808.3333, 234.3333),
         (808.3333, 192.6667),
         (641.6667, 192.6667),
@@ -392,7 +406,7 @@ fn logo_contains(x: f64, y: f64) -> bool {
         (687.5, 280.1667),
         (687.5, 234.3333),
     ];
-    let n = [
+    let letter_n_polygon = [
         (566.6667, 334.3333),
         (454.1667, 192.6667),
         (412.5, 192.6667),
@@ -404,7 +418,9 @@ fn logo_contains(x: f64, y: f64) -> bool {
         (612.5, 192.6667),
         (566.6667, 192.6667),
     ];
-    (outer_o && !inner_o) || point_in_polygon(x, y, &e) || point_in_polygon(x, y, &n)
+    (outer_o && !inner_o)
+        || point_in_polygon(x, y, &letter_e_polygon)
+        || point_in_polygon(x, y, &letter_n_polygon)
 }
 
 fn point_in_polygon(x: f64, y: f64, points: &[(f64, f64)]) -> bool {
@@ -492,6 +508,6 @@ fn decimal(value: u32) -> String {
     if fraction == 0 {
         whole.to_string()
     } else {
-        format!("{whole}.{fraction:03}")
+        format!("{whole}.{fraction:04}")
     }
 }

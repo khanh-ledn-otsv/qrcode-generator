@@ -11,6 +11,10 @@ use branded_geometry::{
     CandidateAppearance, FunctionTreatment, LogoCandidate, render_candidate_png,
     render_candidate_svg,
 };
+use fixture_tool::{
+    DecodeExpectation, EciAssignment as FixtureEci, ErrorCorrection as FixtureEcc, FixtureManifest,
+    QrVersion, VerifiedZxingDecoder, ZxingDecoder,
+};
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EciAssignment, EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{OutputProfile, SUPPORTED_PROFILES};
@@ -31,6 +35,7 @@ const PAYLOAD_CLASSES: [&str; 6] = [
     "ascii-byte",
     "utf8-eci26",
 ];
+const LOGO_WIDTHS: [u32; 9] = [10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 type EncodedPayloadCase = (&'static str, EncodedQr, String);
 
@@ -45,8 +50,10 @@ struct DotOutcome {
 #[derive(Serialize)]
 struct LogoResult {
     version: u8,
-    source_width_thousandths: Option<u32>,
-    source_height_thousandths: Option<u32>,
+    source_left_ten_thousandths: Option<u32>,
+    source_top_ten_thousandths: Option<u32>,
+    source_width_ten_thousandths: Option<u32>,
+    source_height_ten_thousandths: Option<u32>,
     knockout: Option<[u32; 4]>,
     protected_clearance_modules: Option<u32>,
     obscured_data_modules: Option<u32>,
@@ -58,6 +65,13 @@ struct LogoResult {
 struct MinimumVersionResult {
     version: u8,
     maximum_safe_source_width_thousandths: u32,
+    source_left_ten_thousandths: u32,
+    source_top_ten_thousandths: u32,
+    source_height_ten_thousandths: u32,
+    knockout: [u32; 4],
+    protected_clearance_modules: u32,
+    obscured_data_modules: u32,
+    obscured_remainder_modules: u32,
     requested_minimum_source_width_thousandths: u32,
     meets_requested_hierarchy: bool,
 }
@@ -94,9 +108,16 @@ struct Policy {
 #[ignore = "runs the complete manifest-pinned independent decode experiment"]
 fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>> {
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let reader = workspace.join("tests/oracles/zxing-cpp/build/example/ZXingReader");
+    let manifest =
+        FixtureManifest::load_and_verify(workspace.join("tests/fixtures/manifest.json"))?;
     let checkout = workspace.join("tests/oracles/zxing-cpp");
-    verify_decoder(&reader, &checkout)?;
+    let decoder = ZxingDecoder::new(
+        checkout.join("build/example/ZXingReader"),
+        manifest.decoder().version(),
+        &checkout,
+        manifest.decoder().source_commit(),
+    );
+    let decoder = decoder.verify()?;
     let output = tempfile::tempdir()?;
 
     let mut dot_outcomes = Vec::new();
@@ -134,7 +155,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
                                 png
                             },
                         )?;
-                        if decodes(&reader, &png_path, text.as_bytes())? {
+                        if decodes(&decoder, &png_path, &encoded, text.as_bytes())? {
                             decoded += 1;
                         }
 
@@ -147,7 +168,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
                         )?;
                         let svg_path = output.path().join(format!("{stem}-svg.png"));
                         pixmap.save_png(&svg_path)?;
-                        if decodes(&reader, &svg_path, text.as_bytes())? {
+                        if decodes(&decoder, &svg_path, &encoded, text.as_bytes())? {
                             decoded += 1;
                         }
                     }
@@ -182,8 +203,10 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
         if version < selected_minimum_version {
             logo_results.push(LogoResult {
                 version,
-                source_width_thousandths: None,
-                source_height_thousandths: None,
+                source_left_ten_thousandths: None,
+                source_top_ten_thousandths: None,
+                source_width_ten_thousandths: None,
+                source_height_ten_thousandths: None,
                 knockout: None,
                 protected_clearance_modules: None,
                 obscured_data_modules: None,
@@ -194,7 +217,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
         }
         let encoded_cases = payload_cases_for_version(version)?;
         let mut selected = None;
-        for width_modules in [10_u32, 12, 14, 16, 18] {
+        for width_modules in LOGO_WIDTHS {
             let Some(candidate) =
                 LogoCandidate::checked(encoded_cases[0].1.modules(), width_modules)
             else {
@@ -244,7 +267,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
                             )?
                             .save_png(&path)?;
                         }
-                        if !decodes(&reader, &path, text.as_bytes())? {
+                        if !decodes(&decoder, &path, encoded, text.as_bytes())? {
                             passed = false;
                             break 'sample;
                         }
@@ -268,8 +291,10 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
         match selected {
             Some(candidate) => logo_results.push(LogoResult {
                 version,
-                source_width_thousandths: Some(candidate.source_width_thousandths()),
-                source_height_thousandths: Some(candidate.source_height_thousandths()),
+                source_left_ten_thousandths: Some(candidate.source_left_ten_thousandths()),
+                source_top_ten_thousandths: Some(candidate.source_top_ten_thousandths()),
+                source_width_ten_thousandths: Some(candidate.source_width_ten_thousandths()),
+                source_height_ten_thousandths: Some(candidate.source_height_ten_thousandths()),
                 knockout: Some(candidate.knockout()),
                 protected_clearance_modules: Some(candidate.protected_clearance_modules()),
                 obscured_data_modules: Some(candidate.obscured_data_modules()),
@@ -278,8 +303,10 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
             }),
             None => logo_results.push(LogoResult {
                 version,
-                source_width_thousandths: None,
-                source_height_thousandths: None,
+                source_left_ten_thousandths: None,
+                source_top_ten_thousandths: None,
+                source_width_ten_thousandths: None,
+                source_height_ten_thousandths: None,
                 knockout: None,
                 protected_clearance_modules: None,
                 obscured_data_modules: None,
@@ -358,40 +385,27 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-fn verify_decoder(reader: &Path, checkout: &Path) -> Result<(), Box<dyn Error>> {
-    let version = std::process::Command::new(reader)
-        .arg("-version")
-        .output()?;
-    if !version.status.success()
-        || String::from_utf8(version.stdout)?.trim() != "ZXingReader version 3.0.2"
-    {
-        return Err("ZXingReader is not the pinned 3.0.2 build".into());
-    }
-    let commit = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(checkout)
-        .output()?;
-    if !commit.status.success()
-        || String::from_utf8(commit.stdout)?.trim() != "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825"
-    {
-        return Err("ZXing-C++ checkout is not at the manifest-pinned commit".into());
-    }
-    Ok(())
-}
-
-fn decodes(reader: &Path, artifact: &Path, payload: &[u8]) -> Result<bool, Box<dyn Error>> {
-    let output = std::process::Command::new(reader)
-        .args([
-            "-formats",
-            "QRCode",
-            "-single",
-            "-binarizer",
-            "fixed",
-            "-bytes",
-        ])
-        .arg(artifact)
-        .output()?;
-    Ok(output.status.success() && output.stdout == payload)
+fn decodes(
+    decoder: &VerifiedZxingDecoder<'_>,
+    artifact: &Path,
+    encoded: &EncodedQr,
+    payload: &[u8],
+) -> Result<bool, Box<dyn Error>> {
+    let expectation = DecodeExpectation {
+        payload: payload.to_vec(),
+        version: QrVersion::new(encoded.version().number())?,
+        ecc: match encoded.ecc() {
+            ErrorCorrection::Low => FixtureEcc::L,
+            ErrorCorrection::Medium => FixtureEcc::M,
+            ErrorCorrection::Quartile => FixtureEcc::Q,
+            ErrorCorrection::High => FixtureEcc::H,
+        },
+        eci_assignment: encoded
+            .eci_assignment()
+            .map(|assignment| FixtureEci::try_from(assignment.number()))
+            .transpose()?,
+    };
+    Ok(decoder.inspect_and_compare(artifact, &expectation).is_ok())
 }
 
 fn composite_on_white(source: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -500,7 +514,7 @@ fn largest_fitting(
 }
 
 fn minimum_version_results() -> Result<Vec<MinimumVersionResult>, Box<dyn Error>> {
-    const REQUESTED_MINIMUM_WIDTH: u32 = 12_000;
+    const REQUESTED_MINIMUM_WIDTH: u32 = 13_000;
     let mut results = Vec::new();
     for version in [4, 5, 6] {
         let encoded = payload_cases_for_version(version)?
@@ -508,17 +522,24 @@ fn minimum_version_results() -> Result<Vec<MinimumVersionResult>, Box<dyn Error>
             .next()
             .ok_or("missing minimum-version case")?
             .1;
-        let maximum = [10_u32, 12, 14, 16, 18]
+        let candidate = LOGO_WIDTHS
             .into_iter()
             .filter_map(|width| LogoCandidate::checked(encoded.modules(), width))
-            .map(LogoCandidate::source_width_thousandths)
-            .max()
+            .max_by_key(|candidate| candidate.source_width_thousandths())
             .ok_or("minimum-version candidate has no safe centered logo")?;
         results.push(MinimumVersionResult {
             version,
-            maximum_safe_source_width_thousandths: maximum,
+            maximum_safe_source_width_thousandths: candidate.source_width_thousandths(),
+            source_left_ten_thousandths: candidate.source_left_ten_thousandths(),
+            source_top_ten_thousandths: candidate.source_top_ten_thousandths(),
+            source_height_ten_thousandths: candidate.source_height_ten_thousandths(),
+            knockout: candidate.knockout(),
+            protected_clearance_modules: candidate.protected_clearance_modules(),
+            obscured_data_modules: candidate.obscured_data_modules(),
+            obscured_remainder_modules: candidate.obscured_remainder_modules(),
             requested_minimum_source_width_thousandths: REQUESTED_MINIMUM_WIDTH,
-            meets_requested_hierarchy: maximum >= REQUESTED_MINIMUM_WIDTH,
+            meets_requested_hierarchy: candidate.source_width_thousandths()
+                >= REQUESTED_MINIMUM_WIDTH,
         });
     }
     Ok(results)
@@ -532,7 +553,7 @@ fn candidate_minimum_versions_have_measured_center_capacity() -> Result<(), Box<
             .iter()
             .map(|result| (result.version, result.maximum_safe_source_width_thousandths))
             .collect::<Vec<_>>(),
-        [(4, 10_000), (5, 10_000), (6, 12_000)]
+        [(4, 11_000), (5, 11_000), (6, 13_000)]
     );
     assert_eq!(
         results

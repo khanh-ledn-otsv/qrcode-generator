@@ -104,18 +104,19 @@ candidate evidence is committed in
 - Enabling the logo sets ECC H before version selection, so capacity/version is recalculated first.
 - Geometry is selected after H-level fitting in module coordinates. Logo mode
   selects at least Version 6: candidate minima 4 and 5 admitted at most a
-  10-module centered source width, while Version 6 was the first to admit the
-  requested 12-module visual hierarchy. The payload is preserved byte-for-byte;
+  11-module centered source width, while Version 6 was the first to admit the
+  requested 13-module visual hierarchy. The payload is preserved byte-for-byte;
   version selection alone changes.
 - Version 6 uses the unchanged `180 180 640 240` asset presentation box at
-  exactly `12 × 4.5` modules, centered on both matrix axes. Its outward-snapped
+  exactly `13 × 4.875` modules, centered on both matrix axes at
+  ten-thousandth-module precision. Its outward-snapped
   opaque-white knockout is `(left 13, top 17, width 15, height 7)`, clears the
   nearest protected module by six modules, and obscures 105 data modules and
-  zero remainder modules. Candidate source widths 10 and 12 modules decoded
-  36/36 native-PNG and SVG-rasterized samples across Content, Landing, and
-  Print; Inline intentionally rejects branding because its Version 5 ceiling
-  is below the branded minimum. Widths 14, 16, and 18 exceeded
-  the checked 40%-of-matrix knockout bound. A 12-module source is therefore the
+  zero remainder modules. Every integer source width from 10 through 13
+  modules decoded 36/36 native-PNG and SVG-rasterized samples across Content,
+  Landing, and Print; Inline intentionally rejects branding because its Version
+  5 ceiling is below the branded minimum. Every integer width from 14 through
+  18 exceeded the checked 40%-of-matrix knockout bound. A 13-module source is therefore the
   largest admitted centered ONE treatment.
 - Versions 1–5 are below the branded minimum. Versions 7–13 intentionally
   reject the exact-centered logo because the knockout would intersect protected
@@ -127,7 +128,9 @@ candidate evidence is committed in
 - Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
 - The bundled logo option is selected by default. Users may turn it off to restore ECC M and transparent-background availability.
 - Exact centering is mandatory. If the centered artwork or knockout intersects an alignment or other protected module, logo geometry is rejected rather than shifted. The compiled dimensions and generated evidence are recorded in [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
-- If geometry is unsafe for the selected version, logo mode is disabled with a reason. The encoder must not force a larger version merely to create logo space.
+- If geometry is unsafe for the selected version, logo mode is disabled with a
+  reason. The encoder applies the approved Version 6 branded minimum but never
+  selects a still-larger version merely to search for logo space.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
@@ -364,7 +367,8 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 - Apply the owner-approved launch preset list.
 - Implement contrast classification using the approved measurable thresholds.
-- Keep the single square-module and standard-finder treatment.
+- Apply the single 0.45-module non-finder-dot treatment with standard square
+  finders.
 - Integrate sanitized bundled logo, knockout, function-overlap validation, and overlap diagnostics.
 - Add transparency surface previews and exhaustive approved-combination decode tests.
 

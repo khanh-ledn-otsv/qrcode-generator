@@ -21,14 +21,14 @@ module. All 32 diameter/treatment candidates passed their complete 96-artifact
 sample, so 0.45 is the smallest tested reliable diameter and the
 closer-reference non-finder-dot treatment is selected.
 
-Logo mode selects at least Version 6. Versions 4 and 5 admit only a 10-module
+Logo mode selects at least Version 6. Versions 4 and 5 admit only an 11-module
 function-safe centered source, while Version 6 is the first to admit the
-requested 12-module hierarchy. The selected Version 6 ONE source is 12×4.5
+requested 13-module hierarchy. The selected Version 6 ONE source is 13×4.875
 modules; its opaque-white knockout is `(13, 17) 15×7`, clears protected modules
 by six modules, obscures 105 data and zero remainder modules, and decoded 36/36
 native-PNG and rasterized-SVG cases across Content, Landing, and Print. Inline
 intentionally rejects logo mode because its Version 5 ceiling is below the
-branded minimum. Larger tested widths violate the checked
+branded minimum. Every integer width from 14 through 18 violates the checked
 40% knockout bound. Versions 7–13 are intentional exact-centering rejections
 because of protected central alignment geometry. Four quiet modules remain
 mandatory and decorative export borders remain excluded. Full evidence is in

@@ -365,21 +365,29 @@ The branded-geometry approval experiment is replayed separately with:
   rasterized SVG artifacts;
 - the pinned ZXing-C++ 3.0.2 reader at commit
   `8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825` comparing exact payload bytes;
-- ECC-H candidate minima 4, 5, and 6; exact-centered ONE source widths 10, 12,
-  14, 16, and 18 modules; checked one-module outward knockout clearance;
-  protected-module rejection; and obscured data/remainder counts.
+- ECC-H candidate minima 4, 5, and 6; every integer exact-centered ONE source
+  width from 10 through 18 modules; checked one-module outward knockout
+  clearance; protected-module rejection; and obscured data/remainder counts.
 
 The committed record in
 [`generated/branded-geometry-policy.json`](generated/branded-geometry-policy.json)
 must stay strict-schema valid. A diameter/treatment is selectable only after
 every one of its 96 artifact cases decodes. The approved 0.45-module
 non-finder-dot treatment passed 96/96. Version 6 is the first branded version
-meeting the 12-module logo hierarchy, and its selected 12×4.5-module logo
+meeting the 13-module logo hierarchy, and its selected 13×4.875-module logo
 passed 36/36 artifact cases across the three profiles that admit Version 6;
 Inline is expected-invalid because its Version 5 ceiling is below the branded
 minimum. Versions 7–13 are expected-invalid exact-centering
 rows because of protected alignment geometry. Exactly four quiet-zone modules
 and the absence of decorative export borders are invariant across candidates.
+
+Replay and regenerate the committed record explicitly with:
+
+```sh
+QR_BRANDED_GEOMETRY_EVIDENCE=docs/generated/branded-geometry-policy.json \
+  cargo test -p qr-render --test branded_geometry_experiment \
+  compare_and_record_branded_geometry_candidates -- --ignored --nocapture
+```
 
 ### 6.5 Adverse-image tests
 

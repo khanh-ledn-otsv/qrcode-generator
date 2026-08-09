@@ -32,7 +32,8 @@ fi
     fs::write(&artifact, b"not read by the boundary fake").unwrap();
 
     let decoder = ZxingDecoder::new(decoder_path, "3.0.2", directory.path(), source_commit);
-    let result = decoder
+    let verified = decoder.verify().unwrap();
+    let result = verified
         .inspect_and_compare(
             &artifact,
             &DecodeExpectation {

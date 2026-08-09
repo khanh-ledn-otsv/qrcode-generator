@@ -72,7 +72,7 @@
   and logo-knockout exclusion while retaining byte-identical square artifacts.
 - [Ticket 23](issues/23-approve-decode-backed-branded-geometry.md): Pinned
   independent decoding approved 0.45-module centered non-finder dots, full-cell
-  square finders, a Version 6 branded minimum, and a 12×4.5-module exactly
+  square finders, a Version 6 branded minimum, and a 13×4.875-module exactly
   centered ONE source with a function-safe 15×7 white knockout; Versions 7–13
   intentionally reject centered-logo geometry.
 ## Notes

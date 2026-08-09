@@ -994,6 +994,12 @@ pub struct ZxingDecoder {
     expected_source_commit: String,
 }
 
+/// A decoder whose binary version and source checkout were verified once for
+/// an artifact batch.
+pub struct VerifiedZxingDecoder<'decoder> {
+    decoder: &'decoder ZxingDecoder,
+}
+
 impl ZxingDecoder {
     pub fn new(
         executable: impl Into<PathBuf>,
@@ -1014,8 +1020,20 @@ impl ZxingDecoder {
         artifact: impl AsRef<Path>,
         expected: &DecodeExpectation,
     ) -> Result<DecodeObservation, VerificationError> {
+        self.verify()?.inspect_and_compare(artifact, expected)
+    }
+
+    pub fn verify(&self) -> Result<VerifiedZxingDecoder<'_>, VerificationError> {
         self.verify_source_checkout()?;
         self.verify_version()?;
+        Ok(VerifiedZxingDecoder { decoder: self })
+    }
+
+    fn inspect_verified(
+        &self,
+        artifact: impl AsRef<Path>,
+        expected: &DecodeExpectation,
+    ) -> Result<DecodeObservation, VerificationError> {
         let artifact = artifact.as_ref();
         let metadata = self.run([
             "-formats",
@@ -1046,6 +1064,18 @@ impl ZxingDecoder {
                 raw_bytes.len(),
                 expected.payload.len()
             )));
+        }
+
+        if let Ok(expected_text) = std::str::from_utf8(&expected.payload) {
+            let encoded_text = metadata_value(&metadata, "Text")?;
+            let decoded_text: String = serde_json::from_str(encoded_text).map_err(|error| {
+                VerificationError::new(format!("invalid decoded Text value: {error}"))
+            })?;
+            if decoded_text != expected_text {
+                return Err(VerificationError::new(
+                    "decoded Unicode text does not match the expected payload",
+                ));
+            }
         }
 
         let format = metadata_value(&metadata, "Format")?;
@@ -1201,6 +1231,16 @@ impl ZxingDecoder {
             )));
         }
         Ok(output.stdout)
+    }
+}
+
+impl VerifiedZxingDecoder<'_> {
+    pub fn inspect_and_compare(
+        &self,
+        artifact: impl AsRef<Path>,
+        expected: &DecodeExpectation,
+    ) -> Result<DecodeObservation, VerificationError> {
+        self.decoder.inspect_verified(artifact, expected)
     }
 }
 
