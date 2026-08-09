@@ -28,4 +28,6 @@ retain brand RGB with coverage alpha. Structural and pixel tests cover the
 approved envelope, all supported profile/version rows, exact artifact hashes,
 and the native/WASM PNG fixture. The browser diagnostic now reports “Compact
 dots” while retaining the standard-square finder treatment and no shape
-control.
+control. The pinned decoder gate also required correcting its metadata command
+to use ZXing's JSON-compatible plain display mode; raw bytes and ECI state
+remain separately checked.

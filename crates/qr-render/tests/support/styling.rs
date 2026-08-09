@@ -3,8 +3,8 @@ use std::error::Error;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_FUNCTION_MODULE_STYLES,
-    APPROVED_LOGO_STYLES, Background, FinderStyle, Foreground, FunctionModuleStyle, LogoStyle,
+    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
+    APPROVED_MODULE_STYLES, Background, FinderStyle, Foreground, LogoStyle, ModuleStyle,
     OutputProfile, OutputSafety, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
 };
 
@@ -19,7 +19,7 @@ pub struct ApprovedStyleTuple {
     pub profile: OutputProfile,
     pub foreground: Foreground,
     pub background: Background,
-    pub function_style: FunctionModuleStyle,
+    pub function_style: ModuleStyle,
     pub finder: FinderStyle,
     pub logo: LogoStyle,
 }
@@ -28,9 +28,7 @@ impl ApprovedStyleTuple {
     pub fn options(self) -> Result<RenderOptions, RenderError> {
         let options = RenderOptions::approved(self.profile, self.foreground, self.background)?
             .with_logo(self.logo)?;
-        if options.function_module_style() != self.function_style
-            || options.finder_style() != self.finder
-        {
+        if options.module_style() != self.function_style || options.finder_style() != self.finder {
             return Err(RenderError::RenderFailure);
         }
         Ok(options)
@@ -71,7 +69,7 @@ pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
         for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
             for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
                 for (function_style_index, function_style) in
-                    APPROVED_FUNCTION_MODULE_STYLES.into_iter().enumerate()
+                    APPROVED_MODULE_STYLES.into_iter().enumerate()
                 {
                     for (finder_index, finder) in APPROVED_FINDERS.into_iter().enumerate() {
                         for (logo_index, logo) in APPROVED_LOGO_STYLES.into_iter().enumerate() {
@@ -254,7 +252,7 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
             profile,
             foreground: Foreground::Brand,
             background: APPROVED_BACKGROUNDS[0],
-            function_style: APPROVED_FUNCTION_MODULE_STYLES[0],
+            function_style: APPROVED_MODULE_STYLES[0],
             finder: APPROVED_FINDERS[0],
             logo: LogoStyle::None,
         };

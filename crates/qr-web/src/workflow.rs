@@ -5,9 +5,9 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
-    Background, ContrastRatio, FinderStyle, Foreground, FunctionModuleStyle, LogoPlacement,
-    LogoStyle, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions,
-    Rgba, SUPPORTED_PROFILES, render_png, render_svg,
+    Background, ContrastRatio, FinderStyle, Foreground, LogoPlacement, LogoStyle, ModuleStyle,
+    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
+    SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -129,7 +129,7 @@ pub struct Diagnostics {
     background: Background,
     safety: OutputSafety,
     contrast_ratio: Option<ContrastRatio>,
-    function_module_style: FunctionModuleStyle,
+    module_style: ModuleStyle,
     finder_style: FinderStyle,
     logo_style: LogoStyle,
     logo_placement: Option<LogoPlacement>,
@@ -237,8 +237,8 @@ impl Diagnostics {
     }
 
     #[must_use]
-    pub const fn function_module_style(self) -> FunctionModuleStyle {
-        self.function_module_style
+    pub const fn module_style(self) -> ModuleStyle {
+        self.module_style
     }
 
     #[must_use]
@@ -684,7 +684,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             background: request.background,
             safety: options.safety(),
             contrast_ratio: options.contrast_ratio(),
-            function_module_style: options.function_module_style(),
+            module_style: options.module_style(),
             finder_style: options.finder_style(),
             logo_style: options.logo_style(),
             logo_placement: model.logo_placement(),

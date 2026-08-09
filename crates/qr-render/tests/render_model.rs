@@ -7,9 +7,9 @@ use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, ContrastRatio, FinderStyle, Foreground,
-    FunctionModuleStyle, GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile,
-    OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
-    Version, render_png, render_svg,
+    GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, ModuleStyle, OutputProfile, OutputSafety,
+    ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, Version,
+    render_png, render_svg,
 };
 
 #[test]
@@ -31,10 +31,7 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
         model.options().background(),
         Background::Opaque(Rgba::WHITE)
     );
-    assert_eq!(
-        model.options().function_module_style(),
-        FunctionModuleStyle::CompactDots
-    );
+    assert_eq!(model.options().module_style(), ModuleStyle::CompactDots);
     assert_eq!(model.options().finder_style(), FinderStyle::StandardSquare);
     assert_eq!(model.options().logo_style(), LogoStyle::None);
 }
@@ -111,10 +108,7 @@ fn generated_approved_color_background_profile_matrix_is_complete() {
         for foreground in APPROVED_FOREGROUNDS {
             for background in APPROVED_BACKGROUNDS {
                 let options = RenderOptions::approved(profile, foreground, background).unwrap();
-                assert_eq!(
-                    options.function_module_style(),
-                    FunctionModuleStyle::CompactDots
-                );
+                assert_eq!(options.module_style(), ModuleStyle::CompactDots);
                 assert_eq!(options.finder_style(), FinderStyle::StandardSquare);
             }
         }

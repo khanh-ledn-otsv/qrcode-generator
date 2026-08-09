@@ -1,8 +1,9 @@
 use std::fmt::Write;
 
-use crate::{Background, GlyphOwnership, RenderError, RenderModel, Rgba, logo::bundled_logo_body};
-
-const DOT_RADIUS_THOUSANDTHS: u32 = 225;
+use crate::{
+    Background, GlyphOwnership, RenderError, RenderModel, Rgba, logo::bundled_logo_body,
+    model::COMPACT_DOT_GEOMETRY,
+};
 
 /// Renders the validated model as deterministic, payload-free UTF-8 SVG.
 pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
@@ -58,9 +59,11 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
             }
             GlyphOwnership::Separator => return Err(RenderError::RenderFailure),
             GlyphOwnership::OtherFunction | GlyphOwnership::Data | GlyphOwnership::Remainder => {
+                let radius = u32::from(COMPACT_DOT_GEOMETRY.radius_thousandths());
+                let diameter = u32::from(COMPACT_DOT_GEOMETRY.diameter_thousandths());
                 let left = x
                     .checked_mul(1_000)
-                    .and_then(|value| value.checked_add(500 - DOT_RADIUS_THOUSANDTHS))
+                    .and_then(|value| value.checked_add(500 - radius))
                     .ok_or(RenderError::DimensionOverflow)?;
                 let center_y = y
                     .checked_mul(1_000)
@@ -68,9 +71,15 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
                     .ok_or(RenderError::DimensionOverflow)?;
                 write!(
                     svg,
-                    "M{} {}a.225 .225 0 1 0 .450 0a.225 .225 0 1 0-.450 0z",
+                    "M{} {}a{} {} 0 1 0 {} 0a{} {} 0 1 0-{} 0z",
                     decimal_thousandths(left),
                     decimal_thousandths(center_y),
+                    decimal_thousandths(radius),
+                    decimal_thousandths(radius),
+                    decimal_thousandths(diameter),
+                    decimal_thousandths(radius),
+                    decimal_thousandths(radius),
+                    decimal_thousandths(diameter),
                 )
                 .map_err(|_| RenderError::RenderFailure)?;
             }

@@ -1,13 +1,11 @@
 use png::{BitDepth, ColorType, Compression, Encoder, Filter};
 
 use crate::logo::{logo_contains_source_point, source_view_box};
+use crate::model::COMPACT_DOT_GEOMETRY;
 use crate::{Background, GlyphOwnership, PixelDimensions, RenderError, RenderModel, Rgba};
 
 const LOGO_SAMPLES_PER_AXIS: u32 = 4;
 const LOGO_SAMPLE_COUNT: u32 = LOGO_SAMPLES_PER_AXIS * LOGO_SAMPLES_PER_AXIS;
-const DOT_SAMPLES_PER_AXIS: u32 = 8;
-const DOT_SAMPLE_COUNT: u32 = DOT_SAMPLES_PER_AXIS * DOT_SAMPLES_PER_AXIS;
-const DOT_DIAMETER_THOUSANDTHS: u32 = 450;
 
 /// Renders the validated model as a deterministic, metadata-free PNG artifact.
 pub fn render_png(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
@@ -265,11 +263,12 @@ fn fill_dot(
         return Err(RenderError::RenderFailure);
     }
 
+    let samples_per_axis = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
     let center = u64::from(side)
-        .checked_mul(u64::from(DOT_SAMPLES_PER_AXIS))
+        .checked_mul(u64::from(samples_per_axis))
         .ok_or(RenderError::DimensionOverflow)?;
     let scaled_radius = center
-        .checked_mul(u64::from(DOT_DIAMETER_THOUSANDTHS))
+        .checked_mul(u64::from(COMPACT_DOT_GEOMETRY.diameter_thousandths()))
         .ok_or(RenderError::DimensionOverflow)?;
     let radius_squared = scaled_radius
         .checked_mul(scaled_radius)
@@ -277,14 +276,14 @@ fn fill_dot(
     for offset_y in 0..side {
         for offset_x in 0..side {
             let mut covered_samples = 0;
-            for sample_y in 0..DOT_SAMPLES_PER_AXIS {
-                for sample_x in 0..DOT_SAMPLES_PER_AXIS {
+            for sample_y in 0..samples_per_axis {
+                for sample_x in 0..samples_per_axis {
                     let sample_x = u64::from(offset_x)
-                        .checked_mul(u64::from(DOT_SAMPLES_PER_AXIS) * 2)
+                        .checked_mul(u64::from(samples_per_axis) * 2)
                         .and_then(|value| value.checked_add(u64::from(sample_x) * 2 + 1))
                         .ok_or(RenderError::DimensionOverflow)?;
                     let sample_y = u64::from(offset_y)
-                        .checked_mul(u64::from(DOT_SAMPLES_PER_AXIS) * 2)
+                        .checked_mul(u64::from(samples_per_axis) * 2)
                         .and_then(|value| value.checked_add(u64::from(sample_y) * 2 + 1))
                         .ok_or(RenderError::DimensionOverflow)?;
                     let dx = sample_x.abs_diff(center);
@@ -357,10 +356,12 @@ fn blend_dot_channel(
     background: u8,
     covered_samples: u32,
 ) -> Result<u8, RenderError> {
-    let uncovered_samples = DOT_SAMPLE_COUNT - covered_samples;
+    let samples_per_axis = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
+    let sample_count = samples_per_axis * samples_per_axis;
+    let uncovered_samples = sample_count - covered_samples;
     let blended =
         u32::from(foreground) * covered_samples + u32::from(background) * uncovered_samples;
-    u8::try_from((blended + DOT_SAMPLE_COUNT / 2) / DOT_SAMPLE_COUNT)
+    u8::try_from((blended + sample_count / 2) / sample_count)
         .map_err(|_| RenderError::RenderFailure)
 }
 

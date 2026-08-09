@@ -108,12 +108,36 @@ pub enum OutputSafety {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum FunctionModuleStyle {
+pub enum ModuleStyle {
     CompactDots,
 }
 
-pub const APPROVED_FUNCTION_MODULE_STYLES: [FunctionModuleStyle; 1] =
-    [FunctionModuleStyle::CompactDots];
+pub const APPROVED_MODULE_STYLES: [ModuleStyle; 1] = [ModuleStyle::CompactDots];
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct CompactDotGeometry {
+    diameter_thousandths: u16,
+    samples_per_axis: u8,
+}
+
+impl CompactDotGeometry {
+    pub(crate) const fn diameter_thousandths(self) -> u16 {
+        self.diameter_thousandths
+    }
+
+    pub(crate) const fn radius_thousandths(self) -> u16 {
+        self.diameter_thousandths / 2
+    }
+
+    pub(crate) const fn samples_per_axis(self) -> u8 {
+        self.samples_per_axis
+    }
+}
+
+pub(crate) const COMPACT_DOT_GEOMETRY: CompactDotGeometry = CompactDotGeometry {
+    diameter_thousandths: 450,
+    samples_per_axis: 8,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FinderStyle {
@@ -139,7 +163,7 @@ pub struct RenderOptions {
     profile: OutputProfile,
     foreground: Rgba,
     background: Background,
-    function_module_style: FunctionModuleStyle,
+    module_style: ModuleStyle,
     finder_style: FinderStyle,
     logo_style: LogoStyle,
 }
@@ -183,7 +207,7 @@ impl RenderOptions {
             profile,
             foreground,
             background,
-            function_module_style: FunctionModuleStyle::CompactDots,
+            module_style: ModuleStyle::CompactDots,
             finder_style: FinderStyle::StandardSquare,
             logo_style: LogoStyle::None,
         })
@@ -205,8 +229,8 @@ impl RenderOptions {
     }
 
     #[must_use]
-    pub const fn function_module_style(self) -> FunctionModuleStyle {
-        self.function_module_style
+    pub const fn module_style(self) -> ModuleStyle {
+        self.module_style
     }
 
     #[must_use]

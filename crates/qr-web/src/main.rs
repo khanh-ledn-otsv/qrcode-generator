@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
 use qr_render::{
-    APPROVED_BACKGROUNDS, Background, FinderStyle, Foreground, FunctionModuleStyle, LogoStyle,
+    APPROVED_BACKGROUNDS, Background, FinderStyle, Foreground, LogoStyle, ModuleStyle,
     OutputSafety, ProfileId, Rgba, SUPPORTED_PROFILES,
 };
 use qr_web::debounce::DebounceTimer;
@@ -338,7 +338,7 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
                                 <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_color(details.foreground()).to_owned()) />
                                 <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_presentation(details.background()).name.to_owned()) />
-                                <Diagnostic label="Function modules" value=move || diagnostic_value(state, |details| function_module_style_label(details.function_module_style()).to_owned()) />
+                                <Diagnostic label="Non-finder modules" value=move || diagnostic_value(state, |details| module_style_label(details.module_style()).to_owned()) />
                                 <Diagnostic label="Finders" value=move || diagnostic_value(state, |details| finder_style_label(details.finder_style()).to_owned()) />
                                 <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
@@ -532,9 +532,9 @@ fn background_presentation(background: Background) -> BackgroundPresentation {
     }
 }
 
-const fn function_module_style_label(style: FunctionModuleStyle) -> &'static str {
+const fn module_style_label(style: ModuleStyle) -> &'static str {
     match style {
-        FunctionModuleStyle::CompactDots => "Compact dots",
+        ModuleStyle::CompactDots => "Compact dots",
     }
 }
 

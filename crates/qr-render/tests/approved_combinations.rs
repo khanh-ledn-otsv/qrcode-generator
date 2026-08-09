@@ -6,8 +6,8 @@ mod styling;
 mod versions;
 
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_FUNCTION_MODULE_STYLES,
-    APPROVED_LOGO_STYLES, Background, FinderStyle, FunctionModuleStyle, LogoStyle, Rgba,
+    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
+    APPROVED_MODULE_STYLES, Background, FinderStyle, LogoStyle, ModuleStyle, Rgba,
     SUPPORTED_PROFILES,
 };
 
@@ -19,17 +19,14 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
         APPROVED_BACKGROUNDS,
         [Background::Opaque(Rgba::WHITE), Background::Transparent]
     );
-    assert_eq!(
-        APPROVED_FUNCTION_MODULE_STYLES,
-        [FunctionModuleStyle::CompactDots]
-    );
+    assert_eq!(APPROVED_MODULE_STYLES, [ModuleStyle::CompactDots]);
     assert_eq!(APPROVED_FINDERS, [FinderStyle::StandardSquare]);
     assert_eq!(APPROVED_LOGO_STYLES, [LogoStyle::None, LogoStyle::Bundled]);
 
     let raw_tuple_count = SUPPORTED_PROFILES.len()
         * APPROVED_FOREGROUNDS.len()
         * APPROVED_BACKGROUNDS.len()
-        * APPROVED_FUNCTION_MODULE_STYLES.len()
+        * APPROVED_MODULE_STYLES.len()
         * APPROVED_FINDERS.len()
         * APPROVED_LOGO_STYLES.len();
     assert_eq!(raw_tuple_count, 16);

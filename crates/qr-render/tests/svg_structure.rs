@@ -13,20 +13,20 @@ use sha2::{Digest, Sha256};
 
 const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 4] = [
     [[
-        "9cda15326dba305e98a352cfeebe6bf5264b540fde1d128301e408f405b234a2",
-        "a1406e83cb39a206c07065114f6f9fdd8cd3e2447605e25b86f19e1893ea345e",
+        "ab838083cada2b4f111f67781fda45439ea80019e7e57962c0be222267cb8e71",
+        "1d3509f5eb6b337603295a1fcbb09543c7794800b18ca5c39624b8562d1275e2",
     ]],
     [[
-        "7d08d8838071ceeb1c3b3cdc95b04244efc02e973bd54738d0296cf7ff93ac83",
-        "9772f92e866cabe994dc2498e50059bb151484dc1f1c4f0656d3b1a1e2fe3ad1",
+        "c16df2711bb5e1a9758a6dcbcadfe92d64350adaf85a9aa7c3bad81aec576748",
+        "89f848a1ddcf1c51160c2cc21c78289d169199c2ff50a357378a161132fc1af9",
     ]],
     [[
-        "3a957742f63dbc6d8191e822636dae2ee8658d6e37496894a143b59e019c75d1",
-        "7c68066c66e154b8daaaaf32efe43d7a497bb1efd25881cacc7e512e19b8bd3c",
+        "15ffb1de6ba46ada33e04af3f4c97339b20a1c9159538e501b1c8c6844a59d49",
+        "09675b8a6f8065f1754e4d32a5bd0f7b3366371fab02855e575f1cb8bd27a70c",
     ]],
     [[
-        "ac5cccfa03d8fe5a3c4c51f7e0f1e241a2565c6f9a7bf335d62dc76b23f87f5c",
-        "1ba90f81bdfe9329f76fab4dcff82d138b94d4de231f740c4efe865740ecdd5c",
+        "32edc0766a613b8088218533f80c80b01f12a33966da5cd8c968a023265443b1",
+        "318dd2cd412fe2ab44dde0f12f2793f9f17bf44c86a523e055d121f5b8ff12d8",
     ]],
 ];
 
@@ -42,7 +42,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(first.as_bytes(), second.as_bytes());
     assert_eq!(
         sha256_hex(first.as_bytes()),
-        "724308b9771136b5957ca37151dcd0bd482cdf4e8af24990949252d8c2c46a5d"
+        "b137c91a4c08ada49d2230010df90580b3681dabcc5c906475abdc150cb38d8d"
     );
     assert!(!first.contains(payload));
 
@@ -235,8 +235,10 @@ fn svg_uses_full_cell_finders_and_exact_centered_compact_dots() {
     let dot_top = u32::from(dot.y()) + quiet;
     assert!(
         path.contains(
-            format!("M{dot_left}.275 {dot_top}.500a.225 .225 0 1 0 .450 0a.225 .225 0 1 0-.450 0z")
-                .as_str()
+            format!(
+                "M{dot_left}.275 {dot_top}.500a0.225 0.225 0 1 0 0.450 0a0.225 0.225 0 1 0-0.450 0z"
+            )
+            .as_str()
         )
     );
     assert_eq!(
@@ -276,7 +278,7 @@ fn dark_module_coordinates(path: &str) -> Vec<(u32, u32)> {
                 (x.parse().unwrap(), y.parse().unwrap())
             } else {
                 let coordinates = command
-                    .strip_suffix("a.225 .225 0 1 0 .450 0a.225 .225 0 1 0-.450 0z")
+                    .strip_suffix("a0.225 0.225 0 1 0 0.450 0a0.225 0.225 0 1 0-0.450 0z")
                     .unwrap();
                 let (left, center_y) = coordinates.split_once(' ').unwrap();
                 (

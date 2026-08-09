@@ -63,9 +63,15 @@ Enabling the bundled logo is the only release-1 transition that changes ECC: it 
 
 Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rust `png` crate. Do not use Canvas, browser SVG screenshots, or a general scene renderer for production PNG export.
 
-- Square cells are filled by exact integer pixel rectangles.
-- QR modules are rendered as exact square final-pixel rectangles; the complete image is never resized.
-- The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; QR modules and knockout edges remain pixel-sharp.
+- Finder cells and logo-knockout cells are filled by exact integer pixel
+  rectangles. Every other visible module uses the approved centered circular
+  glyph described below.
+- PNG dots use deterministic 8×8 final-pixel subpixel coverage. Opaque edge
+  pixels blend only the approved foreground and background; transparent edge
+  pixels retain the foreground RGB with coverage alpha. Only subpixel samples
+  inside the approved 0.45-module circular envelope contribute coverage. The
+  complete image is never resized.
+- The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering and numeric formatting.

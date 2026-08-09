@@ -8,8 +8,8 @@ use std::io::Cursor;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, GlyphOwnership, RenderModel,
-    RenderOptions, SUPPORTED_PROFILES, render_png,
+    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, Foreground, GlyphOwnership,
+    RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png,
 };
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
@@ -66,51 +66,70 @@ fn safe_png_has_fixed_structure_and_deterministic_bytes() {
 }
 
 #[test]
-fn decoded_pixels_keep_quiet_space_blank_and_glyphs_inside_their_cells() {
+fn every_profile_version_matches_the_independent_dot_coverage_reference() {
     for profile in SUPPORTED_PROFILES {
         for version in 1..=profile.maximum_version().number() {
             let encoded = encoded_qr_at_version(version);
-            let model = RenderModel::new(&encoded, RenderOptions::safe(profile).unwrap()).unwrap();
-            let png = render_png(&model).unwrap();
-            let (width, height, pixels) = decode_rgba(&png);
+            for background in APPROVED_BACKGROUNDS {
+                let model = RenderModel::new(
+                    &encoded,
+                    RenderOptions::approved(profile, Foreground::Brand, background).unwrap(),
+                )
+                .unwrap();
+                let png = render_png(&model).unwrap();
+                let (width, height, pixels) = decode_rgba(&png);
 
-            assert_eq!(width, profile.png_dimensions().width().get());
-            assert_eq!(height, profile.png_dimensions().height().get());
-            assert_eq!(pixels.len(), model.png_placement().rgba_buffer_len());
+                assert_eq!(width, profile.png_dimensions().width().get());
+                assert_eq!(height, profile.png_dimensions().height().get());
+                assert_eq!(pixels.len(), model.png_placement().rgba_buffer_len());
 
-            let placement = model.png_placement();
-            let origin_x = placement.matrix_origin().x().get();
-            let origin_y = placement.matrix_origin().y().get();
-            let scale = placement.module_scale().get();
-            let matrix_size = u32::from(model.matrix().size());
+                let placement = model.png_placement();
+                let origin_x = placement.matrix_origin().x().get();
+                let origin_y = placement.matrix_origin().y().get();
+                let scale = placement.module_scale().get();
+                let matrix_size = u32::from(model.matrix().size());
+                let background_pixel = background_pixel(background);
 
-            assert_eq!(pixel(&pixels, width, 0, 0), [255; 4]);
-            assert_eq!(
-                pixel(
-                    &pixels,
-                    width,
-                    origin_x + matrix_size * scale,
-                    origin_y + matrix_size * scale,
-                ),
-                [255; 4]
-            );
-            for cell in model.cells() {
-                let x = origin_x + u32::from(cell.x()) * scale;
-                let y = origin_y + u32::from(cell.y()) * scale;
-                let expected_corner = if cell
-                    .glyph()
-                    .is_some_and(|glyph| glyph.ownership() == GlyphOwnership::Finder)
-                {
-                    [189, 15, 114, 255]
-                } else {
-                    [255; 4]
-                };
-                assert_eq!(pixel(&pixels, width, x, y), expected_corner);
-                if cell.glyph().is_some() {
-                    assert_eq!(
-                        pixel(&pixels, width, x + scale / 2 - 1, y + scale / 2 - 1),
-                        [189, 15, 114, 255]
-                    );
+                assert_eq!(pixel(&pixels, width, 0, 0), background_pixel);
+                assert_eq!(
+                    pixel(
+                        &pixels,
+                        width,
+                        origin_x + matrix_size * scale,
+                        origin_y + matrix_size * scale,
+                    ),
+                    background_pixel
+                );
+
+                let finder = model
+                    .glyphs()
+                    .find(|glyph| glyph.ownership() == GlyphOwnership::Finder)
+                    .unwrap();
+                assert_glyph_cell_matches(&pixels, width, &model, finder, |_, _| {
+                    Rgba::BRAND.channels()
+                });
+
+                let dot = model
+                    .glyphs()
+                    .find(|glyph| glyph.ownership() != GlyphOwnership::Finder)
+                    .unwrap();
+                assert_glyph_cell_matches(&pixels, width, &model, dot, |x, y| {
+                    reference_dot_pixel(scale, x, y, background)
+                });
+
+                let separator = model
+                    .cells()
+                    .find(|cell| cell.ownership() == GlyphOwnership::Separator)
+                    .unwrap();
+                let separator_x = origin_x + u32::from(separator.x()) * scale;
+                let separator_y = origin_y + u32::from(separator.y()) * scale;
+                for y in 0..scale {
+                    for x in 0..scale {
+                        assert_eq!(
+                            pixel(&pixels, width, separator_x + x, separator_y + y),
+                            background_pixel
+                        );
+                    }
                 }
             }
         }
@@ -159,78 +178,79 @@ fn approved_png_color_background_profile_tuples_are_structural_and_deterministic
     }
 }
 
-#[test]
-fn png_uses_solid_finders_and_antialiased_compact_dots_within_their_envelope() {
-    let encoded = encoded_qr_at_version(1);
-    let profile = SUPPORTED_PROFILES[0];
+fn pixel(pixels: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
+    let offset = usize::try_from((y * width + x) * 4).unwrap();
+    pixels[offset..offset + 4].try_into().unwrap()
+}
 
-    for background in [
-        Background::Opaque(qr_render::Rgba::WHITE),
-        Background::Transparent,
-    ] {
-        let model = RenderModel::new(
-            &encoded,
-            RenderOptions::approved(profile, qr_render::Foreground::Brand, background).unwrap(),
-        )
-        .unwrap();
-        let (width, _, pixels) = decode_rgba(&render_png(&model).unwrap());
-        let placement = model.png_placement();
-        let scale = placement.module_scale().get();
-        assert_eq!(scale, 8);
-
-        let finder = model
-            .glyphs()
-            .find(|glyph| glyph.ownership() == GlyphOwnership::Finder)
-            .unwrap();
-        let finder_x = placement.matrix_origin().x().get() + u32::from(finder.x()) * scale;
-        let finder_y = placement.matrix_origin().y().get() + u32::from(finder.y()) * scale;
-        for y in finder_y..finder_y + scale {
-            for x in finder_x..finder_x + scale {
-                assert_eq!(pixel(&pixels, width, x, y), [189, 15, 114, 255]);
-            }
-        }
-
-        let dot = model
-            .glyphs()
-            .find(|glyph| glyph.ownership() != GlyphOwnership::Finder)
-            .unwrap();
-        let dot_x = placement.matrix_origin().x().get() + u32::from(dot.x()) * scale;
-        let dot_y = placement.matrix_origin().y().get() + u32::from(dot.y()) * scale;
-        let expected_background = match background {
-            Background::Opaque(color) => color.channels(),
-            Background::Transparent => [0, 0, 0, 0],
-        };
-        for offset_y in 0..scale {
-            for offset_x in 0..scale {
-                let actual = pixel(&pixels, width, dot_x + offset_x, dot_y + offset_y);
-                if !(2..=5).contains(&offset_x) || !(2..=5).contains(&offset_y) {
-                    assert_eq!(actual, expected_background);
-                }
-            }
-        }
-        let mut dot_pixels = Vec::new();
-        for offset_y in 2..=5 {
-            for offset_x in 2..=5 {
-                dot_pixels.push(pixel(&pixels, width, dot_x + offset_x, dot_y + offset_y));
-            }
-        }
-        assert!(dot_pixels.contains(&[189, 15, 114, 255]));
-        match background {
-            Background::Opaque(_) => assert!(dot_pixels.iter().any(|pixel| {
-                pixel[3] == 255 && *pixel != [189, 15, 114, 255] && *pixel != [255; 4]
-            })),
-            Background::Transparent => assert!(
-                dot_pixels
-                    .iter()
-                    .any(|pixel| { pixel[..3] == [189, 15, 114] && (1..255).contains(&pixel[3]) })
-            ),
+fn assert_glyph_cell_matches(
+    pixels: &[u8],
+    width: u32,
+    model: &RenderModel<'_>,
+    glyph: qr_render::SymbolGlyph,
+    expected: impl Fn(u32, u32) -> [u8; 4],
+) {
+    let placement = model.png_placement();
+    let scale = placement.module_scale().get();
+    let left = placement.matrix_origin().x().get() + u32::from(glyph.x()) * scale;
+    let top = placement.matrix_origin().y().get() + u32::from(glyph.y()) * scale;
+    for y in 0..scale {
+        for x in 0..scale {
+            assert_eq!(pixel(pixels, width, left + x, top + y), expected(x, y));
         }
     }
 }
 
-fn pixel(pixels: &[u8], width: u32, x: u32, y: u32) -> [u8; 4] {
-    let offset = usize::try_from((y * width + x) * 4).unwrap();
-    pixels[offset..offset + 4].try_into().unwrap()
+fn reference_dot_pixel(scale: u32, x: u32, y: u32, background: Background) -> [u8; 4] {
+    const SAMPLES_PER_AXIS: u32 = 8;
+    const SAMPLE_COUNT: u32 = SAMPLES_PER_AXIS * SAMPLES_PER_AXIS;
+    let center = f64::from(scale) / 2.0;
+    let radius = f64::from(scale) * 0.45 / 2.0;
+    let mut covered = 0;
+    for sample_y in 0..SAMPLES_PER_AXIS {
+        for sample_x in 0..SAMPLES_PER_AXIS {
+            let sample_x = f64::from(x) + (f64::from(sample_x) + 0.5) / f64::from(SAMPLES_PER_AXIS);
+            let sample_y = f64::from(y) + (f64::from(sample_y) + 0.5) / f64::from(SAMPLES_PER_AXIS);
+            if (sample_x - center).powi(2) + (sample_y - center).powi(2) <= radius.powi(2) {
+                covered += 1;
+            }
+        }
+    }
+    if covered == 0 {
+        return background_pixel(background);
+    }
+
+    let foreground = Rgba::BRAND.channels();
+    match background {
+        Background::Transparent => [
+            foreground[0],
+            foreground[1],
+            foreground[2],
+            reference_blend(u8::MAX, 0, covered, SAMPLE_COUNT),
+        ],
+        Background::Opaque(background) => {
+            let background = background.channels();
+            [
+                reference_blend(foreground[0], background[0], covered, SAMPLE_COUNT),
+                reference_blend(foreground[1], background[1], covered, SAMPLE_COUNT),
+                reference_blend(foreground[2], background[2], covered, SAMPLE_COUNT),
+                u8::MAX,
+            ]
+        }
+    }
+}
+
+fn reference_blend(foreground: u8, background: u8, covered: u32, samples: u32) -> u8 {
+    let blended =
+        u32::from(foreground) * covered + u32::from(background) * (samples - covered) + samples / 2;
+    u8::try_from(blended / samples).unwrap()
+}
+
+fn background_pixel(background: Background) -> [u8; 4] {
+    match background {
+        Background::Opaque(color) => color.channels(),
+        Background::Transparent => [0, 0, 0, 0],
+    }
 }
 
 struct PngChunk<'bytes> {
