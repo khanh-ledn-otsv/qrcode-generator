@@ -82,7 +82,8 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 
 These release-1 defaults use the approved ONE treatment. The decode-backed
 geometry below was accepted on 2026-08-09 for implementation by Tickets 24–26;
-the production renderer now applies the selected dot treatment from Ticket 24.
+the production renderer now applies the selected dot treatment and the single
+reviewed Version 6 logo placement.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
 - Visible data, remainder, timing, alignment, format, version, and fixed-dark

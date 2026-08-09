@@ -33,6 +33,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
     );
     let output = tempfile::tempdir()?;
     let mut failures = Vec::new();
+    let mut enabled_rows = 0_u8;
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for version in 1..=profile.maximum_version().number() {
@@ -55,8 +56,9 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
                 Err(RenderError::UnsafeLogoGeometry) => continue,
                 Err(error) => return Err(error.into()),
             };
+            enabled_rows += 1;
             let svg = render_svg(&model)?;
-            let dimensions = profile.svg_dimensions();
+            let dimensions = profile.png_dimensions();
             let pixmap =
                 raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
             let svg_artifact = output
@@ -80,12 +82,21 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             }
         }
     }
+    if enabled_rows != 3 {
+        return Err(
+            format!("expected three enabled Version 6 profile rows, found {enabled_rows}").into(),
+        );
+    }
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
+        if profile.maximum_version().number() < 6 {
+            continue;
+        }
         for (payload_label, text) in required_logo_payloads(profile)? {
-            let encoded = encode(EncodeRequest::first_fit(
+            let encoded = encode(EncodeRequest::with_version_range(
                 &text,
                 ErrorCorrection::High,
+                Version::try_from(6)?,
                 profile.maximum_version(),
             ))?;
             let expected = DecodeExpectation {
@@ -103,7 +114,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
                 Err(RenderError::UnsafeLogoGeometry) => continue,
                 Err(error) => return Err(error.into()),
             };
-            let dimensions = profile.svg_dimensions();
+            let dimensions = profile.png_dimensions();
             let svg = render_svg(&model)?;
             let pixmap =
                 raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;

@@ -9,7 +9,7 @@ use fixture_tool::{
     DecodeExpectation, ErrorCorrection as FixtureEcc, FixtureManifest, QrVersion, ZxingDecoder,
 };
 use qr_core::tables::ErrorCorrection;
-use qr_core::{EncodeRequest, encode};
+use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
     Background, Foreground, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
 };
@@ -133,9 +133,10 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     };
 
     let logo_payload = "https://example.test/logo-caution";
-    let logo_encoded = encode(EncodeRequest::first_fit(
+    let logo_encoded = encode(EncodeRequest::with_version_range(
         logo_payload,
         ErrorCorrection::High,
+        Version::try_from(6)?,
         SUPPORTED_PROFILES[1].maximum_version(),
     ))?;
     let logo_source = render_png(&RenderModel::new(

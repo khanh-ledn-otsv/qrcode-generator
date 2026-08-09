@@ -1,3 +1,4 @@
+use qr_core::Version;
 use qr_core::matrix::{ModuleKind, ModuleMatrix};
 
 use crate::RenderError;
@@ -39,13 +40,13 @@ const SOURCE_VIEW_BOX_LEFT: u32 = 180;
 const SOURCE_VIEW_BOX_TOP: u32 = 180;
 const SOURCE_VIEW_BOX_WIDTH: u32 = 640;
 const SOURCE_VIEW_BOX_HEIGHT: u32 = 240;
-const MODULE_UNITS: u32 = 1_000;
+const MODULE_UNITS: u32 = 10_000;
+const SOURCE_WIDTH_TEN_THOUSANDTHS: u32 = 130_000;
 
-// Largest source-box widths that passed the committed H-level profile/version
-// decode matrix while keeping the whitespace-heavy ONE asset visually legible.
-// Even widths keep both axes exactly centered at thousandth-module precision
-// for the asset's 8:3 presentation aspect ratio.
-const SOURCE_WIDTH_MODULES: [u32; 13] = [6, 6, 8, 8, 8, 10, 10, 10, 10, 12, 12, 12, 14];
+pub const BRANDED_LOGO_VERSION: Version = match Version::new(6) {
+    Ok(version) => version,
+    Err(_) => panic!("the approved branded logo version must be a valid QR version"),
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModuleCoordinate(u32);
@@ -97,41 +98,41 @@ impl LogoKnockoutBounds {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct LogoSourceBounds {
-    left_thousandths: u32,
-    top_thousandths: u32,
-    width_thousandths: u32,
-    height_thousandths: u32,
+    left_ten_thousandths: u32,
+    top_ten_thousandths: u32,
+    width_ten_thousandths: u32,
+    height_ten_thousandths: u32,
 }
 
 impl LogoSourceBounds {
     #[must_use]
-    pub const fn left_thousandths(self) -> u32 {
-        self.left_thousandths
+    pub const fn left_ten_thousandths(self) -> u32 {
+        self.left_ten_thousandths
     }
 
     #[must_use]
-    pub const fn top_thousandths(self) -> u32 {
-        self.top_thousandths
+    pub const fn top_ten_thousandths(self) -> u32 {
+        self.top_ten_thousandths
     }
 
     #[must_use]
-    pub const fn width_thousandths(self) -> u32 {
-        self.width_thousandths
+    pub const fn width_ten_thousandths(self) -> u32 {
+        self.width_ten_thousandths
     }
 
     #[must_use]
-    pub const fn height_thousandths(self) -> u32 {
-        self.height_thousandths
+    pub const fn height_ten_thousandths(self) -> u32 {
+        self.height_ten_thousandths
     }
 
     #[must_use]
-    pub const fn right_thousandths(self) -> u32 {
-        self.left_thousandths + self.width_thousandths
+    pub const fn right_ten_thousandths(self) -> u32 {
+        self.left_ten_thousandths + self.width_ten_thousandths
     }
 
     #[must_use]
-    pub const fn bottom_thousandths(self) -> u32 {
-        self.top_thousandths + self.height_thousandths
+    pub const fn bottom_ten_thousandths(self) -> u32 {
+        self.top_ten_thousandths + self.height_ten_thousandths
     }
 }
 
@@ -179,15 +180,11 @@ impl LogoPlacement {
 pub(crate) fn calculate_logo_placement(
     matrix: &ModuleMatrix,
 ) -> Result<LogoPlacement, RenderError> {
-    let version_index = usize::from(matrix.version().number() - 1);
-    let source_width_modules = SOURCE_WIDTH_MODULES
-        .get(version_index)
-        .copied()
-        .ok_or(RenderError::UnsafeLogoGeometry)?;
+    if matrix.version() != BRANDED_LOGO_VERSION {
+        return Err(RenderError::UnsafeLogoGeometry);
+    }
     let matrix_width = u32::from(matrix.size());
-    let source_width = source_width_modules
-        .checked_mul(MODULE_UNITS)
-        .ok_or(RenderError::DimensionOverflow)?;
+    let source_width = SOURCE_WIDTH_TEN_THOUSANDTHS;
     let source_height = source_width
         .checked_mul(SOURCE_VIEW_BOX_HEIGHT)
         .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
@@ -202,11 +199,7 @@ pub(crate) fn calculate_logo_placement(
         .and_then(|width| width.checked_sub(source_height))
         .map(|difference| difference / 2)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
-    let knockout_padding = if matrix.version().number() == 1 {
-        0
-    } else {
-        MODULE_UNITS
-    };
+    let knockout_padding = MODULE_UNITS;
     let centered_knockout = knockout_for_source(
         centered_left,
         centered_top,
@@ -219,10 +212,10 @@ pub(crate) fn calculate_logo_placement(
         analyze_knockout(matrix, centered_knockout).ok_or(RenderError::UnsafeLogoGeometry)?;
     let placement = LogoPlacement {
         source: LogoSourceBounds {
-            left_thousandths: centered_left,
-            top_thousandths: centered_top,
-            width_thousandths: source_width,
-            height_thousandths: source_height,
+            left_ten_thousandths: centered_left,
+            top_ten_thousandths: centered_top,
+            width_ten_thousandths: source_width,
+            height_ten_thousandths: source_height,
         },
         knockout: centered_knockout,
         protected_clearance: clearance,

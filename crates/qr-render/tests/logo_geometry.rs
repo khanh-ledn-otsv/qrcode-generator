@@ -10,7 +10,46 @@ use qr_render::{
 };
 
 #[test]
-fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
+fn version_six_uses_the_exact_decode_backed_centered_logo_placement() {
+    let version_six = Version::new(6).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
+        "logo",
+        ErrorCorrection::High,
+        version_six,
+        version_six,
+    ))
+    .unwrap();
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[1])
+        .unwrap()
+        .with_logo(LogoStyle::Bundled)
+        .unwrap();
+    let placement = RenderModel::new(&encoded, options)
+        .unwrap()
+        .logo_placement()
+        .unwrap();
+    let source = placement.source_bounds();
+    let knockout = placement.knockout_bounds();
+
+    assert_eq!(source.left_ten_thousandths(), 140_000);
+    assert_eq!(source.top_ten_thousandths(), 180_625);
+    assert_eq!(source.width_ten_thousandths(), 130_000);
+    assert_eq!(source.height_ten_thousandths(), 48_750);
+    assert_eq!(
+        (
+            knockout.left().get(),
+            knockout.top().get(),
+            knockout.width().get(),
+            knockout.height().get(),
+        ),
+        (13, 17, 15, 7),
+    );
+    assert_eq!(placement.protected_clearance(), 6);
+    assert_eq!(placement.obscured_data_modules(), 105);
+    assert_eq!(placement.obscured_remainder_modules(), 0);
+}
+
+#[test]
+fn only_the_reviewed_version_six_geometry_is_enabled_and_function_safe() {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
             let text = high_versions::payload_for_high_version(version_number).unwrap();
@@ -27,7 +66,7 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
                 .with_logo(LogoStyle::Bundled)
                 .unwrap();
             let model = RenderModel::new(&encoded, options);
-            if version_number >= 7 {
+            if version_number != 6 {
                 assert_eq!(model.unwrap_err(), RenderError::UnsafeLogoGeometry);
                 continue;
             }
@@ -40,33 +79,33 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
             let matrix_width = u32::from(encoded.version().symbol_size());
 
             assert_eq!(
-                source.left_thousandths() * 2 + source.width_thousandths(),
-                matrix_width * 1_000,
+                source.left_ten_thousandths() * 2 + source.width_ten_thousandths(),
+                matrix_width * 10_000,
                 "version {version_number} logo is not horizontally centered",
             );
             assert_eq!(
-                source.top_thousandths() * 2 + source.height_thousandths(),
-                matrix_width * 1_000,
+                source.top_ten_thousandths() * 2 + source.height_ten_thousandths(),
+                matrix_width * 10_000,
                 "version {version_number} logo is not vertically centered",
             );
 
             assert!(knockout.width().get() * 5 <= matrix_width * 2);
             assert!(knockout.height().get() * 5 <= matrix_width * 2);
-            assert!(source.width_thousandths() * 100 >= (matrix_width + 8) * 1_000 * 17);
-            let padding = if version_number == 1 { 0 } else { 1_000 };
-            assert!(source.left_thousandths() >= knockout.left().get() * 1_000 + padding);
-            assert!(source.top_thousandths() >= knockout.top().get() * 1_000 + padding);
+            assert!(source.width_ten_thousandths() * 100 >= (matrix_width + 8) * 10_000 * 17);
+            let padding = 10_000;
+            assert!(source.left_ten_thousandths() >= knockout.left().get() * 10_000 + padding);
+            assert!(source.top_ten_thousandths() >= knockout.top().get() * 10_000 + padding);
             assert!(
-                source.right_thousandths()
-                    <= (knockout.left().get() + knockout.width().get()) * 1_000 - padding
+                source.right_ten_thousandths()
+                    <= (knockout.left().get() + knockout.width().get()) * 10_000 - padding
             );
             assert!(
-                source.bottom_thousandths()
-                    <= (knockout.top().get() + knockout.height().get()) * 1_000 - padding
+                source.bottom_ten_thousandths()
+                    <= (knockout.top().get() + knockout.height().get()) * 10_000 - padding
             );
             assert_eq!(
-                source.width_thousandths() * 240,
-                source.height_thousandths() * 640
+                source.width_ten_thousandths() * 240,
+                source.height_ten_thousandths() * 640
             );
 
             let mut obscured = 0_u32;
@@ -84,6 +123,8 @@ fn bundled_logo_geometry_is_version_aware_bounded_and_function_safe() {
                 }
             }
             assert_eq!(placement.obscured_modules(), obscured);
+            assert_eq!(placement.obscured_data_modules(), 105);
+            assert_eq!(placement.obscured_remainder_modules(), 0);
             assert_eq!(options.safety(), OutputSafety::Caution);
         }
     }

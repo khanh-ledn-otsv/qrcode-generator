@@ -101,11 +101,13 @@ fn render_logo(
 
     let source = logo.source_bounds();
     let source_left_pixels = f64::from(matrix_origin.x().get())
-        + f64::from(source.left_thousandths()) * f64::from(scale) / 1_000.0;
+        + f64::from(source.left_ten_thousandths()) * f64::from(scale) / 10_000.0;
     let source_top_pixels = f64::from(matrix_origin.y().get())
-        + f64::from(source.top_thousandths()) * f64::from(scale) / 1_000.0;
-    let source_width_pixels = f64::from(source.width_thousandths()) * f64::from(scale) / 1_000.0;
-    let source_height_pixels = f64::from(source.height_thousandths()) * f64::from(scale) / 1_000.0;
+        + f64::from(source.top_ten_thousandths()) * f64::from(scale) / 10_000.0;
+    let source_width_pixels =
+        f64::from(source.width_ten_thousandths()) * f64::from(scale) / 10_000.0;
+    let source_height_pixels =
+        f64::from(source.height_ten_thousandths()) * f64::from(scale) / 10_000.0;
     let x_start = source_left_pixels.floor() as u32;
     let y_start = source_top_pixels.floor() as u32;
     let x_end = (source_left_pixels + source_width_pixels).ceil() as u32;

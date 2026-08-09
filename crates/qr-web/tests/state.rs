@@ -317,7 +317,12 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
     assert_eq!(logo_diagnostics.data_codewords(), 60);
     assert_eq!(logo_diagnostics.matrix_modules(), 41);
     assert_eq!(logo_diagnostics.logo_style(), qr_render::LogoStyle::Bundled);
-    assert!(logo_diagnostics.logo_placement().is_some());
+    let placement = logo_diagnostics
+        .logo_placement()
+        .expect("version 6 has reviewed logo geometry");
+    assert_eq!(placement.obscured_data_modules(), 105);
+    assert_eq!(placement.obscured_remainder_modules(), 0);
+    assert_eq!(placement.protected_clearance(), 6);
     assert_eq!(logo_diagnostics.safety(), OutputSafety::Caution);
     assert!(
         state
@@ -360,6 +365,23 @@ fn logo_mode_reports_when_a_profile_cannot_admit_the_branded_minimum() {
     assert_eq!(
         state.validation_message().as_deref(),
         Some("Logo mode requires QR version 6 or larger, but Inline supports up to version 5."),
+    );
+    assert!(!state.exports_enabled());
+}
+
+#[test]
+fn logo_mode_rejects_a_naturally_larger_version_without_reviewed_centered_geometry() {
+    let mut state = WorkflowState::new(ProfileId::Print);
+    let request = state
+        .set_payload("a".repeat(59))
+        .expect("revision is available");
+
+    assert_eq!(request.ecc(), ErrorCorrection::High);
+    assert_eq!(request.minimum_version().number(), 6);
+    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+    assert_eq!(
+        state.validation_message().as_deref(),
+        Some("Logo mode is unavailable because no safe placement exists for this QR version."),
     );
     assert!(!state.exports_enabled());
 }

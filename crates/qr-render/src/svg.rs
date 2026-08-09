@@ -112,23 +112,33 @@ fn write_logo(
 
     let source = logo.source_bounds();
     let source_x = source
-        .left_thousandths()
-        .checked_add(origin.x().get() * 1_000)
+        .left_ten_thousandths()
+        .checked_add(origin.x().get() * 10_000)
         .ok_or(RenderError::DimensionOverflow)?;
     let source_y = source
-        .top_thousandths()
-        .checked_add(origin.y().get() * 1_000)
+        .top_ten_thousandths()
+        .checked_add(origin.y().get() * 10_000)
         .ok_or(RenderError::DimensionOverflow)?;
     let logo_body = bundled_logo_body()?;
     write!(
         svg,
         "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"180 180 640 240\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\">{logo_body}</svg>",
-        decimal_thousandths(source_x),
-        decimal_thousandths(source_y),
-        decimal_thousandths(source.width_thousandths()),
-        decimal_thousandths(source.height_thousandths()),
+        decimal_ten_thousandths(source_x),
+        decimal_ten_thousandths(source_y),
+        decimal_ten_thousandths(source.width_ten_thousandths()),
+        decimal_ten_thousandths(source.height_ten_thousandths()),
     )
     .map_err(|_| RenderError::RenderFailure)
+}
+
+fn decimal_ten_thousandths(value: u32) -> String {
+    let whole = value / 10_000;
+    let fraction = value % 10_000;
+    if fraction == 0 {
+        whole.to_string()
+    } else {
+        format!("{whole}.{fraction:04}")
+    }
 }
 
 fn decimal_thousandths(value: u32) -> String {

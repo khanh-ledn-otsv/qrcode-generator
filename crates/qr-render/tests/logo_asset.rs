@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use qr_core::tables::ErrorCorrection;
-use qr_core::{EncodeRequest, encode};
+use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
     BUNDLED_LOGO_SVG, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
     render_svg,
@@ -46,13 +46,15 @@ fn bundled_logo_is_the_sanitized_magenta_one_lettermark() {
 
 #[test]
 fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() {
-    let encoded = encode(EncodeRequest::first_fit(
+    let version_six = Version::new(6).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
         "logo",
         ErrorCorrection::High,
-        SUPPORTED_PROFILES[0].maximum_version(),
+        version_six,
+        version_six,
     ))
     .unwrap();
-    let options = RenderOptions::safe(SUPPORTED_PROFILES[0])
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[1])
         .unwrap()
         .with_logo(LogoStyle::Bundled)
         .unwrap();
@@ -72,6 +74,10 @@ fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() 
         .descendants()
         .find(|node| node.attribute("data-role") == Some("bundled-logo"))
         .unwrap();
+    assert_eq!(rendered_logo.attribute("x"), Some("18"));
+    assert_eq!(rendered_logo.attribute("y"), Some("22.0625"));
+    assert_eq!(rendered_logo.attribute("width"), Some("13"));
+    assert_eq!(rendered_logo.attribute("height"), Some("4.8750"));
     let source_shapes = shape_attributes(source_document.root_element());
     let rendered_shapes = shape_attributes(rendered_logo);
     assert_eq!(rendered_shapes, source_shapes);

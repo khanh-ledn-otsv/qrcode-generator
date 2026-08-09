@@ -132,10 +132,16 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
     .poll(() => diagnostic(page, "Version"))
     .toBe("V6 / V8 max · raised to V6 for branding");
   await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");
-  await expect.poll(() => diagnostic(page, "Logo")).toContain("ONE lettermark");
+  await expect
+    .poll(() => diagnostic(page, "Logo"))
+    .toBe("ONE lettermark · 105 data · 0 remainder modules obscured");
   await expect(transparent).toBeDisabled();
   const renderedLogos = page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]');
   await expect(renderedLogos).toHaveCount(5);
+  await expect(renderedLogos.first()).toHaveAttribute("x", "18");
+  await expect(renderedLogos.first()).toHaveAttribute("y", "22.0625");
+  await expect(renderedLogos.first()).toHaveAttribute("width", "13");
+  await expect(renderedLogos.first()).toHaveAttribute("height", "4.8750");
 
   const logoCard = page.getByText("ONE lettermark", { exact: true }).locator("..");
   await expect(logoCard).toHaveCSS("display", "block");
@@ -167,6 +173,17 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
   });
   expect(visibleArtworkCoverage.width).toBeGreaterThanOrEqual(0.9);
   expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
+});
+
+test("rejects a centered logo when the payload naturally selects Version 7", async ({ page }) => {
+  await page.getByText("Print", { exact: true }).click();
+  await page.getByLabel("Text to encode").fill("a".repeat(59));
+
+  await expect(page.getByRole("alert")).toContainText(
+    "Logo mode is unavailable because no safe placement exists for this QR version.",
+  );
+  await expect(page.getByTestId("download-svg")).toBeDisabled();
+  await expect(page.getByTestId("download-png")).toBeDisabled();
 });
 
 test("uses compact dots and standard square finders without a shape control", async ({ page }) => {

@@ -48,6 +48,15 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
         .diagnostics();
     assert_eq!(diagnostics.selected_version().number(), 6);
     assert!(diagnostics.branding_increased_version());
+    let placement = diagnostics
+        .logo_placement()
+        .expect("version 6 has reviewed logo geometry");
+    assert_eq!(placement.source_bounds().left_ten_thousandths(), 140_000);
+    assert_eq!(placement.source_bounds().top_ten_thousandths(), 180_625);
+    assert_eq!(placement.source_bounds().width_ten_thousandths(), 130_000);
+    assert_eq!(placement.source_bounds().height_ten_thousandths(), 48_750);
+    assert_eq!(placement.obscured_data_modules(), 105);
+    assert_eq!(placement.obscured_remainder_modules(), 0);
     assert!(state.exports_enabled());
 }
 

@@ -5,9 +5,9 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
-    Background, ContrastRatio, FinderStyle, Foreground, LogoPlacement, LogoStyle, ModuleStyle,
-    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, render_png, render_svg,
+    BRANDED_LOGO_VERSION, Background, ContrastRatio, FinderStyle, Foreground, LogoPlacement,
+    LogoStyle, ModuleStyle, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -22,10 +22,6 @@ const SAFE_OUTPUT_GUIDANCE: &str =
     "Use SVG when resizing and validate the QR code in its final environment.";
 const PRINT_OUTPUT_GUIDANCE: &str =
     "Place at 25–30 mm or larger; validate for the actual environment.";
-const BRANDED_MINIMUM_VERSION: Version = match Version::new(6) {
-    Ok(version) => version,
-    Err(_) => panic!("the approved branded minimum must be a valid QR version"),
-};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProfilePresentation {
@@ -113,7 +109,7 @@ impl PreviewRequest {
     #[must_use]
     pub const fn minimum_version(&self) -> Version {
         if self.logo_enabled {
-            BRANDED_MINIMUM_VERSION
+            BRANDED_LOGO_VERSION
         } else {
             Version::MINIMUM
         }

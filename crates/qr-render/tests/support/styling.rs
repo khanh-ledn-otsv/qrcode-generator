@@ -4,8 +4,9 @@ use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
-    APPROVED_MODULE_STYLES, Background, FinderStyle, Foreground, LogoStyle, ModuleStyle,
-    OutputProfile, OutputSafety, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
+    APPROVED_MODULE_STYLES, BRANDED_LOGO_VERSION, Background, FinderStyle, Foreground, LogoStyle,
+    ModuleStyle, OutputProfile, OutputSafety, RenderError, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES,
 };
 
 #[derive(Clone, Copy)]
@@ -276,12 +277,18 @@ fn prepare_decode_case(
 ) -> Result<PreparedDecodeCase, RenderError> {
     let payload_class = case.class;
     let options = tuple.options()?;
-    let encoded = encode(EncodeRequest::first_fit(
-        &case.text,
-        tuple.ecc(),
-        tuple.profile.maximum_version(),
-    ))
-    .map_err(|_| RenderError::RenderFailure)?;
+    let request =
+        if tuple.logo == LogoStyle::Bundled && tuple.profile.maximum_version().number() >= 6 {
+            EncodeRequest::with_version_range(
+                &case.text,
+                tuple.ecc(),
+                BRANDED_LOGO_VERSION,
+                tuple.profile.maximum_version(),
+            )
+        } else {
+            EncodeRequest::first_fit(&case.text, tuple.ecc(), tuple.profile.maximum_version())
+        };
+    let encoded = encode(request).map_err(|_| RenderError::RenderFailure)?;
     if case
         .expected_version
         .is_some_and(|version| encoded.version().number() != version)

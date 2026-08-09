@@ -84,14 +84,16 @@
   encoder ranges preserve ordinary first fitting while logo mode requests ECC H
   and at least Version 6; diagnostics identify branding-enlarged symbols and
   profiles below the branded minimum receive a specific validation failure.
+- [Ticket 26](issues/26-enlarge-exactly-centered-one-logo.md): Production SVG,
+  PNG, previews, diagnostics, and downloads now share the single decode-backed
+  Version 6 centered 13×4.875-module ONE placement and 15×7 knockout; every
+  other version receives a typed, user-visible geometry rejection.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
 
 ## Planned work
 
-- [Ticket 26](issues/26-enlarge-exactly-centered-one-logo.md) enlarges the exact
-  centered ONE logo and is blocked by Tickets 24 and 25.
 - [Ticket 27](issues/27-harden-complete-branded-output-matrix.md) completes the
   automated branded-output evidence and is blocked by Ticket 26.
 

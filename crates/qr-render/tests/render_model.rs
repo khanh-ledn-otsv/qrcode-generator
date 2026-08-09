@@ -315,10 +315,12 @@ fn visible_symbol_glyphs_are_row_major_and_retain_module_ownership() {
 
 #[test]
 fn logo_knockout_is_applied_before_visible_glyphs_reach_artifact_adapters() {
-    let encoded = encode(EncodeRequest::first_fit(
+    let version_six = Version::try_from(6).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
         "logo",
         ErrorCorrection::High,
-        Version::try_from(8).unwrap(),
+        version_six,
+        version_six,
     ))
     .unwrap();
     let options = RenderOptions::safe(SUPPORTED_PROFILES[1])
