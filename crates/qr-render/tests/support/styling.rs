@@ -277,17 +277,18 @@ fn prepare_decode_case(
 ) -> Result<PreparedDecodeCase, RenderError> {
     let payload_class = case.class;
     let options = tuple.options()?;
-    let request =
-        if tuple.logo == LogoStyle::Bundled && tuple.profile.maximum_version().number() >= 6 {
-            EncodeRequest::with_version_range(
-                &case.text,
-                tuple.ecc(),
-                BRANDED_LOGO_VERSION,
-                tuple.profile.maximum_version(),
-            )
-        } else {
-            EncodeRequest::first_fit(&case.text, tuple.ecc(), tuple.profile.maximum_version())
-        };
+    let request = if tuple.logo == LogoStyle::Bundled
+        && tuple.profile.maximum_version() >= BRANDED_LOGO_VERSION
+    {
+        EncodeRequest::with_version_range(
+            &case.text,
+            tuple.ecc(),
+            BRANDED_LOGO_VERSION,
+            tuple.profile.maximum_version(),
+        )
+    } else {
+        EncodeRequest::first_fit(&case.text, tuple.ecc(), tuple.profile.maximum_version())
+    };
     let encoded = encode(request).map_err(|_| RenderError::RenderFailure)?;
     if case
         .expected_version

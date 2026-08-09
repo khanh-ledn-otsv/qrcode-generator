@@ -40,7 +40,7 @@ const SOURCE_VIEW_BOX_LEFT: u32 = 180;
 const SOURCE_VIEW_BOX_TOP: u32 = 180;
 const SOURCE_VIEW_BOX_WIDTH: u32 = 640;
 const SOURCE_VIEW_BOX_HEIGHT: u32 = 240;
-const MODULE_UNITS: u32 = 10_000;
+const TEN_THOUSANDTHS_PER_MODULE: u32 = 10_000;
 const SOURCE_WIDTH_TEN_THOUSANDTHS: u32 = 130_000;
 
 pub const BRANDED_LOGO_VERSION: Version = match Version::new(6) {
@@ -190,16 +190,16 @@ pub(crate) fn calculate_logo_placement(
         .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
         .ok_or(RenderError::DimensionOverflow)?;
     let centered_left = matrix_width
-        .checked_mul(MODULE_UNITS)
+        .checked_mul(TEN_THOUSANDTHS_PER_MODULE)
         .and_then(|width| width.checked_sub(source_width))
         .map(|difference| difference / 2)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
     let centered_top = matrix_width
-        .checked_mul(MODULE_UNITS)
+        .checked_mul(TEN_THOUSANDTHS_PER_MODULE)
         .and_then(|width| width.checked_sub(source_height))
         .map(|difference| difference / 2)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
-    let knockout_padding = MODULE_UNITS;
+    let knockout_padding = TEN_THOUSANDTHS_PER_MODULE;
     let centered_knockout = knockout_for_source(
         centered_left,
         centered_top,
@@ -250,10 +250,10 @@ fn knockout_for_source(
         .checked_add(height)
         .and_then(|value| value.checked_add(padding))
         .ok_or(RenderError::DimensionOverflow)?;
-    let knockout_left = padded_left / MODULE_UNITS;
-    let knockout_top = padded_top / MODULE_UNITS;
-    let knockout_right = div_ceil(right, MODULE_UNITS);
-    let knockout_bottom = div_ceil(bottom, MODULE_UNITS);
+    let knockout_left = padded_left / TEN_THOUSANDTHS_PER_MODULE;
+    let knockout_top = padded_top / TEN_THOUSANDTHS_PER_MODULE;
+    let knockout_right = div_ceil(right, TEN_THOUSANDTHS_PER_MODULE);
+    let knockout_bottom = div_ceil(bottom, TEN_THOUSANDTHS_PER_MODULE);
     Ok(LogoKnockoutBounds {
         left: ModuleCoordinate(knockout_left),
         top: ModuleCoordinate(knockout_top),

@@ -123,31 +123,25 @@ fn write_logo(
     write!(
         svg,
         "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"180 180 640 240\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\">{logo_body}</svg>",
-        decimal_ten_thousandths(source_x),
-        decimal_ten_thousandths(source_y),
-        decimal_ten_thousandths(source.width_ten_thousandths()),
-        decimal_ten_thousandths(source.height_ten_thousandths()),
+        decimal_fixed(source_x, 10_000, 4),
+        decimal_fixed(source_y, 10_000, 4),
+        decimal_fixed(source.width_ten_thousandths(), 10_000, 4),
+        decimal_fixed(source.height_ten_thousandths(), 10_000, 4),
     )
     .map_err(|_| RenderError::RenderFailure)
 }
 
-fn decimal_ten_thousandths(value: u32) -> String {
-    let whole = value / 10_000;
-    let fraction = value % 10_000;
-    if fraction == 0 {
-        whole.to_string()
-    } else {
-        format!("{whole}.{fraction:04}")
-    }
+fn decimal_thousandths(value: u32) -> String {
+    decimal_fixed(value, 1_000, 3)
 }
 
-fn decimal_thousandths(value: u32) -> String {
-    let whole = value / 1_000;
-    let fraction = value % 1_000;
+fn decimal_fixed(value: u32, units_per_whole: u32, fractional_digits: usize) -> String {
+    let whole = value / units_per_whole;
+    let fraction = value % units_per_whole;
     if fraction == 0 {
         whole.to_string()
     } else {
-        format!("{whole}.{fraction:03}")
+        format!("{whole}.{fraction:0width$}", width = fractional_digits)
     }
 }
 

@@ -17,7 +17,7 @@
     "test:e2e": "playwright test --project=chromium",
     "test:python": "uv run --project tests/oracles --locked python -m unittest discover -s tests/support -p 'test_*.py'",
     "test:rust": "cargo test",
-    "test:wasm": "cargo test -p qr-web --target wasm32-unknown-unknown --lib && cargo test -p qr-web --target wasm32-unknown-unknown --test wasm_browser",
+    "test:wasm": "cargo test -p qr-render --target wasm32-unknown-unknown --test png_wasm && cargo test -p qr-web --target wasm32-unknown-unknown --lib && cargo test -p qr-web --target wasm32-unknown-unknown --test wasm_browser",
     "test:approved": "cargo test -p qr-render --test approved_combinations --test resource_baselines --test adverse_transforms",
     "test:decode": "QR_RELEASE_EVIDENCE_DIR=target/release-evidence cargo test -p qr-render --test independent_png_decode --test independent_svg_decode --test logo_decode -- --ignored",
     "test:adverse:decode": "QR_RELEASE_EVIDENCE_DIR=target/release-evidence cargo test -p qr-render --test adverse_transforms -- --ignored",

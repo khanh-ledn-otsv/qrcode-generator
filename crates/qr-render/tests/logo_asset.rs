@@ -1,3 +1,6 @@
+#[path = "support/branded_artifact_fixture.rs"]
+mod branded_artifact_fixture;
+
 use std::io::Cursor;
 
 use qr_core::tables::ErrorCorrection;
@@ -41,6 +44,14 @@ fn bundled_logo_is_the_sanitized_magenta_one_lettermark() {
             .filter(|node| node.has_tag_name("polygon"))
             .count(),
         2
+    );
+}
+
+#[test]
+fn branded_artifact_hashes_pin_every_enabled_profile_on_native() {
+    assert_eq!(
+        branded_artifact_fixture::hashes(),
+        branded_artifact_fixture::SHA256
     );
 }
 
