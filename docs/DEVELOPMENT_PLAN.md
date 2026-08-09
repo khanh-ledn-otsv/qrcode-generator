@@ -74,21 +74,52 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 
 ### 2.6 Branding safety defaults
 
-These release-1 defaults use the approved ONE treatment:
+These release-1 defaults use the approved ONE treatment. The decode-backed
+geometry below was accepted on 2026-08-09 for implementation by Tickets 24–26;
+the square production renderer remains the compatibility baseline until those
+tickets land.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
-- All data modules, function modules, and finders are square in release 1.
-- Dot modules: deferred from release 1.
+- Visible data, remainder, timing, alignment, format, version, and fixed-dark
+  modules use exactly centered circular glyphs with a diameter of `0.45`
+  module. Encoded values and module coordinates are unchanged.
+- All three 7×7 finder regions remain full-cell square patterns. Separator
+  modules remain blank. The closer-reference non-finder dot treatment is
+  approved; the conservative square-function treatment remains recorded as a
+  passing experiment control but is not the selected branded appearance.
 - Transparent background: supported as a caution, with export evaluated against white, light gray, and the documented dark/patterned previews. It is never the default.
 - Module strokes and decorative borders: excluded from the product. Surplus fixed-canvas padding remains background-only.
 - Finder styling: standard square only.
 
-**Launch decisions accepted by the project owner on 2026-08-07 and revised on 2026-08-07:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque contrast threshold, optional no-logo transparency as a caution, square modules, standard finders, and the bundled ONE lettermark described below. Rounded and dot modules are excluded.
+**Launch decisions accepted by the project owner on 2026-08-07 and revised on
+2026-08-09:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque
+contrast threshold, optional no-logo transparency as a caution, 0.45-module
+centered dots outside the full-size square finder regions, and the bundled ONE
+lettermark described below. Rounded modules remain excluded. The complete
+candidate evidence is committed in
+[`generated/branded-geometry-policy.json`](generated/branded-geometry-policy.json).
 
 ### 2.7 Logo safety
 
 - Enabling the logo sets ECC H before version selection, so capacity/version is recalculated first.
-- Geometry is selected after H-level fitting in module coordinates. The unchanged asset geometry is uniformly scaled through the reviewed `180 180 640 240` presentation box. Version 1 uses a tight function-safe knockout; Versions 2–6 receive at least one module of outward-snapped knockout clearance. The complete knockout remains at most 40% of matrix width. Logo output stays classified as a caution, and every enabled size must pass the independent SVG/PNG decode matrix before release.
+- Geometry is selected after H-level fitting in module coordinates. Logo mode
+  selects at least Version 6: candidate minima 4 and 5 admitted at most a
+  10-module centered source width, while Version 6 was the first to admit the
+  requested 12-module visual hierarchy. The payload is preserved byte-for-byte;
+  version selection alone changes.
+- Version 6 uses the unchanged `180 180 640 240` asset presentation box at
+  exactly `12 × 4.5` modules, centered on both matrix axes. Its outward-snapped
+  opaque-white knockout is `(left 13, top 17, width 15, height 7)`, clears the
+  nearest protected module by six modules, and obscures 105 data modules and
+  zero remainder modules. Candidate source widths 10 and 12 modules decoded
+  36/36 native-PNG and SVG-rasterized samples across Content, Landing, and
+  Print; Inline intentionally rejects branding because its Version 5 ceiling
+  is below the branded minimum. Widths 14, 16, and 18 exceeded
+  the checked 40%-of-matrix knockout bound. A 12-module source is therefore the
+  largest admitted centered ONE treatment.
+- Versions 1–5 are below the branded minimum. Versions 7–13 intentionally
+  reject the exact-centered logo because the knockout would intersect protected
+  central alignment geometry. Logo output stays classified as a caution.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
@@ -99,6 +130,10 @@ These release-1 defaults use the approved ONE treatment:
 - If geometry is unsafe for the selected version, logo mode is disabled with a reason. The encoder must not force a larger version merely to create logo space.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
+
+The exported symbol always retains exactly four quiet-zone modules per side.
+Decorative export borders, frames, labels, and strokes remain excluded; fixed
+PNG canvas surplus is background-only.
 
 ## 3. Specification corrections required
 

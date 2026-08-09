@@ -307,7 +307,9 @@ Parse every generated SVG and assert:
 - quiet zone remains unpainted by QR modules and branding;
 - no frame, label, stroke, or path exists outside the QR symbol geometry;
 - paths stay inside their cells and within checked bounds;
-- function modules retain their approved conservative geometry;
+- the three finder regions retain full-cell square glyphs while every other
+  visible module uses an exactly centered 0.45-module circle; separator modules
+  remain blank;
 - the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with unchanged geometry, the reviewed `180 180 640 240` presentation box, and no external reference;
 - logo knockout geometry is opaque white, outside the four-module quiet zone, function-safe, deterministic, and independently decoded for every enabled H-level profile/version row;
 - stable element/path ordering and normalized number formatting;
@@ -331,7 +333,9 @@ Decode the emitted PNG as a file and inspect:
 - configured, deterministic metadata/chunk policy;
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
-- exact square-module rectangles with no intermediate colors in safe mode;
+- full-cell square finder rectangles have no intermediate colors; centered dot
+  coverage stays inside the approved 0.45-module circle envelope, with
+  intermediate opaque colors or alpha confined to its antialiased edge;
 - approved edge coverage only for the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
 - byte-for-byte equality for repeated requests on native and WASM where encoder output is specified to be cross-target identical.
 
@@ -350,6 +354,32 @@ For each approved tuple of foreground, background/transparency, finder style, lo
 - record warning/invalid classification alongside decode results.
 
 The generated coverage test must fail if a new approved enum variant is not included in the matrix.
+
+The branded-geometry approval experiment is replayed separately with:
+
+- every centered dot diameter from 0.45 through 0.60 module in 0.01-module
+  increments;
+- both square-function controls and non-finder-dot treatment;
+- all four profiles, opaque-white and transparent-background handling, all six
+  required payload classes, and both direct RGBA PNG and independently
+  rasterized SVG artifacts;
+- the pinned ZXing-C++ 3.0.2 reader at commit
+  `8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825` comparing exact payload bytes;
+- ECC-H candidate minima 4, 5, and 6; exact-centered ONE source widths 10, 12,
+  14, 16, and 18 modules; checked one-module outward knockout clearance;
+  protected-module rejection; and obscured data/remainder counts.
+
+The committed record in
+[`generated/branded-geometry-policy.json`](generated/branded-geometry-policy.json)
+must stay strict-schema valid. A diameter/treatment is selectable only after
+every one of its 96 artifact cases decodes. The approved 0.45-module
+non-finder-dot treatment passed 96/96. Version 6 is the first branded version
+meeting the 12-module logo hierarchy, and its selected 12×4.5-module logo
+passed 36/36 artifact cases across the three profiles that admit Version 6;
+Inline is expected-invalid because its Version 5 ceiling is below the branded
+minimum. Versions 7–13 are expected-invalid exact-centering
+rows because of protected alignment geometry. Exactly four quiet-zone modules
+and the absence of decorative export borders are invariant across candidates.
 
 ### 6.5 Adverse-image tests
 

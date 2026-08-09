@@ -67,20 +67,22 @@
   gate proves reproducible build hashes, zero-retry browser workflows, privacy,
   downloads, approved artifacts, and guidance; manual product checks are kept
   outside the repository evidence system.
+- [Ticket 22](issues/22-centralize-deterministic-symbol-glyphs.md): SVG and PNG
+  now consume one row-major visible-glyph classification with shared ownership
+  and logo-knockout exclusion while retaining byte-identical square artifacts.
+- [Ticket 23](issues/23-approve-decode-backed-branded-geometry.md): Pinned
+  independent decoding approved 0.45-module centered non-finder dots, full-cell
+  square finders, a Version 6 branded minimum, and a 12×4.5-module exactly
+  centered ONE source with a function-safe 15×7 white knockout; Versions 7–13
+  intentionally reject centered-logo geometry.
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
 
 ## Planned work
 
-- [Ticket 22](issues/22-centralize-deterministic-symbol-glyphs.md) centralizes
-  visible glyph classification without changing current artifacts and is the
-  ready frontier for the branded-appearance effort.
-- [Ticket 23](issues/23-approve-decode-backed-branded-geometry.md) selects the
-  decode-backed dot, function-pattern, minimum-version, and logo geometry; it
-  is blocked by Ticket 22.
 - [Ticket 24](issues/24-render-compact-dots-with-square-finders.md) ships compact
-  dots with prominent square finders and is blocked by Ticket 23.
+  dots with prominent square finders and is the ready frontier.
 - [Ticket 25](issues/25-select-branded-minimum-version-in-logo-mode.md) carries
   checked minimum-version selection through logo mode and is blocked by Ticket
   23.

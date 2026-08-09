@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "decoder": { "tool": "ZXing-C++ ZXingReader", "version": "3.0.2", "source_commit": "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825" },
+  "sample": {
+    "profiles": 4,
+    "payload_classes": ["short-url", "dense-url", "numeric", "alphanumeric", "ascii-byte", "utf8-eci26"],
+    "backgrounds": ["opaque-white", "transparent"],
+    "artifact_paths": ["native-png", "rasterized-svg"]
+  },
+  "dots": {
+    "candidate_diameters_thousandths": [450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600],
+    "function_treatments": ["square-functions", "non-finder-dots"],
+    "outcomes": [
+      { "diameter_thousandths": 450, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 450, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 460, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 460, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 470, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 470, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 480, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 480, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 490, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 490, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 500, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 500, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 510, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 510, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 520, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 520, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 530, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 530, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 540, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 540, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 550, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 550, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 560, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 560, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 570, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 570, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 580, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 580, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 590, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 590, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 600, "function_treatment": "square-functions", "attempted": 96, "decoded": 96 },
+      { "diameter_thousandths": 600, "function_treatment": "non-finder-dots", "attempted": 96, "decoded": 96 }
+    ],
+    "selected_diameter_thousandths": 450,
+    "selected_function_treatment": "non-finder-dots"
+  },
+  "logo": {
+    "ecc": "H",
+    "exact_matrix_centering": true,
+    "opaque_white_knockout": true,
+    "candidate_minimum_versions": [4, 5, 6],
+    "minimum_version_evaluation": [
+      { "version": 4, "maximum_safe_source_width_thousandths": 10000, "requested_minimum_source_width_thousandths": 12000, "meets_requested_hierarchy": false },
+      { "version": 5, "maximum_safe_source_width_thousandths": 10000, "requested_minimum_source_width_thousandths": 12000, "meets_requested_hierarchy": false },
+      { "version": 6, "maximum_safe_source_width_thousandths": 12000, "requested_minimum_source_width_thousandths": 12000, "meets_requested_hierarchy": true }
+    ],
+    "selected_version_width_outcomes": [
+      { "version": 6, "source_width_thousandths": 10000, "attempted": 36, "decoded": 36, "outcome": "decoded" },
+      { "version": 6, "source_width_thousandths": 12000, "attempted": 36, "decoded": 36, "outcome": "decoded" },
+      { "version": 6, "source_width_thousandths": 14000, "attempted": 0, "decoded": 0, "outcome": "unsafe-geometry" },
+      { "version": 6, "source_width_thousandths": 16000, "attempted": 0, "decoded": 0, "outcome": "unsafe-geometry" },
+      { "version": 6, "source_width_thousandths": 18000, "attempted": 0, "decoded": 0, "outcome": "unsafe-geometry" }
+    ],
+    "profile_outcomes": [
+      { "profile": "Inline", "attempted": 0, "decoded": 0, "outcome": "minimum-version-exceeds-profile-ceiling" },
+      { "profile": "Content", "attempted": 12, "decoded": 12, "outcome": "decoded" },
+      { "profile": "Landing", "attempted": 12, "decoded": 12, "outcome": "decoded" },
+      { "profile": "Print", "attempted": 12, "decoded": 12, "outcome": "decoded" }
+    ],
+    "selected_minimum_version": 6,
+    "selected_sizes": [
+      { "version": 1, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "below-branded-minimum" },
+      { "version": 2, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "below-branded-minimum" },
+      { "version": 3, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "below-branded-minimum" },
+      { "version": 4, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "below-branded-minimum" },
+      { "version": 5, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "below-branded-minimum" },
+      { "version": 6, "source_width_thousandths": 12000, "source_height_thousandths": 4500, "knockout": [13, 17, 15, 7], "protected_clearance_modules": 6, "obscured_data_modules": 105, "obscured_remainder_modules": 0, "outcome": "decoded" },
+      { "version": 7, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" },
+      { "version": 8, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" },
+      { "version": 9, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" },
+      { "version": 10, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" },
+      { "version": 11, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" },
+      { "version": 12, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" },
+      { "version": 13, "source_width_thousandths": null, "source_height_thousandths": null, "knockout": null, "protected_clearance_modules": null, "obscured_data_modules": null, "obscured_remainder_modules": null, "outcome": "unsafe-protected-module-intersection" }
+    ]
+  },
+  "quiet_zone_modules": 4,
+  "decorative_export_borders": false
+}
