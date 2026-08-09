@@ -11,6 +11,10 @@ use qr_render::{
 #[test]
 fn unbranded_inline_version_six_hashes_are_pinned_on_native() {
     assert_eq!(
+        inline_version_six_artifact_fixture::SHA256,
+        inline_version_six_artifact_fixture::provenance_hashes()
+    );
+    assert_eq!(
         inline_version_six_artifact_fixture::hashes(),
         inline_version_six_artifact_fixture::SHA256
     );

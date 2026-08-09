@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-inline-v06-m-unbranded-artifact",
+  "synthetic": true,
+  "payload": "cross-target unbranded Inline Version 6 artifact",
+  "payload_sha256": "7d84e7c99224527b9f71c0255e58c6bd031604073ef0ffbccb9bb073a20c38ee",
+  "encoding": "utf-8",
+  "profile": "Inline",
+  "version": 6,
+  "ecc": "M",
+  "logo": "none",
+  "svg_sha256": "4dfcdbac53bad49e5757dd67c0142725f8172d056afd7552439320296e833ab7",
+  "png_sha256": "6e06b6694c8269e7651f16fa89b2a47b7fe4a85971e3c9da02c7c561ca402461",
+  "generation": {
+    "tool": "qr-render native test fixture",
+    "command": "cargo test -p qr-render --test profile_geometry unbranded_inline_version_six_hashes_are_pinned_on_native -- --exact --nocapture",
+    "source": "crates/qr-render/tests/support/inline_version_six_artifact_fixture.rs"
+  },
+  "local_verification": [
+    "Native and wasm32 tests render the same exact Version 6 SVG and PNG inputs and compare both SHA-256 digests",
+    "The approved-output release evidence independently decodes unbranded Inline Version 6 PNG and rasterized SVG artifacts with manifest-pinned ZXing-C++ 3.0.2"
+  ],
+  "verification": {
+    "state": "accepted",
+    "reviewer": "ticket-28-native-wasm-artifact-review",
+    "verified_at": "2026-08-09",
+    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target artifact equality, while pinned decoder evidence separately establishes readability."
+  }
+}
