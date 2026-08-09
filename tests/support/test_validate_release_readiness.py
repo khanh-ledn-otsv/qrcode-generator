@@ -1,3 +1,4 @@
+import itertools
 import json
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ from collect_release_readiness import (
     REQUIRED_PROJECTS,
     BuildMismatchError,
     ResultEvidenceError,
+    _validate_approved_matrix,
     collect_build_evidence,
     collect_result_evidence,
     validate_adverse_evidence,
@@ -50,13 +52,55 @@ def automated_evidence() -> dict[str, Any]:
 
 def approved_matrix_rows() -> list[dict[str, Any]]:
     policy = json.loads(Path("tests/approved-output-matrix-policy.json").read_text())
-    expected = policy["expected_rows"]
     dimensions = policy["tuple_dimensions"]
     payload_classes = policy["required_payload_classes"]
     rows = []
-    for index in range(expected["total"]):
-        decoded = index < expected["decoded"]
-        logo = index == 0
+    dimension_order = (
+        "profiles",
+        "foregrounds",
+        "backgrounds",
+        "module_styles",
+        "finder_styles",
+        "logo_states",
+    )
+    tuples = itertools.product(*(range(dimensions[name]) for name in dimension_order))
+    scenarios = []
+    for indices in tuples:
+        scenarios.extend(
+            (*indices, "required-payload", payload, payload, None) for payload in payload_classes
+        )
+        scenarios.extend(
+            (
+                *indices,
+                "version-coverage",
+                policy["version_coverage_payload_class"],
+                f"version-v{version}",
+                version,
+            )
+            for version in range(1, policy["profile_max_versions"][indices[0]] + 1)
+        )
+    for index, scenario in enumerate(scenarios):
+        (
+            profile_index,
+            foreground_index,
+            background_index,
+            module_style_index,
+            finder_style_index,
+            logo_state_index,
+            case_kind,
+            payload_class,
+            case_label,
+            covered_version,
+        ) = scenario
+        logo = logo_state_index == 1
+        decoded = not logo or (
+            background_index == 0
+            and profile_index > 0
+            and (
+                (case_kind == "required-payload" and payload_class != "dense-url")
+                or (case_kind == "version-coverage" and covered_version == 6)
+            )
+        )
         outcome = "decoded" if decoded else "expected-invalid"
         artifact = {
             "outcome": outcome,
@@ -66,17 +110,18 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         rows.append(
             {
                 "id": f"row-{index}",
-                "case_kind": "required-payload"
-                if index < expected["required_payload"]
-                else "version-coverage",
-                "profile_index": index % dimensions["profiles"],
-                "foreground_index": 0,
-                "background_index": index % dimensions["backgrounds"],
-                "module_style_index": 0,
-                "finder_style_index": 0,
-                "logo_state_index": 1 if logo else 0,
-                "payload_class": payload_classes[index % len(payload_classes)],
-                "version": 6 if logo else index % 13 + 1,
+                "case_kind": case_kind,
+                "case_label": case_label,
+                "profile_index": profile_index,
+                "foreground_index": foreground_index,
+                "background_index": background_index,
+                "module_style_index": module_style_index,
+                "finder_style_index": finder_style_index,
+                "logo_state_index": logo_state_index,
+                "payload_class": payload_class,
+                "version": 6
+                if case_kind == "required-payload" and decoded and logo
+                else covered_version,
                 "safety": "caution" if decoded else None,
                 "logo_geometry": {
                     "source_ten_thousandths": [140000, 180625, 130000, 48750],
@@ -85,7 +130,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
                     "obscured_data_modules": 105,
                     "obscured_remainder_modules": 0,
                 }
-                if logo
+                if logo and decoded
                 else None,
                 "artifacts": {"png": dict(artifact), "svg": dict(artifact)},
             }
@@ -111,6 +156,17 @@ def adverse_outcomes() -> list[dict[str, str]]:
 
 
 class ReleaseReadinessEvidenceTests(unittest.TestCase):
+    def test_approved_matrix_requires_exact_scenario_membership(self) -> None:
+        with TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "matrix.json"
+            rows = approved_matrix_rows()
+            rows[-1]["version"] = 1
+            rows[-1]["case_label"] = "version-v1"
+            evidence.write_text(json.dumps({"schema_version": 2, "rows": rows}))
+
+            with self.assertRaisesRegex(ResultEvidenceError, "scenario membership"):
+                _validate_approved_matrix(evidence)
+
     def test_adverse_evidence_requires_each_documented_pass_envelope(self) -> None:
         with TemporaryDirectory() as temporary:
             evidence = Path(temporary) / "adverse.json"
@@ -214,7 +270,9 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
                 result["artifact_evidence"]["expected_invalid_rows"],
                 expected["expected_invalid"],
             )
-            self.assertEqual(result["artifact_evidence"]["adverse_outcomes"], 29)
+            self.assertEqual(
+                result["artifact_evidence"]["adverse_outcomes"], len(adverse_outcomes())
+            )
 
     def test_result_evidence_rejects_a_missing_required_project(self) -> None:
         with TemporaryDirectory() as temporary:

@@ -1,5 +1,6 @@
 import argparse
 import hashlib
+import itertools
 import json
 from pathlib import Path
 from typing import Any
@@ -74,6 +75,54 @@ def _matrix_policy() -> dict[str, Any]:
     return policy
 
 
+def _expected_matrix_keys(policy: dict[str, Any]) -> set[tuple[object, ...]]:
+    dimensions = _mapping(policy.get("tuple_dimensions"), "approved matrix dimensions")
+    dimension_names = (
+        "profiles",
+        "foregrounds",
+        "backgrounds",
+        "module_styles",
+        "finder_styles",
+        "logo_states",
+    )
+    counts: list[int] = []
+    for name in dimension_names:
+        count = dimensions.get(name)
+        if not isinstance(count, int) or count <= 0:
+            raise ResultEvidenceError("approved matrix policy has invalid tuple dimensions")
+        counts.append(count)
+    profile_max_versions = policy.get("profile_max_versions")
+    payload_classes = policy.get("required_payload_classes")
+    version_payload_class = policy.get("version_coverage_payload_class")
+    if (
+        not isinstance(profile_max_versions, list)
+        or len(profile_max_versions) != counts[0]
+        or not all(isinstance(version, int) and version > 0 for version in profile_max_versions)
+        or not isinstance(payload_classes, list)
+        or not payload_classes
+        or not all(isinstance(payload, str) for payload in payload_classes)
+        or not isinstance(version_payload_class, str)
+    ):
+        raise ResultEvidenceError("approved matrix policy has invalid scenario membership")
+
+    expected = set()
+    ranges = [range(count) for count in counts]
+    for indices in itertools.product(*ranges):
+        for payload_class in payload_classes:
+            expected.add((*indices, "required-payload", payload_class, payload_class, None))
+        for version in range(1, profile_max_versions[indices[0]] + 1):
+            expected.add(
+                (
+                    *indices,
+                    "version-coverage",
+                    version_payload_class,
+                    f"version-v{version}",
+                    version,
+                )
+            )
+    return expected
+
+
 def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     policy = _matrix_policy()
     expected = _mapping(policy.get("expected_rows"), "approved matrix expected rows")
@@ -98,6 +147,25 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     ids = {row.get("id") for row in rows if isinstance(row, dict)}
     if len(ids) != total_rows or None in ids:
         raise ResultEvidenceError("approved output evidence contains invalid or duplicate IDs")
+    expected_keys = _expected_matrix_keys(policy)
+    actual_keys = {
+        (
+            row.get("profile_index"),
+            row.get("foreground_index"),
+            row.get("background_index"),
+            row.get("module_style_index"),
+            row.get("finder_style_index"),
+            row.get("logo_state_index"),
+            row.get("case_kind"),
+            row.get("payload_class"),
+            row.get("case_label"),
+            row.get("version") if row.get("case_kind") == "version-coverage" else None,
+        )
+        for row in rows
+        if isinstance(row, dict)
+    }
+    if actual_keys != expected_keys:
+        raise ResultEvidenceError("approved output evidence has incomplete scenario membership")
     case_kinds = [row.get("case_kind") for row in rows]
     if (
         case_kinds.count("required-payload") != required_rows

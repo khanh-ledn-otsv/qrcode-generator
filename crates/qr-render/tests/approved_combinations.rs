@@ -69,10 +69,11 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
     assert_eq!(policy["schema_version"], 1);
     let expected_rows = &policy["expected_rows"];
 
-    let required_payload_rows = 16 * styling::REQUIRED_PAYLOAD_CLASSES.len();
-    let tuple_version_rows = SUPPORTED_PROFILES
+    let tuples = styling::approved_style_tuples();
+    let required_payload_rows = tuples.len() * styling::REQUIRED_PAYLOAD_CLASSES.len();
+    let tuple_version_rows = tuples
         .iter()
-        .map(|profile| usize::from(profile.maximum_version().number()) * 4)
+        .map(|tuple| usize::from(tuple.profile.maximum_version().number()))
         .sum::<usize>();
     assert_eq!(
         policy["tuple_dimensions"]["profiles"],

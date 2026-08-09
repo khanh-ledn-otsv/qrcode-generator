@@ -17,6 +17,7 @@
     "ascii-byte",
     "utf8-eci26"
   ],
+  "version_coverage_payload_class": "ascii-byte",
   "expected_rows": {
     "required_payload": 96,
     "version_coverage": 152,
