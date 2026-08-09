@@ -31,10 +31,8 @@ CRITICAL_WORKFLOW_TESTS = {
     "rejects a centered logo when the payload naturally selects Version 7",
     "uses compact dots and standard square finders without a shape control",
 }
-EXPECTED_MATRIX_ROWS = 248
-EXPECTED_DECODED_ROWS = 142
-EXPECTED_INVALID_ROWS = 106
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
+MATRIX_POLICY_PATH = WORKSPACE_ROOT / "tests/approved-output-matrix-policy.json"
 
 
 def _mapping(value: object, label: str) -> dict[str, Any]:
@@ -69,39 +67,68 @@ def _valid_sha256(value: object) -> bool:
     )
 
 
+def _matrix_policy() -> dict[str, Any]:
+    policy = _mapping(json.loads(MATRIX_POLICY_PATH.read_text()), "approved matrix policy")
+    if policy.get("schema_version") != 1:
+        raise ResultEvidenceError("approved matrix policy has an invalid schema")
+    return policy
+
+
 def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
+    policy = _matrix_policy()
+    expected = _mapping(policy.get("expected_rows"), "approved matrix expected rows")
+    total_rows = expected.get("total")
+    required_rows = expected.get("required_payload")
+    version_rows = expected.get("version_coverage")
+    decoded_rows = expected.get("decoded")
+    invalid_rows = expected.get("expected_invalid")
+    if not all(
+        isinstance(value, int)
+        for value in (total_rows, required_rows, version_rows, decoded_rows, invalid_rows)
+    ):
+        raise ResultEvidenceError("approved matrix policy has invalid expected row counts")
     document = _mapping(json.loads(path.read_text()), "approved output evidence")
     rows = document.get("rows")
     if document.get("schema_version") != 2 or not isinstance(rows, list):
         raise ResultEvidenceError("approved output evidence must use complete matrix schema 2")
-    if len(rows) != EXPECTED_MATRIX_ROWS:
+    if len(rows) != total_rows:
         raise ResultEvidenceError(
-            f"approved output evidence must contain exactly {EXPECTED_MATRIX_ROWS} rows"
+            f"approved output evidence must contain exactly {total_rows} rows"
         )
     ids = {row.get("id") for row in rows if isinstance(row, dict)}
-    if len(ids) != EXPECTED_MATRIX_ROWS or None in ids:
+    if len(ids) != total_rows or None in ids:
         raise ResultEvidenceError("approved output evidence contains invalid or duplicate IDs")
     case_kinds = [row.get("case_kind") for row in rows]
-    if case_kinds.count("required-payload") != 96 or case_kinds.count("version-coverage") != 152:
+    if (
+        case_kinds.count("required-payload") != required_rows
+        or case_kinds.count("version-coverage") != version_rows
+    ):
         raise ResultEvidenceError("approved output evidence has incomplete case-kind coverage")
-    if {row.get("profile_index") for row in rows} != set(range(4)):
-        raise ResultEvidenceError("approved output evidence has incomplete profile coverage")
-    if {row.get("background_index") for row in rows} != {0, 1}:
-        raise ResultEvidenceError("approved output evidence has incomplete background coverage")
-    if {row.get("logo_state_index") for row in rows} != {0, 1}:
-        raise ResultEvidenceError("approved output evidence has incomplete logo-state coverage")
+    dimensions = _mapping(policy.get("tuple_dimensions"), "approved matrix dimensions")
+    dimension_fields = {
+        "profile_index": "profiles",
+        "foreground_index": "foregrounds",
+        "background_index": "backgrounds",
+        "module_style_index": "module_styles",
+        "finder_style_index": "finder_styles",
+        "logo_state_index": "logo_states",
+    }
+    for field, dimension in dimension_fields.items():
+        count = dimensions.get(dimension)
+        if not isinstance(count, int) or {row.get(field) for row in rows} != set(range(count)):
+            raise ResultEvidenceError(
+                f"approved output evidence has incomplete {dimension} coverage"
+            )
+    profile_max_versions = policy.get("profile_max_versions")
+    if not isinstance(profile_max_versions, list) or not all(
+        isinstance(version, int) for version in profile_max_versions
+    ):
+        raise ResultEvidenceError("approved matrix policy has invalid profile versions")
     if {row.get("version") for row in rows if isinstance(row.get("version"), int)} != set(
-        range(1, 14)
+        range(1, max(profile_max_versions) + 1)
     ):
         raise ResultEvidenceError("approved output evidence has incomplete version coverage")
-    required_payloads = {
-        "short-url",
-        "dense-url",
-        "numeric",
-        "alphanumeric",
-        "ascii-byte",
-        "utf8-eci26",
-    }
+    required_payloads = set(policy.get("required_payload_classes", []))
     if {row.get("payload_class") for row in rows} != required_payloads:
         raise ResultEvidenceError("approved output evidence has incomplete payload coverage")
 
@@ -142,7 +169,7 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
                 raise ResultEvidenceError(f"{row['id']} records facts for an invalid artifact")
         else:
             raise ResultEvidenceError(f"{row['id']} has an unknown artifact outcome")
-    if (decoded, invalid) != (EXPECTED_DECODED_ROWS, EXPECTED_INVALID_ROWS) or branded == 0:
+    if (decoded, invalid) != (decoded_rows, invalid_rows) or branded == 0:
         raise ResultEvidenceError("approved output evidence has incomplete outcome coverage")
     return len(rows), decoded, invalid
 

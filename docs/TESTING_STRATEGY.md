@@ -355,6 +355,9 @@ For each approved tuple of foreground, background/transparency, finder style, lo
 
 The generated coverage test must fail if a new approved enum variant is not included in the matrix.
 
+The versioned coverage contract is
+[`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
+which is consumed by both the Rust generator test and Python readiness validator.
 The release evidence contains 248 generated scenario rows: 96 required-payload
 rows (six payload classes for each compiled profile/background/logo tuple) and
 152 exact-version rows (every version admitted by each profile for the same

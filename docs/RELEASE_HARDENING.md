@@ -83,6 +83,9 @@ renderable rows record safety, deterministic artifact and decoder-input hashes,
 a ZXing decode, and reviewed logo geometry where applicable; the 106 unsupported
 logo/background or centered-logo geometry rows record the expected typed
 rejection.
+The executable counts and dimensions have one versioned owner in
+`tests/approved-output-matrix-policy.json`; the Rust coverage test and Python
+readiness validator both reject drift from it.
 `tests/adverse/parameters.json` is the versioned transform manifest. The adverse
 evidence records exactly 29 decoded outcomes across three declared envelopes:
 all 13 transforms for a low-density opaque Print compact-dot symbol (`safe`),

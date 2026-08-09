@@ -49,9 +49,13 @@ def automated_evidence() -> dict[str, Any]:
 
 
 def approved_matrix_rows() -> list[dict[str, Any]]:
+    policy = json.loads(Path("tests/approved-output-matrix-policy.json").read_text())
+    expected = policy["expected_rows"]
+    dimensions = policy["tuple_dimensions"]
+    payload_classes = policy["required_payload_classes"]
     rows = []
-    for index in range(248):
-        decoded = index < 142
+    for index in range(expected["total"]):
+        decoded = index < expected["decoded"]
         logo = index == 0
         outcome = "decoded" if decoded else "expected-invalid"
         artifact = {
@@ -62,18 +66,16 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         rows.append(
             {
                 "id": f"row-{index}",
-                "case_kind": "required-payload" if index < 96 else "version-coverage",
-                "profile_index": index % 4,
-                "background_index": index % 2,
+                "case_kind": "required-payload"
+                if index < expected["required_payload"]
+                else "version-coverage",
+                "profile_index": index % dimensions["profiles"],
+                "foreground_index": 0,
+                "background_index": index % dimensions["backgrounds"],
+                "module_style_index": 0,
+                "finder_style_index": 0,
                 "logo_state_index": 1 if logo else 0,
-                "payload_class": [
-                    "short-url",
-                    "dense-url",
-                    "numeric",
-                    "alphanumeric",
-                    "ascii-byte",
-                    "utf8-eci26",
-                ][index % 6],
+                "payload_class": payload_classes[index % len(payload_classes)],
                 "version": 6 if logo else index % 13 + 1,
                 "safety": "caution" if decoded else None,
                 "logo_geometry": {
@@ -201,11 +203,17 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             )
 
             result = collect_result_evidence(report_path, evidence)
+            expected = json.loads(Path("tests/approved-output-matrix-policy.json").read_text())[
+                "expected_rows"
+            ]
 
             self.assertEqual(set(result["browsers"]), set(REQUIRED_PROJECTS))
-            self.assertEqual(result["artifact_evidence"]["matrix_rows"], 248)
-            self.assertEqual(result["artifact_evidence"]["decoded_rows"], 142)
-            self.assertEqual(result["artifact_evidence"]["expected_invalid_rows"], 106)
+            self.assertEqual(result["artifact_evidence"]["matrix_rows"], expected["total"])
+            self.assertEqual(result["artifact_evidence"]["decoded_rows"], expected["decoded"])
+            self.assertEqual(
+                result["artifact_evidence"]["expected_invalid_rows"],
+                expected["expected_invalid"],
+            )
             self.assertEqual(result["artifact_evidence"]["adverse_outcomes"], 29)
 
     def test_result_evidence_rejects_a_missing_required_project(self) -> None:

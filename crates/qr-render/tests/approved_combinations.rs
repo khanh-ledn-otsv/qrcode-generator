@@ -6,6 +6,8 @@ mod styling;
 mod versions;
 
 use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
 
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
@@ -13,10 +15,25 @@ use qr_render::{
     SUPPORTED_PROFILES,
 };
 
+fn matrix_policy() -> serde_json::Value {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    serde_json::from_slice(
+        &fs::read(workspace.join("tests/approved-output-matrix-policy.json"))
+            .expect("approved-output matrix policy is readable"),
+    )
+    .expect("approved-output matrix policy is valid JSON")
+}
+
 #[test]
 fn approved_configuration_lists_cover_the_complete_selectable_surface() {
-    assert_eq!(SUPPORTED_PROFILES.len(), 4);
-    assert_eq!(APPROVED_FOREGROUNDS.len(), 1);
+    let policy = matrix_policy();
+    let dimensions = &policy["tuple_dimensions"];
+    assert_eq!(dimensions["profiles"], SUPPORTED_PROFILES.len());
+    assert_eq!(dimensions["foregrounds"], APPROVED_FOREGROUNDS.len());
+    assert_eq!(dimensions["backgrounds"], APPROVED_BACKGROUNDS.len());
+    assert_eq!(dimensions["module_styles"], APPROVED_MODULE_STYLES.len());
+    assert_eq!(dimensions["finder_styles"], APPROVED_FINDERS.len());
+    assert_eq!(dimensions["logo_states"], APPROVED_LOGO_STYLES.len());
     assert_eq!(
         APPROVED_BACKGROUNDS,
         [Background::Opaque(Rgba::WHITE), Background::Transparent]
@@ -31,21 +48,57 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
         * APPROVED_MODULE_STYLES.len()
         * APPROVED_FINDERS.len()
         * APPROVED_LOGO_STYLES.len();
-    assert_eq!(raw_tuple_count, 16);
+    assert_eq!(
+        raw_tuple_count,
+        dimensions
+            .as_object()
+            .expect("tuple dimensions are an object")
+            .values()
+            .map(|value| {
+                usize::try_from(value.as_u64().expect("tuple dimension is unsigned"))
+                    .expect("tuple dimension fits usize")
+            })
+            .product::<usize>()
+    );
 }
 
 #[test]
 fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
     let records = styling::approved_combination_records().expect("matrix generation succeeds");
+    let policy = matrix_policy();
+    assert_eq!(policy["schema_version"], 1);
+    let expected_rows = &policy["expected_rows"];
 
     let required_payload_rows = 16 * styling::REQUIRED_PAYLOAD_CLASSES.len();
     let tuple_version_rows = SUPPORTED_PROFILES
         .iter()
         .map(|profile| usize::from(profile.maximum_version().number()) * 4)
         .sum::<usize>();
-    assert_eq!(required_payload_rows, 96);
-    assert_eq!(tuple_version_rows, 152);
-    assert_eq!(records.len(), required_payload_rows + tuple_version_rows);
+    assert_eq!(
+        policy["tuple_dimensions"]["profiles"],
+        SUPPORTED_PROFILES.len()
+    );
+    assert_eq!(
+        policy["profile_max_versions"],
+        serde_json::json!(
+            SUPPORTED_PROFILES
+                .iter()
+                .map(|profile| profile.maximum_version().number())
+                .collect::<Vec<_>>()
+        )
+    );
+    assert_eq!(
+        policy["required_payload_classes"],
+        serde_json::json!(
+            styling::REQUIRED_PAYLOAD_CLASSES
+                .iter()
+                .map(|class| class.label())
+                .collect::<Vec<_>>()
+        )
+    );
+    assert_eq!(expected_rows["required_payload"], required_payload_rows);
+    assert_eq!(expected_rows["version_coverage"], tuple_version_rows);
+    assert_eq!(expected_rows["total"], records.len());
     assert_eq!(
         records
             .iter()
