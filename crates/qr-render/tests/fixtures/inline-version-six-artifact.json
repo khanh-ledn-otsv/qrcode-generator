@@ -13,7 +13,7 @@
   "png_sha256": "6e06b6694c8269e7651f16fa89b2a47b7fe4a85971e3c9da02c7c561ca402461",
   "generation": {
     "tool": "qr-render native test fixture",
-    "command": "cargo test -p qr-render --test profile_geometry unbranded_inline_version_six_hashes_are_pinned_on_native -- --exact --nocapture",
+    "command": "cargo test -p qr-render --test profile_geometry print_unbranded_inline_version_six_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
     "source": "crates/qr-render/tests/support/inline_version_six_artifact_fixture.rs"
   },
   "local_verification": [

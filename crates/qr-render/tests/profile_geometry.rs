@@ -21,6 +21,14 @@ fn unbranded_inline_version_six_hashes_are_pinned_on_native() {
 }
 
 #[test]
+#[ignore = "explicitly emits golden hashes for reviewed fixture refreshes"]
+fn print_unbranded_inline_version_six_hashes_for_fixture_refresh() {
+    let [svg_sha256, png_sha256] = inline_version_six_artifact_fixture::hashes();
+    println!("svg_sha256={svg_sha256}");
+    println!("png_sha256={png_sha256}");
+}
+
+#[test]
 fn supported_profiles_match_the_approved_output_contract() {
     let expected = [
         (ProfileId::Inline, 100, 300, 6),
