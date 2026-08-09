@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "synthetic-adaptive-branded-v06-v10-artifacts",
-  "synthetic": false,
-  "payload_provenance": "Ticket 29 exact public ONE news URL plus synthetic version-labelled regression payloads",
+  "synthetic": true,
+  "payload_provenance": "Generated non-sensitive version-labelled and 110-byte URL regression payloads",
   "encoding": "utf-8",
   "profile": "Adaptive Branded",
   "ecc": "H",
@@ -37,11 +37,11 @@
       "png_sha256": "06dabd7a9479babf5ff132d298b270fad1094821a125d44819cd9bb589a7963a"
     },
     {
-      "payload": "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya",
-      "payload_sha256": "1b5046fea8219fc98bf49f76aae46b962dc75f1fc907718fbac82cadd83300af",
+      "payload": "https://example.test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "payload_sha256": "bbbf9a1e577d3becfb32e3f9afe61328591f358b3fbfb5ddc72ecbc17de46caf",
       "version": 10,
-      "svg_sha256": "15223845dcf6fbedbc4e4144ad4592c4bc7ec8b6720a44e994055596024b3f35",
-      "png_sha256": "f7c17465e80d4697f5af14ca99ef17ae67ef51d3722a3a60b7dec2ba600e5756"
+      "svg_sha256": "267dd3d841e69a5189026fb8f566826f259c2e8fcc59ec366a7847f98ab67580",
+      "png_sha256": "7b60a292ad89cccbbb90669e6e75f91d13abb1676fdc1888d961e45921510ea1"
     }
   ],
   "generation": {
@@ -51,12 +51,12 @@
   },
   "local_verification": [
     "Native and wasm32 tests render identical Version 6 through Version 10 SVG and PNG inputs and compare both SHA-256 digests",
-    "The manifest-pinned ZXing-C++ 3.0.2 reader independently decodes native PNG and rasterized SVG artifacts for every enabled adaptive branded version and the exact ONE news URL"
+    "The manifest-pinned ZXing-C++ 3.0.2 reader independently decodes native PNG and rasterized SVG artifacts for every enabled adaptive branded version; separate workflow, Chromium, decoder, and adverse tests cover the exact ONE news URL"
   ],
   "verification": {
     "state": "accepted",
     "reviewer": "ticket-29-native-wasm-and-decoder-review",
     "verified_at": "2026-08-09",
-    "notes": "The four version-labelled payloads are synthetic and non-sensitive; Version 10 uses the exact public URL reported in Ticket 29. These goldens record deterministic cross-target equality, while pinned decoder evidence separately establishes readability."
+    "notes": "All payloads are generated, synthetic, and non-sensitive. The Version 10 URL matches the reported URL's 110-byte length without copying external content. These goldens record deterministic cross-target equality, while pinned decoder evidence separately establishes readability."
   }
 }

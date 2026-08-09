@@ -11,7 +11,7 @@ pub const CASES: [(&str, u8); 5] = [
     ("adaptive branded version 8", 8),
     ("adaptive branded version 9", 9),
     (
-        "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya",
+        "https://example.test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         10,
     ),
 ];
@@ -34,8 +34,8 @@ pub const SHA256: [[&str; 2]; 5] = [
         "06dabd7a9479babf5ff132d298b270fad1094821a125d44819cd9bb589a7963a",
     ],
     [
-        "15223845dcf6fbedbc4e4144ad4592c4bc7ec8b6720a44e994055596024b3f35",
-        "f7c17465e80d4697f5af14ca99ef17ae67ef51d3722a3a60b7dec2ba600e5756",
+        "267dd3d841e69a5189026fb8f566826f259c2e8fcc59ec366a7847f98ab67580",
+        "7b60a292ad89cccbbb90669e6e75f91d13abb1676fdc1888d961e45921510ea1",
     ],
 ];
 
@@ -72,10 +72,10 @@ pub fn provenance_hashes() -> [[String; 2]; 5] {
     let manifest: serde_json::Value =
         serde_json::from_str(include_str!("../fixtures/adaptive-branded-artifacts.json")).unwrap();
     assert_eq!(manifest["schema_version"], 1);
-    assert_eq!(manifest["synthetic"], false);
+    assert_eq!(manifest["synthetic"], true);
     assert_eq!(
         manifest["payload_provenance"],
-        "Ticket 29 exact public ONE news URL plus synthetic version-labelled regression payloads"
+        "Generated non-sensitive version-labelled and 110-byte URL regression payloads"
     );
     assert_eq!(manifest["profile"], "Adaptive Branded");
     assert_eq!(manifest["ecc"], "H");

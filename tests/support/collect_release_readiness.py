@@ -241,63 +241,50 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
 def _expected_logo_geometry(row: dict[str, Any], branding: dict[str, Any]) -> dict[str, Any]:
     profile_index = row.get("profile_index")
     version = row.get("version")
-    fixed_profiles = branding.get("fixed_profile_indices")
-    adaptive_profile = branding.get("adaptive_profile_index")
-    minimum_version = branding.get("minimum_version")
-    adaptive_maximum = branding.get("adaptive_maximum_version")
+    geometry_rows = branding.get("geometry_rows")
     if (
         not isinstance(profile_index, int)
         or not isinstance(version, int)
-        or not isinstance(fixed_profiles, list)
-        or not all(isinstance(index, int) for index in fixed_profiles)
-        or not isinstance(adaptive_profile, int)
-        or not isinstance(minimum_version, int)
-        or not isinstance(adaptive_maximum, int)
-        or not (
-            (profile_index in fixed_profiles and version == minimum_version)
-            or (
-                profile_index == adaptive_profile and minimum_version <= version <= adaptive_maximum
-            )
-        )
+        or not isinstance(geometry_rows, list)
     ):
+        raise ResultEvidenceError("branded geometry policy has invalid rows")
+    matches = []
+    for geometry_row in geometry_rows:
+        if not isinstance(geometry_row, dict):
+            raise ResultEvidenceError("branded geometry policy has invalid rows")
+        profile_indices = geometry_row.get("profile_indices")
+        if not isinstance(profile_indices, list) or not all(
+            isinstance(index, int) for index in profile_indices
+        ):
+            raise ResultEvidenceError("branded geometry policy has invalid profile indices")
+        if geometry_row.get("version") == version and profile_index in profile_indices:
+            matches.append(geometry_row)
+    if len(matches) != 1:
         raise ResultEvidenceError(f"{row['id']} has an unapproved branded version")
-    source_width = branding.get("source_width_ten_thousandths")
-    source_height = branding.get("source_height_ten_thousandths")
-    shift_modules = branding.get("adaptive_vertical_shift_modules_after_minimum")
-    padding = branding.get("knockout_padding_modules")
-    obscured_data = branding.get("obscured_data_modules")
-    obscured_remainder = branding.get("obscured_remainder_modules")
+    geometry = {
+        key: value for key, value in matches[0].items() if key not in {"profile_indices", "version"}
+    }
     if (
-        not isinstance(source_width, int)
-        or not isinstance(source_height, int)
-        or not isinstance(shift_modules, int)
-        or not isinstance(padding, int)
-        or not isinstance(obscured_data, int)
-        or not isinstance(obscured_remainder, int)
+        not isinstance(geometry.get("source_ten_thousandths"), list)
+        or len(geometry["source_ten_thousandths"]) != 4
+        or not all(isinstance(value, int) for value in geometry["source_ten_thousandths"])
+        or not isinstance(geometry.get("knockout_modules"), list)
+        or len(geometry["knockout_modules"]) != 4
+        or not all(isinstance(value, int) for value in geometry["knockout_modules"])
+        or not isinstance(geometry.get("protected_clearance_modules"), int)
+        or not isinstance(geometry.get("obscured_data_modules"), int)
+        or not isinstance(geometry.get("obscured_remainder_modules"), int)
+        or set(geometry)
+        != {
+            "source_ten_thousandths",
+            "knockout_modules",
+            "protected_clearance_modules",
+            "obscured_data_modules",
+            "obscured_remainder_modules",
+        }
     ):
         raise ResultEvidenceError("branded geometry policy has invalid measurements")
-    matrix_width = 17 + 4 * version
-    left = (matrix_width * 10_000 - source_width) // 2
-    top = (matrix_width * 10_000 - source_height) // 2
-    adaptive_shifted = profile_index == adaptive_profile and version > minimum_version
-    if adaptive_shifted:
-        top -= shift_modules * 10_000
-    knockout_left = left // 10_000 - padding
-    knockout_top = top // 10_000 - padding
-    knockout_right = (left + source_width + 9_999) // 10_000 + padding
-    knockout_bottom = (top + source_height + 9_999) // 10_000 + padding
-    return {
-        "source_ten_thousandths": [left, top, source_width, source_height],
-        "knockout_modules": [
-            knockout_left,
-            knockout_top,
-            knockout_right - knockout_left,
-            knockout_bottom - knockout_top,
-        ],
-        "protected_clearance_modules": 0 if adaptive_shifted else 6,
-        "obscured_data_modules": obscured_data,
-        "obscured_remainder_modules": obscured_remainder,
-    }
+    return geometry
 
 
 def validate_adverse_evidence(path: Path) -> int:

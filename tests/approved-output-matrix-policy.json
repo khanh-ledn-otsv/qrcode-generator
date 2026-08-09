@@ -23,12 +23,53 @@
     "adaptive_profile_index": 4,
     "minimum_version": 6,
     "adaptive_maximum_version": 10,
-    "source_width_ten_thousandths": 130000,
-    "source_height_ten_thousandths": 48750,
-    "adaptive_vertical_shift_modules_after_minimum": 6,
-    "knockout_padding_modules": 1,
-    "obscured_data_modules": 105,
-    "obscured_remainder_modules": 0
+    "geometry_rows": [
+      {
+        "profile_indices": [0, 1, 2, 3, 4],
+        "version": 6,
+        "source_ten_thousandths": [140000, 180625, 130000, 48750],
+        "knockout_modules": [13, 17, 15, 7],
+        "protected_clearance_modules": 6,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [4],
+        "version": 7,
+        "source_ten_thousandths": [160000, 140625, 130000, 48750],
+        "knockout_modules": [15, 13, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [4],
+        "version": 8,
+        "source_ten_thousandths": [180000, 160625, 130000, 48750],
+        "knockout_modules": [17, 15, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [4],
+        "version": 9,
+        "source_ten_thousandths": [200000, 180625, 130000, 48750],
+        "knockout_modules": [19, 17, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [4],
+        "version": 10,
+        "source_ten_thousandths": [220000, 200625, 130000, 48750],
+        "knockout_modules": [21, 19, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      }
+    ]
   },
   "expected_rows": {
     "required_payload": 120,

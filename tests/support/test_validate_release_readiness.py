@@ -13,6 +13,7 @@ from collect_release_readiness import (
     REQUIRED_PROJECTS,
     BuildMismatchError,
     ResultEvidenceError,
+    _expected_logo_geometry,
     _validate_approved_matrix,
     collect_build_evidence,
     collect_result_evidence,
@@ -132,62 +133,26 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
                 and profile_index == branding["adaptive_profile_index"]
                 else branding["minimum_version"]
             )
-        logo_geometry = None
+        row = {
+            "id": f"row-{index}",
+            "case_kind": case_kind,
+            "case_label": case_label,
+            "profile_index": profile_index,
+            "foreground_index": foreground_index,
+            "background_index": background_index,
+            "module_style_index": module_style_index,
+            "finder_style_index": finder_style_index,
+            "logo_state_index": logo_state_index,
+            "payload_class": payload_class,
+            "version": row_version,
+            "safety": "caution" if decoded else None,
+            "logo_geometry": None,
+            "artifacts": {"png": dict(artifact), "svg": dict(artifact)},
+        }
         if logo and decoded:
-            assert isinstance(row_version, int)
-            logo_geometry = expected_logo_geometry(profile_index, row_version, branding)
-        rows.append(
-            {
-                "id": f"row-{index}",
-                "case_kind": case_kind,
-                "case_label": case_label,
-                "profile_index": profile_index,
-                "foreground_index": foreground_index,
-                "background_index": background_index,
-                "module_style_index": module_style_index,
-                "finder_style_index": finder_style_index,
-                "logo_state_index": logo_state_index,
-                "payload_class": payload_class,
-                "version": row_version,
-                "safety": "caution" if decoded else None,
-                "logo_geometry": logo_geometry,
-                "artifacts": {"png": dict(artifact), "svg": dict(artifact)},
-            }
-        )
+            row["logo_geometry"] = _expected_logo_geometry(row, branding)
+        rows.append(row)
     return rows
-
-
-def expected_logo_geometry(
-    profile_index: int, version: int, branding: dict[str, Any]
-) -> dict[str, Any]:
-    matrix_width = 17 + 4 * version
-    source_width = branding["source_width_ten_thousandths"]
-    source_height = branding["source_height_ten_thousandths"]
-    left = (matrix_width * 10_000 - source_width) // 2
-    top = (matrix_width * 10_000 - source_height) // 2
-    adaptive_shifted = (
-        profile_index == branding["adaptive_profile_index"]
-        and version > branding["minimum_version"]
-    )
-    if adaptive_shifted:
-        top -= branding["adaptive_vertical_shift_modules_after_minimum"] * 10_000
-    padding = branding["knockout_padding_modules"]
-    knockout_left = left // 10_000 - padding
-    knockout_top = top // 10_000 - padding
-    knockout_right = (left + source_width + 9_999) // 10_000 + padding
-    knockout_bottom = (top + source_height + 9_999) // 10_000 + padding
-    return {
-        "source_ten_thousandths": [left, top, source_width, source_height],
-        "knockout_modules": [
-            knockout_left,
-            knockout_top,
-            knockout_right - knockout_left,
-            knockout_bottom - knockout_top,
-        ],
-        "protected_clearance_modules": 0 if adaptive_shifted else 6,
-        "obscured_data_modules": branding["obscured_data_modules"],
-        "obscured_remainder_modules": branding["obscured_remainder_modules"],
-    }
 
 
 def adverse_outcomes() -> list[dict[str, str]]:
@@ -217,6 +182,17 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             evidence.write_text(json.dumps({"schema_version": 2, "rows": rows}))
 
             with self.assertRaisesRegex(ResultEvidenceError, "scenario membership"):
+                _validate_approved_matrix(evidence)
+
+    def test_approved_matrix_rejects_geometry_drift_from_explicit_policy(self) -> None:
+        with TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "matrix.json"
+            rows = approved_matrix_rows()
+            branded_row = next(row for row in rows if row["logo_geometry"] is not None)
+            branded_row["logo_geometry"]["knockout_modules"][0] += 1
+            evidence.write_text(json.dumps({"schema_version": 2, "rows": rows}))
+
+            with self.assertRaisesRegex(ResultEvidenceError, "unapproved branded geometry"):
                 _validate_approved_matrix(evidence)
 
     def test_adverse_evidence_requires_each_documented_pass_envelope(self) -> None:
