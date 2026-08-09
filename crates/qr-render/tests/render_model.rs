@@ -7,9 +7,9 @@ use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, ContrastRatio, FinderStyle, Foreground,
-    FunctionModuleStyle, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile, OutputSafety, ProfileId,
-    RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, Version, render_png,
-    render_svg,
+    FunctionModuleStyle, GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile,
+    OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
+    Version, render_png, render_svg,
 };
 
 #[test]
@@ -264,6 +264,96 @@ fn function_module_ownership_is_preserved_as_protected_geometry() {
     assert_eq!(
         brandable_count,
         model.cells().filter(|cell| !cell.is_protected()).count()
+    );
+}
+
+#[test]
+fn visible_symbol_glyphs_are_row_major_and_retain_module_ownership() {
+    let encoded = encoded_qr("CLASSIFIED GLYPHS");
+    let model = RenderModel::new(
+        &encoded,
+        RenderOptions::safe(SUPPORTED_PROFILES[1]).unwrap(),
+    )
+    .unwrap();
+    let glyphs = model.glyphs().collect::<Vec<_>>();
+
+    assert_eq!(
+        glyphs.len(),
+        model.cells().filter(|cell| cell.module().is_dark()).count()
+    );
+    assert!(glyphs.windows(2).all(|pair| {
+        let first = pair[0];
+        let second = pair[1];
+        (first.y(), first.x()) < (second.y(), second.x())
+    }));
+
+    for glyph in &glyphs {
+        let module = model.matrix().module(glyph.x(), glyph.y()).unwrap();
+        assert!(module.is_dark());
+        assert_eq!(
+            glyph.ownership(),
+            match module.kind() {
+                ModuleKind::Finder => GlyphOwnership::Finder,
+                ModuleKind::Separator => GlyphOwnership::Separator,
+                ModuleKind::Data => GlyphOwnership::Data,
+                ModuleKind::Remainder => GlyphOwnership::Remainder,
+                ModuleKind::Timing
+                | ModuleKind::Alignment
+                | ModuleKind::Format
+                | ModuleKind::Version
+                | ModuleKind::Dark => GlyphOwnership::OtherFunction,
+            }
+        );
+    }
+
+    assert!(model.cells().any(|cell| {
+        cell.module().kind() == ModuleKind::Separator
+            && cell.ownership() == GlyphOwnership::Separator
+            && cell.glyph().is_none()
+    }));
+    assert_eq!(
+        model
+            .cells()
+            .filter_map(|cell| cell.glyph())
+            .collect::<Vec<_>>(),
+        glyphs
+    );
+}
+
+#[test]
+fn logo_knockout_is_applied_before_visible_glyphs_reach_artifact_adapters() {
+    let encoded = encode(EncodeRequest {
+        text: "logo",
+        ecc: ErrorCorrection::High,
+        max_version: Version::try_from(8).unwrap(),
+    })
+    .unwrap();
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[1])
+        .unwrap()
+        .with_logo(LogoStyle::Bundled)
+        .unwrap();
+    let model = RenderModel::new(&encoded, options).unwrap();
+    let knockout = model.logo_placement().unwrap().knockout_bounds();
+    let is_knocked_out = |x: u16, y: u16| {
+        let x = u32::from(x);
+        let y = u32::from(y);
+        x >= knockout.left().get()
+            && y >= knockout.top().get()
+            && x < knockout.left().get() + knockout.width().get()
+            && y < knockout.top().get() + knockout.height().get()
+    };
+
+    assert!(
+        model
+            .glyphs()
+            .all(|glyph| !is_knocked_out(glyph.x(), glyph.y()))
+    );
+    assert_eq!(
+        model.glyphs().count(),
+        model
+            .cells()
+            .filter(|cell| cell.module().is_dark() && !is_knocked_out(cell.x(), cell.y()))
+            .count()
     );
 }
 

@@ -401,6 +401,59 @@ pub struct RenderCell {
     x: u16,
     y: u16,
     module: Module,
+    ownership: GlyphOwnership,
+    visible_glyph: bool,
+}
+
+/// QR ownership retained by the shared visible-glyph classification.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum GlyphOwnership {
+    Finder,
+    Separator,
+    OtherFunction,
+    Data,
+    Remainder,
+}
+
+impl GlyphOwnership {
+    const fn from_module_kind(kind: ModuleKind) -> Self {
+        match kind {
+            ModuleKind::Finder => Self::Finder,
+            ModuleKind::Separator => Self::Separator,
+            ModuleKind::Data => Self::Data,
+            ModuleKind::Remainder => Self::Remainder,
+            ModuleKind::Timing
+            | ModuleKind::Alignment
+            | ModuleKind::Format
+            | ModuleKind::Version
+            | ModuleKind::Dark => Self::OtherFunction,
+        }
+    }
+}
+
+/// One visible dark module, after any validated logo knockout is applied.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SymbolGlyph {
+    x: u16,
+    y: u16,
+    ownership: GlyphOwnership,
+}
+
+impl SymbolGlyph {
+    #[must_use]
+    pub const fn x(self) -> u16 {
+        self.x
+    }
+
+    #[must_use]
+    pub const fn y(self) -> u16 {
+        self.y
+    }
+
+    #[must_use]
+    pub const fn ownership(self) -> GlyphOwnership {
+        self.ownership
+    }
 }
 
 /// A branding target proven to contain only payload data or remainder bits.
@@ -445,6 +498,25 @@ impl RenderCell {
         self.module
     }
 
+    #[must_use]
+    pub const fn ownership(self) -> GlyphOwnership {
+        self.ownership
+    }
+
+    /// Returns the visible glyph projection selected by the shared model.
+    #[must_use]
+    pub const fn glyph(self) -> Option<SymbolGlyph> {
+        if self.visible_glyph {
+            Some(SymbolGlyph {
+                x: self.x,
+                y: self.y,
+                ownership: self.ownership,
+            })
+        } else {
+            None
+        }
+    }
+
     /// Protected cells can never be targets for future branding geometry.
     #[must_use]
     pub const fn is_protected(self) -> bool {
@@ -460,6 +532,7 @@ pub struct RenderModel<'encoded> {
     svg_placement: SvgPlacement,
     png_placement: PngPlacement,
     logo_placement: Option<LogoPlacement>,
+    cells: Vec<RenderCell>,
 }
 
 impl<'encoded> RenderModel<'encoded> {
@@ -471,6 +544,7 @@ impl<'encoded> RenderModel<'encoded> {
             LogoStyle::None => None,
             LogoStyle::Bundled => Some(calculate_logo_placement(encoded.modules())?),
         };
+        let cells = classify_cells(encoded.modules(), logo_placement)?;
         let png_geometry = options
             .profile()
             .geometry(encoded.version())
@@ -514,6 +588,7 @@ impl<'encoded> RenderModel<'encoded> {
                 rgba_buffer_len,
             },
             logo_placement,
+            cells,
         })
     }
 
@@ -562,21 +637,50 @@ impl<'encoded> RenderModel<'encoded> {
         self.logo_placement
     }
 
-    pub fn cells(&self) -> impl Iterator<Item = RenderCell> + '_ {
-        let size = self.matrix().size();
-        (0..size).flat_map(move |y| {
-            (0..size).filter_map(move |x| {
-                self.matrix()
-                    .module(x, y)
-                    .map(|module| RenderCell { x, y, module })
-            })
-        })
+    /// Visible dark module glyphs in deterministic row-major order.
+    ///
+    /// Logo-knockout exclusions have already been applied, so artifact
+    /// adapters cannot disagree about which QR modules survive.
+    pub fn glyphs(&self) -> impl Iterator<Item = SymbolGlyph> + '_ {
+        self.cells.iter().filter_map(|cell| cell.glyph())
+    }
+
+    pub fn cells(&self) -> impl ExactSizeIterator<Item = RenderCell> + '_ {
+        self.cells.iter().copied()
     }
 
     pub fn brandable_cells(&self) -> impl Iterator<Item = BrandableCell> + '_ {
         self.cells()
             .filter_map(|cell| (!cell.is_protected()).then_some(BrandableCell { cell }))
     }
+}
+
+fn classify_cells(
+    matrix: &ModuleMatrix,
+    logo_placement: Option<LogoPlacement>,
+) -> Result<Vec<RenderCell>, RenderError> {
+    let modules = matrix.modules();
+    let mut cells = Vec::new();
+    cells
+        .try_reserve_exact(modules.len())
+        .map_err(|_| RenderError::RenderFailure)?;
+    let size = usize::from(matrix.size());
+
+    for (index, module) in modules.enumerate() {
+        let x = u16::try_from(index % size).map_err(|_| RenderError::DimensionOverflow)?;
+        let y = u16::try_from(index / size).map_err(|_| RenderError::DimensionOverflow)?;
+        let knocked_out = logo_placement
+            .is_some_and(|logo| logo.knockout_bounds().contains(u32::from(x), u32::from(y)));
+        cells.push(RenderCell {
+            x,
+            y,
+            module,
+            ownership: GlyphOwnership::from_module_kind(module.kind()),
+            visible_glyph: module.is_dark() && !knocked_out,
+        });
+    }
+
+    Ok(cells)
 }
 
 fn checked_rgba_buffer_len(dimensions: PixelDimensions) -> Result<usize, RenderError> {

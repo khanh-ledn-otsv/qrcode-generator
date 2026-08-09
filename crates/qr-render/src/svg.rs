@@ -10,8 +10,9 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
     let origin = placement.matrix_origin();
     let foreground = hex_color(model.options().foreground());
 
-    let dark_modules = model.cells().filter(|cell| cell.module().is_dark()).count();
-    let estimated_path_bytes = dark_modules
+    let estimated_path_bytes = model
+        .glyphs()
+        .count()
         .checked_mul(96)
         .ok_or(RenderError::DimensionOverflow)?;
     let estimated_bytes = estimated_path_bytes
@@ -47,24 +48,17 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
     )
     .map_err(|_| RenderError::RenderFailure)?;
 
-    let logo_placement = model.logo_placement();
-    for cell in model.cells().filter(|cell| cell.module().is_dark()) {
-        if logo_placement.is_some_and(|logo| {
-            logo.knockout_bounds()
-                .contains(u32::from(cell.x()), u32::from(cell.y()))
-        }) {
-            continue;
-        }
-        let x = u32::from(cell.x())
+    for glyph in model.glyphs() {
+        let x = u32::from(glyph.x())
             .checked_add(origin.x().get())
             .ok_or(RenderError::DimensionOverflow)?;
-        let y = u32::from(cell.y())
+        let y = u32::from(glyph.y())
             .checked_add(origin.y().get())
             .ok_or(RenderError::DimensionOverflow)?;
         write!(svg, "M{x} {y}h1v1h-1z").map_err(|_| RenderError::RenderFailure)?;
     }
     svg.push_str("\"/>");
-    if let Some(logo) = logo_placement {
+    if let Some(logo) = model.logo_placement() {
         write_logo(&mut svg, model, logo)?;
     }
     svg.push_str("</svg>");

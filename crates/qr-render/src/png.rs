@@ -30,19 +30,12 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
     let dimensions = placement.canvas_dimensions();
     let origin = placement.matrix_origin();
     let scale = placement.module_scale().get();
-    let logo_placement = model.logo_placement();
-    for cell in model.cells().filter(|cell| cell.module().is_dark()) {
-        if logo_placement.is_some_and(|logo| {
-            logo.knockout_bounds()
-                .contains(u32::from(cell.x()), u32::from(cell.y()))
-        }) {
-            continue;
-        }
-        let x = u32::from(cell.x())
+    for glyph in model.glyphs() {
+        let x = u32::from(glyph.x())
             .checked_mul(scale)
             .and_then(|offset| origin.x().get().checked_add(offset))
             .ok_or(RenderError::DimensionOverflow)?;
-        let y = u32::from(cell.y())
+        let y = u32::from(glyph.y())
             .checked_mul(scale)
             .and_then(|offset| origin.y().get().checked_add(offset))
             .ok_or(RenderError::DimensionOverflow)?;
@@ -55,7 +48,7 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
             model.options().foreground(),
         )?;
     }
-    if let Some(logo) = logo_placement {
+    if let Some(logo) = model.logo_placement() {
         render_logo(&mut pixels, dimensions, origin, scale, logo)?;
     }
     Ok(pixels)

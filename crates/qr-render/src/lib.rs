@@ -19,9 +19,9 @@ pub use logo::{
 pub use model::{
     APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_FUNCTION_MODULE_STYLES,
     APPROVED_LOGO_STYLES, Background, BrandableCell, ContrastRatio, FinderStyle, Foreground,
-    FunctionModuleStyle, LogoStyle, MAX_RGBA_BUFFER_BYTES, ModuleDimensions, ModulePoint,
-    OutputSafety, PixelPoint, PngPlacement, RenderCell, RenderError, RenderModel, RenderOptions,
-    Rgba, SvgPlacement,
+    FunctionModuleStyle, GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, ModuleDimensions,
+    ModulePoint, OutputSafety, PixelPoint, PngPlacement, RenderCell, RenderError, RenderModel,
+    RenderOptions, Rgba, SvgPlacement, SymbolGlyph,
 };
 pub use png::render_png;
 pub use profile::{OutputProfile, ProfileError, ProfileId, SUPPORTED_PROFILES};
