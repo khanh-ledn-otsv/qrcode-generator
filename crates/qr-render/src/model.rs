@@ -567,7 +567,10 @@ impl<'encoded> RenderModel<'encoded> {
         }
         let logo_placement = match options.logo_style() {
             LogoStyle::None => None,
-            LogoStyle::Bundled => Some(calculate_logo_placement(encoded.modules())?),
+            LogoStyle::Bundled => Some(calculate_logo_placement(
+                encoded.modules(),
+                options.profile().id(),
+            )?),
         };
         let cells = classify_cells(encoded.modules(), logo_placement)?;
         let png_geometry = options

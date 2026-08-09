@@ -1,3 +1,5 @@
+#[path = "support/adaptive_branded_artifact_fixture.rs"]
+mod adaptive_branded_artifact_fixture;
 #[path = "support/branded_artifact_fixture.rs"]
 mod branded_artifact_fixture;
 
@@ -53,6 +55,31 @@ fn branded_artifact_hashes_pin_every_enabled_profile_on_native() {
         branded_artifact_fixture::hashes(),
         branded_artifact_fixture::SHA256
     );
+}
+
+#[test]
+fn adaptive_branded_artifact_hashes_pin_versions_six_through_ten_on_native() {
+    assert_eq!(
+        adaptive_branded_artifact_fixture::SHA256,
+        adaptive_branded_artifact_fixture::provenance_hashes()
+    );
+    assert_eq!(
+        adaptive_branded_artifact_fixture::hashes(),
+        adaptive_branded_artifact_fixture::SHA256
+    );
+}
+
+#[test]
+#[ignore = "explicitly emits golden hashes for reviewed fixture refreshes"]
+fn print_adaptive_branded_hashes_for_fixture_refresh() {
+    for ((payload, version), [svg_sha256, png_sha256]) in adaptive_branded_artifact_fixture::CASES
+        .into_iter()
+        .zip(adaptive_branded_artifact_fixture::hashes())
+    {
+        println!("version={version} payload={payload}");
+        println!("svg_sha256={svg_sha256}");
+        println!("png_sha256={png_sha256}");
+    }
 }
 
 #[test]

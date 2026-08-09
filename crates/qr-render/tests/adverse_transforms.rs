@@ -11,7 +11,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    Background, Foreground, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
+    Background, Foreground, LogoStyle, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES,
+    render_png,
 };
 
 #[test]
@@ -47,6 +48,10 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
     );
     assert_eq!(suite.envelope_ids("transparent-compact-dots")?.len(), 10);
     assert_eq!(suite.envelope_ids("centered-logo")?.len(), 6);
+    assert_eq!(
+        suite.envelope_ids("adaptive-branded-v10-long-url")?.len(),
+        6
+    );
     Ok(())
 }
 
@@ -160,6 +165,29 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         eci_assignment: None,
     };
 
+    let adaptive_payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
+    let adaptive_profile = SUPPORTED_PROFILES
+        .into_iter()
+        .find(|profile| profile.id() == ProfileId::AdaptiveBranded)
+        .ok_or("Adaptive Branded profile is missing")?;
+    let version_ten = Version::new(10)?;
+    let adaptive_encoded = encode(EncodeRequest::with_version_range(
+        adaptive_payload,
+        ErrorCorrection::High,
+        version_ten,
+        version_ten,
+    ))?;
+    let adaptive_source = render_png(&RenderModel::new(
+        &adaptive_encoded,
+        RenderOptions::safe(adaptive_profile)?.with_logo(LogoStyle::Bundled)?,
+    )?)?;
+    let adaptive_expected = DecodeExpectation {
+        payload: adaptive_payload.as_bytes().to_vec(),
+        version: QrVersion::new(10)?,
+        ecc: FixtureEcc::H,
+        eci_assignment: None,
+    };
+
     let configurations = [
         ("print-compact-dots", safe_source, safe_expected),
         (
@@ -168,6 +196,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
             transparent_expected,
         ),
         ("centered-logo", logo_source, logo_expected),
+        (
+            "adaptive-branded-v10-long-url",
+            adaptive_source,
+            adaptive_expected,
+        ),
     ];
     let suite = adverse::TransformSuite::load()?;
     let output = tempfile::tempdir()?;

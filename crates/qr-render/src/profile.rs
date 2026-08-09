@@ -14,6 +14,7 @@ pub enum ProfileId {
     Content,
     Landing,
     Print,
+    AdaptiveBranded,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -133,11 +134,12 @@ impl OutputProfile {
     }
 }
 
-pub const SUPPORTED_PROFILES: [OutputProfile; 4] = [
+pub const SUPPORTED_PROFILES: [OutputProfile; 5] = [
     OutputProfile::compiled(ProfileId::Inline, 100, 300, 6),
     OutputProfile::compiled(ProfileId::Content, 120, 360, 8),
     OutputProfile::compiled(ProfileId::Landing, 150, 450, 12),
     OutputProfile::compiled(ProfileId::Print, 160, 480, 13),
+    OutputProfile::compiled(ProfileId::AdaptiveBranded, 180, 540, 10),
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

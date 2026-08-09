@@ -54,6 +54,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
     policy = json.loads(Path("tests/approved-output-matrix-policy.json").read_text())
     dimensions = policy["tuple_dimensions"]
     payload_classes = policy["required_payload_classes"]
+    branding = policy["branded_geometry_policy"]
     rows = []
     dimension_order = (
         "profiles",
@@ -98,9 +99,23 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             and (
                 (
                     case_kind == "required-payload"
-                    and (payload_class != "dense-url" or profile_index == 0)
+                    and (
+                        payload_class != "dense-url"
+                        or profile_index in (0, branding["adaptive_profile_index"])
+                    )
                 )
-                or (case_kind == "version-coverage" and covered_version == 6)
+                or (
+                    case_kind == "version-coverage"
+                    and (
+                        covered_version == branding["minimum_version"]
+                        or (
+                            profile_index == branding["adaptive_profile_index"]
+                            and branding["minimum_version"]
+                            <= covered_version
+                            <= branding["adaptive_maximum_version"]
+                        )
+                    )
+                )
             )
         )
         outcome = "decoded" if decoded else "expected-invalid"
@@ -109,6 +124,18 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             "sha256": "a" * 64 if decoded else None,
             "decoder_input_sha256": "b" * 64 if decoded else None,
         }
+        row_version = covered_version
+        if case_kind == "required-payload" and decoded and logo:
+            row_version = (
+                policy["profile_max_versions"][profile_index]
+                if payload_class == "dense-url"
+                and profile_index == branding["adaptive_profile_index"]
+                else branding["minimum_version"]
+            )
+        logo_geometry = None
+        if logo and decoded:
+            assert isinstance(row_version, int)
+            logo_geometry = expected_logo_geometry(profile_index, row_version, branding)
         rows.append(
             {
                 "id": f"row-{index}",
@@ -121,23 +148,46 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
                 "finder_style_index": finder_style_index,
                 "logo_state_index": logo_state_index,
                 "payload_class": payload_class,
-                "version": 6
-                if case_kind == "required-payload" and decoded and logo
-                else covered_version,
+                "version": row_version,
                 "safety": "caution" if decoded else None,
-                "logo_geometry": {
-                    "source_ten_thousandths": [140000, 180625, 130000, 48750],
-                    "knockout_modules": [13, 17, 15, 7],
-                    "protected_clearance_modules": 6,
-                    "obscured_data_modules": 105,
-                    "obscured_remainder_modules": 0,
-                }
-                if logo and decoded
-                else None,
+                "logo_geometry": logo_geometry,
                 "artifacts": {"png": dict(artifact), "svg": dict(artifact)},
             }
         )
     return rows
+
+
+def expected_logo_geometry(
+    profile_index: int, version: int, branding: dict[str, Any]
+) -> dict[str, Any]:
+    matrix_width = 17 + 4 * version
+    source_width = branding["source_width_ten_thousandths"]
+    source_height = branding["source_height_ten_thousandths"]
+    left = (matrix_width * 10_000 - source_width) // 2
+    top = (matrix_width * 10_000 - source_height) // 2
+    adaptive_shifted = (
+        profile_index == branding["adaptive_profile_index"]
+        and version > branding["minimum_version"]
+    )
+    if adaptive_shifted:
+        top -= branding["adaptive_vertical_shift_modules_after_minimum"] * 10_000
+    padding = branding["knockout_padding_modules"]
+    knockout_left = left // 10_000 - padding
+    knockout_top = top // 10_000 - padding
+    knockout_right = (left + source_width + 9_999) // 10_000 + padding
+    knockout_bottom = (top + source_height + 9_999) // 10_000 + padding
+    return {
+        "source_ten_thousandths": [left, top, source_width, source_height],
+        "knockout_modules": [
+            knockout_left,
+            knockout_top,
+            knockout_right - knockout_left,
+            knockout_bottom - knockout_top,
+        ],
+        "protected_clearance_modules": 0 if adaptive_shifted else 6,
+        "obscured_data_modules": branding["obscured_data_modules"],
+        "obscured_remainder_modules": branding["obscured_remainder_modules"],
+    }
 
 
 def adverse_outcomes() -> list[dict[str, str]]:
@@ -211,7 +261,11 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(
-            "rejects a centered logo when the payload naturally selects Version 7",
+            "fixed profiles recommend Adaptive Branded when centered branding is unavailable",
+            CRITICAL_WORKFLOW_TESTS,
+        )
+        self.assertIn(
+            "Adaptive Branded preserves and exports the long ONE URL at Version 10",
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertNotIn(

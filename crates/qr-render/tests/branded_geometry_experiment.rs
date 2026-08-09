@@ -17,7 +17,7 @@ use fixture_tool::{
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EciAssignment, EncodeRequest, EncodedQr, Version, encode};
-use qr_render::{OutputProfile, SUPPORTED_PROFILES};
+use qr_render::{OutputProfile, ProfileId, SUPPORTED_PROFILES};
 use serde::Serialize;
 
 const DIAMETERS: [u16; 16] = [
@@ -119,6 +119,13 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
     );
     let decoder = decoder.verify()?;
     let output = tempfile::tempdir()?;
+    // This committed experiment preserves the four fixed-profile policy selected
+    // before Adaptive Branded existed. Its separate focused experiment owns the
+    // displaced Version 10 candidate campaign.
+    let fixed_profiles = SUPPORTED_PROFILES
+        .into_iter()
+        .filter(|profile| profile.id() != ProfileId::AdaptiveBranded)
+        .collect::<Vec<_>>();
 
     let mut dot_outcomes = Vec::new();
     for diameter in DIAMETERS {
@@ -130,7 +137,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
             };
             let mut attempted = 0;
             let mut decoded = 0;
-            for profile in SUPPORTED_PROFILES {
+            for profile in fixed_profiles.iter().copied() {
                 for (label, text) in payload_cases(profile, ErrorCorrection::Medium)? {
                     let encoded = encode(EncodeRequest::first_fit(
                         &text,
@@ -240,8 +247,9 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
             let mut passed = true;
             let mut attempted = 0;
             let mut decoded = 0;
-            'sample: for profile in SUPPORTED_PROFILES
-                .into_iter()
+            'sample: for profile in fixed_profiles
+                .iter()
+                .copied()
                 .filter(|profile| version <= profile.maximum_version().number())
             {
                 for (_, encoded, text) in &encoded_cases {
@@ -316,23 +324,27 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
         }
     }
 
-    let logo_profile_outcomes = SUPPORTED_PROFILES.map(|profile| {
-        if profile.maximum_version().number() < selected_minimum_version {
-            LogoProfileOutcome {
-                profile: format!("{:?}", profile.id()),
-                attempted: 0,
-                decoded: 0,
-                outcome: "minimum-version-exceeds-profile-ceiling",
+    let logo_profile_outcomes = fixed_profiles
+        .iter()
+        .copied()
+        .map(|profile| {
+            if profile.maximum_version().number() < selected_minimum_version {
+                LogoProfileOutcome {
+                    profile: format!("{:?}", profile.id()),
+                    attempted: 0,
+                    decoded: 0,
+                    outcome: "minimum-version-exceeds-profile-ceiling",
+                }
+            } else {
+                LogoProfileOutcome {
+                    profile: format!("{:?}", profile.id()),
+                    attempted: PAYLOAD_CLASSES.len() * 2,
+                    decoded: PAYLOAD_CLASSES.len() * 2,
+                    outcome: "decoded",
+                }
             }
-        } else {
-            LogoProfileOutcome {
-                profile: format!("{:?}", profile.id()),
-                attempted: PAYLOAD_CLASSES.len() * 2,
-                decoded: PAYLOAD_CLASSES.len() * 2,
-                outcome: "decoded",
-            }
-        }
-    });
+        })
+        .collect::<Vec<_>>();
 
     let policy = Policy {
         schema_version: 1,
@@ -342,7 +354,7 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
             "source_commit": "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825",
         }),
         sample: serde_json::json!({
-            "profiles": SUPPORTED_PROFILES.len(),
+            "profiles": fixed_profiles.len(),
             "payload_classes": PAYLOAD_CLASSES,
             "backgrounds": ["opaque-white", "transparent"],
             "artifact_paths": ["native-png", "rasterized-svg"],

@@ -97,10 +97,17 @@
   now 100 px SVG / 300 px PNG with a Version 6 ceiling and six-pixel PNG module
   scale, so fitting logo-mode payloads use the approved centered ONE treatment
   instead of ending in a profile/version compatibility failure.
+- [Ticket 29](issues/29-support-adaptive-large-branded-qr.md): Adaptive Branded
+  is a separate non-default 180 px SVG / 540 px PNG profile through Version 10;
+  its deterministic function-safe placement keeps the largest reviewed ONE
+  treatment, lets the exact long URL export at ECC H / Version 10, and is backed
+  by 316-row dual-format decoder evidence plus a 35-outcome adverse manifest.
 
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
+
+## Planned work
 
 ## Fog
 

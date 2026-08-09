@@ -222,6 +222,7 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
         (ProfileId::Content, 8, 120, 360, false),
         (ProfileId::Landing, 12, 150, 450, false),
         (ProfileId::Print, 13, 160, 480, true),
+        (ProfileId::AdaptiveBranded, 10, 180, 540, true),
     ];
 
     for (profile_id, maximum_version, svg_side, png_side, is_print) in cases {
@@ -241,6 +242,39 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
             is_print,
         );
     }
+}
+
+#[test]
+fn adaptive_branded_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
+    let payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
+    let mut state = WorkflowState::new(ProfileId::AdaptiveBranded);
+    let request = state
+        .set_payload(payload.to_owned())
+        .expect("revision is available");
+
+    assert_eq!(request.payload(), payload);
+    assert_eq!(request.ecc(), ErrorCorrection::High);
+    assert_eq!(request.minimum_version().number(), 6);
+    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+
+    let preview = state.preview().expect("adaptive branded URL fits");
+    let diagnostics = preview.diagnostics();
+    assert_eq!(diagnostics.selected_version().number(), 10);
+    assert_eq!(diagnostics.maximum_version().number(), 10);
+    assert!(!diagnostics.branding_increased_version());
+    assert_eq!(diagnostics.svg_side_pixels(), 180);
+    assert_eq!(diagnostics.png_side_pixels(), 540);
+    assert_eq!(diagnostics.module_scale(), 8);
+    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 520);
+    assert_eq!(diagnostics.outer_padding_per_side(), 10);
+    let placement = diagnostics
+        .logo_placement()
+        .expect("adaptive logo placement");
+    assert_eq!(placement.source_bounds().left_ten_thousandths(), 220_000);
+    assert_eq!(placement.source_bounds().top_ten_thousandths(), 200_625);
+    assert_eq!(placement.knockout_bounds().left().get(), 21);
+    assert_eq!(placement.knockout_bounds().top().get(), 19);
+    assert!(state.exports_enabled());
 }
 
 #[test]
@@ -398,7 +432,9 @@ fn logo_mode_rejects_a_naturally_larger_version_without_reviewed_centered_geomet
     assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
     assert_eq!(
         state.validation_message().as_deref(),
-        Some("Logo mode is unavailable because no safe placement exists for this QR version."),
+        Some(
+            "Logo mode is unavailable because no safe placement exists for this QR version. Try Adaptive Branded for long branded payloads."
+        ),
     );
     assert!(!state.exports_enabled());
 }
@@ -449,7 +485,9 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     assert!(state.complete_preview(over_capacity.revision(), evaluate_preview(&over_capacity),));
     assert_eq!(
         state.validation_message().as_deref(),
-        Some("The payload does not fit this profile's maximum QR version 6."),
+        Some(
+            "The payload does not fit this profile's maximum QR version 6. Try Adaptive Branded for long branded payloads."
+        ),
     );
     assert!(!state.exports_enabled());
 

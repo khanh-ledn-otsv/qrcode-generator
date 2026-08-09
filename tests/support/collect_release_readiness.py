@@ -19,6 +19,7 @@ PRIVACY_TEST = "payload, logo, configuration, and downloads make no runtime requ
 DOWNLOAD_TESTS = {
     "downloads fixed filenames and exact deterministic SVG and PNG bytes",
     "downloaded PNG independently decodes with the pinned reader",
+    "downloads and decodes the deterministic Adaptive Branded Version 10 artifacts",
 }
 GUIDANCE_TEST = "explains export, physical sizing, and placement validation before generation"
 CRITICAL_WORKFLOW_TESTS = {
@@ -29,7 +30,8 @@ CRITICAL_WORKFLOW_TESTS = {
     "shows the opaque preview at its real SVG size",
     "uses only magenta and shows transparent placement cautions",
     "logo mode is selected by default, uses ECC H, and requires opaque white",
-    "rejects a centered logo when the payload naturally selects Version 7",
+    "fixed profiles recommend Adaptive Branded when centered branding is unavailable",
+    "Adaptive Branded preserves and exports the long ONE URL at Version 10",
     "uses compact dots and standard square finders without a shape control",
 }
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
@@ -203,13 +205,7 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     decoded = 0
     invalid = 0
     branded = 0
-    expected_geometry = {
-        "source_ten_thousandths": [140000, 180625, 130000, 48750],
-        "knockout_modules": [13, 17, 15, 7],
-        "protected_clearance_modules": 6,
-        "obscured_data_modules": 105,
-        "obscured_remainder_modules": 0,
-    }
+    branding = _mapping(policy.get("branded_geometry_policy"), "branded geometry policy")
     for row in rows:
         artifacts = row.get("artifacts")
         if not isinstance(artifacts, dict) or set(artifacts) != {"png", "svg"}:
@@ -229,7 +225,7 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
                     raise ResultEvidenceError(f"{row['id']} has invalid artifact hashes")
             if row.get("logo_state_index") == 1:
                 branded += 1
-                if row.get("version") != 6 or row.get("logo_geometry") != expected_geometry:
+                if row.get("logo_geometry") != _expected_logo_geometry(row, branding):
                     raise ResultEvidenceError(f"{row['id']} has unapproved branded geometry")
         elif outcome == "expected-invalid":
             invalid += 1
@@ -240,6 +236,68 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     if (decoded, invalid) != (decoded_rows, invalid_rows) or branded == 0:
         raise ResultEvidenceError("approved output evidence has incomplete outcome coverage")
     return len(rows), decoded, invalid
+
+
+def _expected_logo_geometry(row: dict[str, Any], branding: dict[str, Any]) -> dict[str, Any]:
+    profile_index = row.get("profile_index")
+    version = row.get("version")
+    fixed_profiles = branding.get("fixed_profile_indices")
+    adaptive_profile = branding.get("adaptive_profile_index")
+    minimum_version = branding.get("minimum_version")
+    adaptive_maximum = branding.get("adaptive_maximum_version")
+    if (
+        not isinstance(profile_index, int)
+        or not isinstance(version, int)
+        or not isinstance(fixed_profiles, list)
+        or not all(isinstance(index, int) for index in fixed_profiles)
+        or not isinstance(adaptive_profile, int)
+        or not isinstance(minimum_version, int)
+        or not isinstance(adaptive_maximum, int)
+        or not (
+            (profile_index in fixed_profiles and version == minimum_version)
+            or (
+                profile_index == adaptive_profile and minimum_version <= version <= adaptive_maximum
+            )
+        )
+    ):
+        raise ResultEvidenceError(f"{row['id']} has an unapproved branded version")
+    source_width = branding.get("source_width_ten_thousandths")
+    source_height = branding.get("source_height_ten_thousandths")
+    shift_modules = branding.get("adaptive_vertical_shift_modules_after_minimum")
+    padding = branding.get("knockout_padding_modules")
+    obscured_data = branding.get("obscured_data_modules")
+    obscured_remainder = branding.get("obscured_remainder_modules")
+    if (
+        not isinstance(source_width, int)
+        or not isinstance(source_height, int)
+        or not isinstance(shift_modules, int)
+        or not isinstance(padding, int)
+        or not isinstance(obscured_data, int)
+        or not isinstance(obscured_remainder, int)
+    ):
+        raise ResultEvidenceError("branded geometry policy has invalid measurements")
+    matrix_width = 17 + 4 * version
+    left = (matrix_width * 10_000 - source_width) // 2
+    top = (matrix_width * 10_000 - source_height) // 2
+    adaptive_shifted = profile_index == adaptive_profile and version > minimum_version
+    if adaptive_shifted:
+        top -= shift_modules * 10_000
+    knockout_left = left // 10_000 - padding
+    knockout_top = top // 10_000 - padding
+    knockout_right = (left + source_width + 9_999) // 10_000 + padding
+    knockout_bottom = (top + source_height + 9_999) // 10_000 + padding
+    return {
+        "source_ten_thousandths": [left, top, source_width, source_height],
+        "knockout_modules": [
+            knockout_left,
+            knockout_top,
+            knockout_right - knockout_left,
+            knockout_bottom - knockout_top,
+        ],
+        "protected_clearance_modules": 0 if adaptive_shifted else 6,
+        "obscured_data_modules": obscured_data,
+        "obscured_remainder_modules": obscured_remainder,
+    }
 
 
 def validate_adverse_evidence(path: Path) -> int:

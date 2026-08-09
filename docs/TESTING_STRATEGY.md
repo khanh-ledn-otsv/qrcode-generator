@@ -295,7 +295,7 @@ Exhaustively iterate every version permitted by each profile:
 - transparent surplus padding has zero alpha and opaque surplus padding exactly matches the configured background;
 - unsafe logo geometry is rejected before rendering.
 
-Include explicit expected cases for all four profile ceilings and for transitions where module scale decreases.
+Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Branded Version 10 must assert its 65-module logical extent, eight-pixel PNG module scale, 520 px rendered symbol, and 10 px symmetric padding inside the 540 px canvas.
 
 ### 6.2 SVG artifact tests
 
@@ -358,21 +358,22 @@ The generated coverage test must fail if a new approved enum variant is not incl
 The versioned coverage contract is
 [`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
 which is consumed by both the Rust generator test and Python readiness validator.
-The release evidence contains 252 generated scenario rows: 96 required-payload
+The release evidence contains 316 generated scenario rows: 120 required-payload
 rows (six payload classes for each compiled profile/background/logo tuple) and
-156 exact-version rows (every version admitted by each profile for the same
+196 exact-version rows (every version admitted by each profile for the same
 background/logo choices). Both the native PNG and independently rasterized SVG
 artifact are hashed and passed to the pinned decoder for each accepted row.
-There are 151 accepted rows and 101 expected-invalid rows. Accepted logo rows
-must record the reviewed Version 6 placement facts; all other logo versions and
-profiles below the branded minimum record their typed rejection.
+There are 194 accepted rows and 122 expected-invalid rows. Accepted fixed-profile
+logo rows record the reviewed Version 6 placement. Adaptive Branded records the
+reviewed Version 6–10 placement for each accepted row; profiles/versions outside
+those policies record their typed rejection.
 
 The branded-geometry approval experiment is replayed separately with:
 
 - every centered dot diameter from 0.45 through 0.60 module in 0.01-module
   increments;
 - both square-function controls and non-finder-dot treatment;
-- all four profiles, opaque-white and transparent-background handling, all six
+- all four fixed profiles, opaque-white and transparent-background handling, all six
   required payload classes, and both direct RGBA PNG and independently
   rasterized SVG artifacts;
 - the pinned ZXing-C++ 3.0.2 reader at commit
@@ -392,6 +393,24 @@ Inline's 100 px SVG / 300 px PNG profile retains a six-pixel PNG module scale
 at its Version 6 ceiling. Versions 7–13 are expected-invalid exact-centering
 rows because of protected alignment geometry. Exactly four quiet-zone modules
 and the absence of decorative export borders are invariant across candidates.
+
+Adaptive Branded has a separate focused Version 10 placement experiment in
+[`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json).
+It evaluates source widths 10–13 modules at the center and six modules above and
+below it, over seven payload classes (including the exact ONE news URL) and both
+native PNG and independently rasterized SVG. Every function-safe candidate must
+decode all 14 artifacts; protected-module intersections remain unrendered. The
+largest full-pass candidate is selected, with upward winning the deterministic
+equal-distance tie. Production and matrix tests additionally cover every enabled
+Adaptive Branded version from 6 through 10, native/WASM byte equality, exact
+payload preservation, and the typed rejection surface.
+
+Replay the focused experiment explicitly with:
+
+```sh
+cargo test -p qr-render --test adaptive_branded_placement_experiment \
+  compare_and_record_adaptive_branded_placement_candidates -- --ignored --exact --nocapture
+```
 
 Replay and regenerate the committed record explicitly with:
 
@@ -420,8 +439,10 @@ The release-1 manifest defines three explicit pass envelopes rather than a
 universal compact-dot claim: a low-density opaque Print symbol passes all 13
 named transforms and is classified safe; transparent compact dots pass 10
 placement-relevant transforms as a caution; and the centered Version 6 logo on
-the Print profile passes six transforms as a caution. The exact fixture payload,
-seed, parameters, membership, safety, decoder version, and 29 outcomes are
+the Print profile passes six transforms as a caution. The Adaptive Branded
+Version 10 exact long-URL artifact passes the same six-transform caution
+envelope. The exact fixture payload, seed, parameters, membership, safety,
+decoder version, and 35 outcomes are
 machine-validated release evidence.
 
 ## 7. Web and WASM tests

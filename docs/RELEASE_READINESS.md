@@ -11,7 +11,7 @@ From a clean worktree, run setup and the readiness gate:
 pnpm run release:readiness
 ```
 
-The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs desktop Chromium with Playwright retries disabled, and validates the 252-row dual-format approved-output matrix plus all 29 declared adverse-decoder outcomes. It writes the machine evidence and final report under `target/release-readiness/`.
+The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs desktop Chromium with Playwright retries disabled, and validates the 316-row dual-format approved-output matrix plus all 35 declared adverse-decoder outcomes. It writes the machine evidence and final report under `target/release-readiness/`.
 
 ## Acceptance-criterion map
 

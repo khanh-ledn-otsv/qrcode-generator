@@ -57,6 +57,13 @@ Mixed-mode dynamic programming is deferred. Add it later only if telemetry-free 
 
 Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics but is not user-selectable. Output profiles define only canvas dimensions and a maximum version; they do not silently change ECC. For an exact payload and selected profile, the workflow requests ECC M with Version 1 as its minimum and chooses the first fitting version up to the profile ceiling.
 
+The compiled selectable profiles are Inline (100 px SVG / 300 px PNG, through
+Version 6), Content (120/360, through Version 8), Landing (150/450, through
+Version 12), Print (160/480, through Version 13), and the separate non-default
+Adaptive Branded profile (180/540, through Version 10). Adaptive Branded does
+not replace or silently select any fixed profile; without the logo it follows
+the same ordinary ECC-M first-fit rule.
+
 Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
 ### 2.5 PNG renderer
@@ -81,9 +88,9 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 ### 2.6 Branding safety defaults
 
 These release-1 defaults use the approved ONE treatment. The decode-backed
-geometry below was accepted on 2026-08-09 for implementation by Tickets 24–26;
-the production renderer now applies the selected dot treatment and the single
-reviewed Version 6 logo placement.
+geometry below was accepted on 2026-08-09 for implementation by Tickets 24–29;
+the production renderer applies the selected dot treatment, the unchanged
+fixed-profile Version 6 placement, and the decode-backed adaptive placements.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
 - Visible data, remainder, timing, alignment, format, version, and fixed-dark
@@ -125,29 +132,53 @@ candidate evidence is committed in
   symbol. Every integer width from 14 through
   18 exceeded the checked 40%-of-matrix knockout bound. A 13-module source is therefore the
   largest admitted centered ONE treatment.
-- Versions 1–5 are below the branded minimum. Versions 7–13 intentionally
-  reject the exact-centered logo because the knockout would intersect protected
-  central alignment geometry. Logo output stays classified as a caution.
+- Inline, Content, Landing, and Print retain that exact Version 6-only policy.
+  Versions 7–13 on those fixed profiles intentionally reject branding because
+  exact centering intersects protected central alignment geometry.
+- Adaptive Branded admits Versions 6–10 on its 180 px SVG / 540 px PNG canvas.
+  Version 10 has a 57-module matrix, a 65-module logical extent including the
+  quiet zone, an eight-pixel PNG module scale, a 520 px rendered symbol, and
+  10 px symmetric background-only padding. Its Version 10 placement keeps the
+  13×4.875-module source horizontally centered and shifts it six modules upward
+  to `(left 22, top 20.0625)`, with a function-safe `(21, 19, 15, 7)` knockout.
+- Adaptive placement tries the exact center first, then searches integer module
+  offsets in increasing Euclidean distance with a stable center/above/below/
+  left/right tie order. It considers source widths from 13 down through the
+  reviewed 10-module legibility floor and selects the largest safe candidate.
+  Versions 7–10 select the nearest placement six modules upward; upward wins
+  the equal-distance tie with the equally decodable placement below center.
+  The focused committed experiment in
+  [`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json)
+  records 10–13-module candidates above, centered, and below: all 112
+  function-safe native-PNG/rasterized-SVG artifacts decoded, while every
+  centered Version 10 candidate was rejected before decoding for protected
+  alignment-module overlap.
+- Versions 1–5 remain below the branded minimum. Logo output stays classified
+  as a caution on every valid profile/version row.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
 - Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
 - The bundled logo option is selected by default. Users may turn it off to restore ECC M and transparent-background availability.
-- Exact centering is mandatory. If the centered artwork or knockout intersects an alignment or other protected module, logo geometry is rejected rather than shifted. The compiled dimensions and generated evidence are recorded in [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
+- Exact centering remains mandatory for the four fixed profiles. Adaptive
+  Branded alone may use the reviewed deterministic nearby search. The compiled
+  dimensions and generated evidence are recorded in
+  [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - If geometry is unsafe for the selected version, logo mode is disabled with a
   reason. The encoder applies the approved Version 6 branded minimum but never
   selects a still-larger version merely to search for logo space.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
-Release evidence exhausts the selectable surface with 252 generated scenarios:
-96 required-payload rows and 156 exact-version rows. Native PNG and independently
+Release evidence exhausts the selectable surface with 316 generated scenarios:
+120 required-payload rows and 196 exact-version rows. Native PNG and independently
 rasterized SVG artifacts share one scenario identity and record deterministic
-hashes, safety, decode outcome, and Version 6 logo geometry. The resulting policy
-has 151 accepted rows and 101 typed expected rejections. Deterministic adverse
-evidence separately records 29 outcomes across explicit safe opaque-Print,
-transparent-caution, and centered-logo-caution pass envelopes; it does not imply
+hashes, safety, decode outcome, and fixed/adaptive logo geometry. The resulting policy
+has 194 accepted rows and 122 typed expected rejections. Deterministic adverse
+evidence separately records 35 outcomes across explicit safe opaque-Print,
+transparent-caution, centered-logo-caution, and Adaptive-Branded-Version-10
+long-URL caution pass envelopes; it does not imply
 that every compact-dot density passes every transform.
 
 The exported symbol always retains exactly four quiet-zone modules per side.
@@ -290,7 +321,7 @@ Keep versions exact in the workspace manifest and update dependencies deliberate
 
 - `leptos = =0.8.20` with `csr` for the web crate.
 - `wasm-bindgen`, `web-sys`, and `js-sys` only in `qr-web` for Blob/URL/download integration.
-- `serde` only if configuration serialization is actually needed; compiled Rust constants are preferred for four profiles.
+- `serde` only if configuration serialization is actually needed; compiled Rust constants are preferred for the five profiles.
 - `thiserror` for typed errors if its WASM size is acceptable; otherwise implement `Display` manually.
 - `png` 0.18.x in `qr-render`, with only required features.
 - A small timer utility for debounce only if Leptos/browser APIs do not already provide the needed lifecycle-safe timeout.

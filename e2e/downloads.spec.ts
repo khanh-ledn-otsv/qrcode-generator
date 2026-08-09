@@ -9,6 +9,8 @@ import { SAFE_PAYLOAD, enterPayload, sha256 } from "./helpers";
 
 const ZXING_COMMIT = "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825";
 const ZXING_VERSION = "ZXingReader version 3.0.2";
+const LONG_ONE_URL =
+  "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -78,4 +80,40 @@ test("downloaded PNG independently decodes with the pinned reader", async ({ pag
   );
   expect(result.status, result.stderr).toBe(0);
   expect(result.stdout.trim()).toBe(decodePayload);
+});
+
+test("downloads and decodes the deterministic Adaptive Branded Version 10 artifacts", async ({
+  page,
+}) => {
+  await page.getByText("Adaptive Branded", { exact: true }).click();
+  await enterPayload(page, LONG_ONE_URL);
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  const [svgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-svg").click(),
+  ]);
+  const [pngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
+  const svg = await readFile(await svgDownload.path());
+  const png = await readFile(await pngDownload.path());
+  expect(await sha256(svg)).toBe(
+    "15223845dcf6fbedbc4e4144ad4592c4bc7ec8b6720a44e994055596024b3f35",
+  );
+  expect(await sha256(png)).toBe(
+    "f7c17465e80d4697f5af14ca99ef17ae67ef51d3722a3a60b7dec2ba600e5756",
+  );
+  expect(png.readUInt32BE(16)).toBe(540);
+  expect(png.readUInt32BE(20)).toBe(540);
+
+  const source = resolve("tests/oracles/zxing-cpp");
+  const reader = resolve(source, "build/example/ZXingReader");
+  const result = spawnSync(
+    reader,
+    ["-formats", "QRCode", "-single", "-bytes", await pngDownload.path()],
+    { encoding: "utf8" },
+  );
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stdout.trim()).toBe(LONG_ONE_URL);
 });

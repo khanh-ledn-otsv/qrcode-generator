@@ -75,22 +75,23 @@ pnpm run release:evidence
 ```
 
 This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
-hashes under `target/release-evidence/`. The matrix has 252 generated scenario
-rows: 96 required-payload rows and 156 exact-version coverage rows spanning all
+hashes under `target/release-evidence/`. The matrix has 316 generated scenario
+rows: 120 required-payload rows and 196 exact-version coverage rows spanning all
 compiled profile, background, logo, payload, and enabled-version paths. Each row
-contains matched native-PNG and independently rasterized SVG evidence. The 151
+contains matched native-PNG and independently rasterized SVG evidence. The 194
 renderable rows record safety, deterministic artifact and decoder-input hashes,
-a ZXing decode, and reviewed logo geometry where applicable; the 101 unsupported
-logo/background or centered-logo geometry rows record the expected typed
+a ZXing decode, and reviewed fixed/adaptive logo geometry where applicable; the 122 unsupported
+logo/background or profile-specific geometry rows record the expected typed
 rejection.
 The executable counts and dimensions have one versioned owner in
 `tests/approved-output-matrix-policy.json`; the Rust coverage test and Python
 readiness validator both reject drift from it.
 `tests/adverse/parameters.json` is the versioned transform manifest. The adverse
-evidence records exactly 29 decoded outcomes across three declared envelopes:
+evidence records exactly 35 decoded outcomes across four declared envelopes:
 all 13 transforms for a low-density opaque Print compact-dot symbol (`safe`),
 10 placement-relevant transforms for transparent compact dots (`caution`), and
-six transforms for the centered Version 6 Print logo (`caution`). It compares
+six transforms for the centered Version 6 Print logo (`caution`), and six for
+the Adaptive Branded Version 10 exact long-URL artifact (`caution`). It compares
 decoded pixels before invoking ZXing and includes light, darker, and patterned
 placement backgrounds; each evidence row records the configuration, safety
 class, transform, decoder, and outcome.

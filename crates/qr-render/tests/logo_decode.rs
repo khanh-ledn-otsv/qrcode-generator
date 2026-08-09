@@ -14,8 +14,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, LogoStyle, OutputProfile, RenderError, RenderModel, RenderOptions,
-    SUPPORTED_PROFILES, render_png, render_svg,
+    BRANDED_LOGO_VERSION, LogoStyle, OutputProfile, ProfileId, RenderError, RenderModel,
+    RenderOptions, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 #[test]
@@ -82,13 +82,24 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             }
         }
     }
-    let expected_enabled_rows = SUPPORTED_PROFILES
+    let fixed_version_six_rows = SUPPORTED_PROFILES
         .iter()
-        .filter(|profile| profile.maximum_version() >= BRANDED_LOGO_VERSION)
+        .filter(|profile| {
+            profile.id() != ProfileId::AdaptiveBranded
+                && profile.maximum_version() >= BRANDED_LOGO_VERSION
+        })
         .count();
+    let adaptive_rows = SUPPORTED_PROFILES
+        .iter()
+        .find(|profile| profile.id() == ProfileId::AdaptiveBranded)
+        .map(|profile| {
+            usize::from(profile.maximum_version().number() - BRANDED_LOGO_VERSION.number() + 1)
+        })
+        .ok_or("Adaptive Branded profile is missing")?;
+    let expected_enabled_rows = fixed_version_six_rows + adaptive_rows;
     if enabled_rows != expected_enabled_rows {
         return Err(format!(
-            "expected {expected_enabled_rows} enabled Version 6 profile rows, found {enabled_rows}"
+            "expected {expected_enabled_rows} enabled fixed/adaptive branded rows, found {enabled_rows}"
         )
         .into());
     }
@@ -181,12 +192,19 @@ fn required_logo_payloads(
         return Err("dense logo URL did not select the profile ceiling version".into());
     }
 
-    Ok(vec![
+    let mut payloads = vec![
         ("short-url", "https://example.test/a".to_owned()),
         ("dense-url", dense_url),
         ("numeric", "12345678901234567890".to_owned()),
         ("alphanumeric", "APPROVED LOGO 123".to_owned()),
         ("ascii-byte", "lowercase-logo-byte".to_owned()),
         ("utf8-eci26", "café logo".to_owned()),
-    ])
+    ];
+    if profile.id() == ProfileId::AdaptiveBranded {
+        payloads.push((
+            "one-news-url",
+            "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya".to_owned(),
+        ));
+    }
+    Ok(payloads)
 }

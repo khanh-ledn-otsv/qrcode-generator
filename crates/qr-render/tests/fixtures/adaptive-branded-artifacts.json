@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-adaptive-branded-v06-v10-artifacts",
+  "synthetic": false,
+  "payload_provenance": "Ticket 29 exact public ONE news URL plus synthetic version-labelled regression payloads",
+  "encoding": "utf-8",
+  "profile": "Adaptive Branded",
+  "ecc": "H",
+  "logo": "bundled ONE",
+  "cases": [
+    {
+      "payload": "adaptive branded version 6",
+      "payload_sha256": "e8b7baa834e2e56b0c46a031ac35f733e316999a9afdc5c18a40029eef14b51f",
+      "version": 6,
+      "svg_sha256": "dd592d85a3480eb7b65ed1407bd226979ee7fa7d58558a3b8a3d47fc3bb2c767",
+      "png_sha256": "dae1c7165d015239cb1c519f1f97cf2b8196f8a020602a2877e47027c838b042"
+    },
+    {
+      "payload": "adaptive branded version 7",
+      "payload_sha256": "6b634846142059ac5d2c382140376ec083316bca44649a875701051154eb2078",
+      "version": 7,
+      "svg_sha256": "c732031d99f6430be50a01470b53c18114874b34c28cff70b59c00e435ed69a4",
+      "png_sha256": "7695db15fbf0ea4bfb5594ea94fa79f4f70f280b9331f173ed328b1ffd1c2307"
+    },
+    {
+      "payload": "adaptive branded version 8",
+      "payload_sha256": "570a4823fe305b27b2dc46cb539a5c3e916c0f8439d73778615294f50ab498e1",
+      "version": 8,
+      "svg_sha256": "16529c4d8ba105fa7065c649a3333687f7e8ca184abc150e86c3d0e27ebcc732",
+      "png_sha256": "8f5e49387d17862ac237afb9ea65ba1655e5562772e64923f34984c5a83ca38f"
+    },
+    {
+      "payload": "adaptive branded version 9",
+      "payload_sha256": "ae9e31f9d14b4a007c6d37254b7617b69bee2b86717eed362273370f2e607706",
+      "version": 9,
+      "svg_sha256": "a3bfc07b9b42f3f9f9060765645ccdd7f63a6e2db30cec432b95b6b0142647ff",
+      "png_sha256": "06dabd7a9479babf5ff132d298b270fad1094821a125d44819cd9bb589a7963a"
+    },
+    {
+      "payload": "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya",
+      "payload_sha256": "1b5046fea8219fc98bf49f76aae46b962dc75f1fc907718fbac82cadd83300af",
+      "version": 10,
+      "svg_sha256": "15223845dcf6fbedbc4e4144ad4592c4bc7ec8b6720a44e994055596024b3f35",
+      "png_sha256": "f7c17465e80d4697f5af14ca99ef17ae67ef51d3722a3a60b7dec2ba600e5756"
+    }
+  ],
+  "generation": {
+    "tool": "qr-render native test fixture",
+    "command": "cargo test -p qr-render --test logo_asset print_adaptive_branded_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
+    "source": "crates/qr-render/tests/support/adaptive_branded_artifact_fixture.rs"
+  },
+  "local_verification": [
+    "Native and wasm32 tests render identical Version 6 through Version 10 SVG and PNG inputs and compare both SHA-256 digests",
+    "The manifest-pinned ZXing-C++ 3.0.2 reader independently decodes native PNG and rasterized SVG artifacts for every enabled adaptive branded version and the exact ONE news URL"
+  ],
+  "verification": {
+    "state": "accepted",
+    "reviewer": "ticket-29-native-wasm-and-decoder-review",
+    "verified_at": "2026-08-09",
+    "notes": "The four version-labelled payloads are synthetic and non-sensitive; Version 10 uses the exact public URL reported in Ticket 29. These goldens record deterministic cross-target equality, while pinned decoder evidence separately establishes readability."
+  }
+}

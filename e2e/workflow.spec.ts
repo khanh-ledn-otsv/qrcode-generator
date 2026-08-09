@@ -185,15 +185,51 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
   expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
 });
 
-test("rejects a centered logo when the payload naturally selects Version 7", async ({ page }) => {
+test("fixed profiles recommend Adaptive Branded when centered branding is unavailable", async ({
+  page,
+}) => {
   await page.getByText("Print", { exact: true }).click();
   await page.getByLabel("Text to encode").fill("a".repeat(59));
 
   await expect(page.getByRole("alert")).toContainText(
-    "Logo mode is unavailable because no safe placement exists for this QR version.",
+    "Try Adaptive Branded for long branded payloads.",
   );
   await expect(page.getByTestId("download-svg")).toBeDisabled();
   await expect(page.getByTestId("download-png")).toBeDisabled();
+});
+
+test("Adaptive Branded preserves and exports the long ONE URL at Version 10", async ({ page }) => {
+  const payload =
+    "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
+  await page.getByText("Adaptive Branded", { exact: true }).click();
+  await enterPayload(page, payload);
+
+  await expect(page.getByRole("radio", { name: /Adaptive Branded/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Adaptive Branded/ })).toHaveAccessibleName(
+    /180 px SVG · 540 px PNG · up to V10/,
+  );
+  await expect(page.getByLabel("Text to encode")).toHaveValue(payload);
+  await expect.poll(() => diagnostic(page, "Version")).toBe("V10 / V10 max");
+  await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
+  await expect
+    .poll(() => diagnostic(page, "PNG geometry"))
+    .toBe("8 px/module · 520 px symbol · 10 px padding");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("180 px SVG · 540 px PNG");
+  await expect
+    .poll(() => diagnostic(page, "Logo"))
+    .toBe("ONE lettermark · 105 data · 0 remainder modules obscured");
+  await expect
+    .poll(() => diagnostic(page, "Logo bounds"))
+    .toBe(
+      "source (22, 20.0625) 13 × 4.875 modules · knockout (21, 19) 15 × 7 modules · 0 module protected clearance",
+    );
+  const renderedLogo = page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]').first();
+  await expect(renderedLogo).toHaveAttribute("x", "26");
+  await expect(renderedLogo).toHaveAttribute("y", "24.0625");
+  await expect(renderedLogo).toHaveAttribute("width", "13");
+  await expect(renderedLogo).toHaveAttribute("height", "4.8750");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
 test("uses compact dots and standard square finders without a shape control", async ({ page }) => {

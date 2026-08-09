@@ -175,9 +175,11 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
             record.label()
         );
         if record.outcome.is_renderable() && record.tuple.logo == LogoStyle::Bundled {
-            assert_eq!(
-                record.version,
-                Some(6),
+            let version = record.version.expect("branded rows record a version");
+            assert!(
+                version == 6
+                    || (record.tuple.profile.id() == qr_render::ProfileId::AdaptiveBranded
+                        && version <= 10),
                 "{} branded version",
                 record.label()
             );
@@ -186,7 +188,9 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
                 .expect("renderable branded rows record geometry");
             assert_eq!(placement.obscured_data_modules(), 105);
             assert_eq!(placement.obscured_remainder_modules(), 0);
-            assert_eq!(placement.protected_clearance(), 6);
+            if version == 6 {
+                assert_eq!(placement.protected_clearance(), 6);
+            }
         } else {
             assert!(
                 record.logo_placement.is_none(),

@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "tuple_dimensions": {
-    "profiles": 4,
+    "profiles": 5,
     "foregrounds": 1,
     "backgrounds": 2,
     "module_styles": 1,
     "finder_styles": 1,
     "logo_states": 2
   },
-  "profile_max_versions": [6, 8, 12, 13],
+  "profile_max_versions": [6, 8, 12, 13, 10],
   "required_payload_classes": [
     "short-url",
     "dense-url",
@@ -18,11 +18,23 @@
     "utf8-eci26"
   ],
   "version_coverage_payload_class": "ascii-byte",
+  "branded_geometry_policy": {
+    "fixed_profile_indices": [0, 1, 2, 3],
+    "adaptive_profile_index": 4,
+    "minimum_version": 6,
+    "adaptive_maximum_version": 10,
+    "source_width_ten_thousandths": 130000,
+    "source_height_ten_thousandths": 48750,
+    "adaptive_vertical_shift_modules_after_minimum": 6,
+    "knockout_padding_modules": 1,
+    "obscured_data_modules": 105,
+    "obscured_remainder_modules": 0
+  },
   "expected_rows": {
-    "required_payload": 96,
-    "version_coverage": 156,
-    "total": 252,
-    "decoded": 151,
-    "expected_invalid": 101
+    "required_payload": 120,
+    "version_coverage": 196,
+    "total": 316,
+    "decoded": 194,
+    "expected_invalid": 122
   }
 }

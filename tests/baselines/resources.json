@@ -3,6 +3,6 @@
   "approved_matrix": {
     "maximum_svg_bytes": 230189,
     "maximum_png_bytes": 14068,
-    "maximum_rgba_buffer_bytes": 921600
+    "maximum_rgba_buffer_bytes": 1166400
   }
 }

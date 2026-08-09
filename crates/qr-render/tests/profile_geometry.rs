@@ -35,6 +35,7 @@ fn supported_profiles_match_the_approved_output_contract() {
         (ProfileId::Content, 120, 360, 8),
         (ProfileId::Landing, 150, 450, 12),
         (ProfileId::Print, 160, 480, 13),
+        (ProfileId::AdaptiveBranded, 180, 540, 10),
     ];
 
     assert_eq!(SUPPORTED_PROFILES.len(), expected.len());
@@ -95,6 +96,7 @@ fn profile_ceiling_geometry_matches_the_approved_worked_examples() {
         (ProfileId::Content, 57, 6, 9),
         (ProfileId::Landing, 73, 6, 6),
         (ProfileId::Print, 77, 6, 9),
+        (ProfileId::AdaptiveBranded, 65, 8, 10),
     ];
 
     for (profile, (id, symbol_modules, scale, padding)) in SUPPORTED_PROFILES.iter().zip(expected) {
@@ -108,12 +110,15 @@ fn profile_ceiling_geometry_matches_the_approved_worked_examples() {
 
 #[test]
 fn scale_transitions_are_exercised_for_each_profile() {
-    let expected_scales: [&[u32]; 4] = [
+    let expected_scales: [&[u32]; 5] = [
         &[10, 8, 8, 6, 6, 6],
         &[12, 10, 8, 8, 8, 6, 6, 6],
         &[14, 12, 12, 10, 10, 8, 8, 6, 6, 6, 6, 6],
         &[16, 14, 12, 10, 10, 8, 8, 8, 6, 6, 6, 6, 6],
+        &[18, 16, 14, 12, 12, 10, 10, 8, 8, 8],
     ];
+
+    assert_eq!(SUPPORTED_PROFILES.len(), expected_scales.len());
 
     for (profile, expected) in SUPPORTED_PROFILES.iter().zip(expected_scales) {
         let actual: Vec<u32> = (1..=profile.maximum_version().number())

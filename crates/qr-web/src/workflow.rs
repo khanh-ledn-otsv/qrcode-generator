@@ -70,6 +70,11 @@ pub const fn profile_presentation(profile_id: ProfileId) -> ProfilePresentation 
             value: "print",
             guidance: PRINT_OUTPUT_GUIDANCE,
         },
+        ProfileId::AdaptiveBranded => ProfilePresentation {
+            name: "Adaptive Branded",
+            value: "adaptive-branded",
+            guidance: PRINT_OUTPUT_GUIDANCE,
+        },
     }
 }
 
@@ -362,6 +367,7 @@ pub enum WorkflowFailure {
     },
     OverCapacity {
         maximum_version: Version,
+        adaptive_recommended: bool,
     },
     UnsafeContrast {
         actual: ContrastRatio,
@@ -373,7 +379,9 @@ pub enum WorkflowFailure {
         maximum_version: Version,
         profile_name: &'static str,
     },
-    UnsafeLogoGeometry,
+    UnsafeLogoGeometry {
+        adaptive_recommended: bool,
+    },
     Internal,
 }
 
@@ -386,9 +394,13 @@ impl WorkflowFailure {
                 byte_length,
                 maximum,
             } => format!("The payload is {byte_length} bytes; the input limit is {maximum} bytes."),
-            Self::OverCapacity { maximum_version } => format!(
-                "The payload does not fit this profile's maximum QR version {}.",
-                maximum_version.number()
+            Self::OverCapacity {
+                maximum_version,
+                adaptive_recommended,
+            } => format!(
+                "The payload does not fit this profile's maximum QR version {}.{}",
+                maximum_version.number(),
+                adaptive_recommendation(*adaptive_recommended),
             ),
             Self::UnsafeContrast { actual, minimum } => format!(
                 "Opaque QR contrast is {}.{:02}:1; at least {}.{:02}:1 is required.",
@@ -409,10 +421,12 @@ impl WorkflowFailure {
                 minimum_version.number(),
                 maximum_version.number(),
             ),
-            Self::UnsafeLogoGeometry => {
-                "Logo mode is unavailable because no safe placement exists for this QR version."
-                    .to_owned()
-            }
+            Self::UnsafeLogoGeometry {
+                adaptive_recommended,
+            } => format!(
+                "Logo mode is unavailable because no safe placement exists for this QR version.{}",
+                adaptive_recommendation(*adaptive_recommended),
+            ),
             Self::Internal => INTERNAL_FAILURE_MESSAGE.to_owned(),
         }
     }
@@ -682,8 +696,9 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
                 LogoStyle::None
             })
         })
-        .map_err(classify_render_error)?;
-    let model = RenderModel::new(&encoded, options).map_err(classify_render_error)?;
+        .map_err(|error| classify_render_error(error, profile))?;
+    let model = RenderModel::new(&encoded, options)
+        .map_err(|error| classify_render_error(error, profile))?;
     let svg = render_svg(&model).map_err(|_| WorkflowFailure::Internal)?;
     let png = render_png(&model).map_err(|_| WorkflowFailure::Internal)?;
     let png_placement = model.png_placement();
@@ -793,6 +808,7 @@ fn classify_encode_error(
             EncodingError::PayloadTooLargeForProfile { .. } | EncodingError::PayloadTooLargeForQr,
         ) => WorkflowFailure::OverCapacity {
             maximum_version: profile.maximum_version(),
+            adaptive_recommended: profile.id() != ProfileId::AdaptiveBranded,
         },
         EncodeError::Payload(EncodingError::InvalidVersionRange { minimum, maximum })
             if request.logo_enabled =>
@@ -807,14 +823,24 @@ fn classify_encode_error(
     }
 }
 
-fn classify_render_error(error: RenderError) -> WorkflowFailure {
+fn classify_render_error(error: RenderError, profile: OutputProfile) -> WorkflowFailure {
     match error {
         RenderError::UnsafeContrast { actual, minimum } => {
             WorkflowFailure::UnsafeContrast { actual, minimum }
         }
         RenderError::LogoRequiresOpaqueWhite => WorkflowFailure::LogoRequiresOpaqueWhite,
-        RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry,
+        RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry {
+            adaptive_recommended: profile.id() != ProfileId::AdaptiveBranded,
+        },
         _ => WorkflowFailure::Internal,
+    }
+}
+
+const fn adaptive_recommendation(recommended: bool) -> &'static str {
+    if recommended {
+        " Try Adaptive Branded for long branded payloads."
+    } else {
+        ""
     }
 }
 

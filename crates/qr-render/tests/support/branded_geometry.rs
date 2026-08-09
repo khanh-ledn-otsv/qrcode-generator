@@ -47,6 +47,14 @@ pub struct LogoCandidate {
 
 impl LogoCandidate {
     pub fn checked(matrix: &ModuleMatrix, width_modules: u32) -> Option<Self> {
+        Self::checked_shifted(matrix, width_modules, 0)
+    }
+
+    pub fn checked_shifted(
+        matrix: &ModuleMatrix,
+        width_modules: u32,
+        vertical_offset_modules: i32,
+    ) -> Option<Self> {
         let matrix_width = u32::from(matrix.size());
         let source_width = width_modules.checked_mul(UNITS)?;
         let source_height = source_width.checked_mul(3)?.checked_div(8)?;
@@ -54,10 +62,16 @@ impl LogoCandidate {
             .checked_mul(UNITS)?
             .checked_sub(source_width)?
             .checked_div(2)?;
-        let source_top = matrix_width
+        let centered_top = matrix_width
             .checked_mul(UNITS)?
             .checked_sub(source_height)?
             .checked_div(2)?;
+        let offset_units = vertical_offset_modules.checked_mul(i32::try_from(UNITS).ok()?)?;
+        let source_top = if offset_units < 0 {
+            centered_top.checked_sub(offset_units.unsigned_abs())?
+        } else {
+            centered_top.checked_add(u32::try_from(offset_units).ok()?)?
+        };
         let left = source_left.checked_sub(UNITS)? / UNITS;
         let top = source_top.checked_sub(UNITS)? / UNITS;
         let right = div_ceil(

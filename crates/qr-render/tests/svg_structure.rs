@@ -11,7 +11,7 @@ use qr_render::{
 };
 use sha2::{Digest, Sha256};
 
-const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 4] = [
+const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 5] = [
     [[
         "f8a646a085a1210cbf6ad8301ad1839c36a3d80e37cba83b1e19581d2e4a7de7",
         "3164ec58af57186d0ce11cf79b24f87314781f0cdc6b0ba8999bb6218d66d243",
@@ -27,6 +27,10 @@ const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 4] = [
     [[
         "32edc0766a613b8088218533f80c80b01f12a33966da5cd8c968a023265443b1",
         "318dd2cd412fe2ab44dde0f12f2793f9f17bf44c86a523e055d121f5b8ff12d8",
+    ]],
+    [[
+        "8fc963d14e4948870984b001a188296c60a789b051ff71ab0b2ddfbd77e04f8a",
+        "f35ee0201f2a87cc4cdfb0c80e8bf4f48b99a43c515ec3ed24dc217dad507e40",
     ]],
 ];
 

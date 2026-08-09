@@ -102,7 +102,7 @@ fn only_approved_combinations_can_be_rendered_and_unsafe_contrast_is_typed() {
 fn generated_approved_color_background_profile_matrix_is_complete() {
     let combinations =
         SUPPORTED_PROFILES.len() * APPROVED_FOREGROUNDS.len() * APPROVED_BACKGROUNDS.len();
-    assert_eq!(combinations, 8);
+    assert_eq!(combinations, 10);
 
     for profile in SUPPORTED_PROFILES {
         for foreground in APPROVED_FOREGROUNDS {

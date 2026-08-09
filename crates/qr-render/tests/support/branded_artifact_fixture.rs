@@ -7,8 +7,8 @@ use qr_render::{
 use sha2::{Digest, Sha256};
 
 pub const PAYLOAD: &str = "cross-target branded artifact";
-pub const ENABLED_PROFILE_INDICES: [usize; 4] = [0, 1, 2, 3];
-pub const SHA256: [[&str; 2]; 4] = [
+pub const ENABLED_PROFILE_INDICES: [usize; 5] = [0, 1, 2, 3, 4];
+pub const SHA256: [[&str; 2]; 5] = [
     [
         "7372d764468601b4e0a104187871d7ab85e07f6e63a94a9bc97a4795f5cefa0a",
         "6326a6472d6db72de114669d3615ffe3e4a56a754db22aa341de45283f15f65b",
@@ -24,6 +24,10 @@ pub const SHA256: [[&str; 2]; 4] = [
     [
         "88455b572c015e2644f85b41dbe631c74944939d66f076e9838c18546422a5dc",
         "49c6e5d60bd8c0b8ac14b6988cf91e510ef83723792059f1fddc38c8e2ddfc36",
+    ],
+    [
+        "d217220872916a6e12ee35a626c0a697bdb02c1a661fdaa04a0cd85123c76bf4",
+        "d82acd0cdc3e11971ef9e24737ddfb89fdba395bb89854eed14115dfc2fdbf52",
     ],
 ];
 
@@ -49,7 +53,7 @@ pub fn artifacts(profile_index: usize) -> (Vec<u8>, Vec<u8>) {
     )
 }
 
-pub fn hashes() -> [[String; 2]; 4] {
+pub fn hashes() -> [[String; 2]; 5] {
     ENABLED_PROFILE_INDICES.map(|profile_index| {
         let (svg, png) = artifacts(profile_index);
         [sha256_hex(&svg), sha256_hex(&png)]

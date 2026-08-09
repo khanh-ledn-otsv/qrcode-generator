@@ -5,9 +5,11 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    Background, Foreground, LogoStyle, OutputSafety, RenderError, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES,
+    Background, Foreground, LogoStyle, OutputSafety, ProfileId, RenderError, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES,
 };
+
+const LONG_ONE_URL: &str = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
 
 #[test]
 fn version_six_uses_the_exact_decode_backed_centered_logo_placement() {
@@ -49,7 +51,61 @@ fn version_six_uses_the_exact_decode_backed_centered_logo_placement() {
 }
 
 #[test]
-fn only_the_reviewed_version_six_geometry_is_enabled_and_function_safe() {
+fn adaptive_branded_version_ten_uses_the_nearest_function_safe_logo_placement() {
+    let version_ten = Version::new(10).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
+        LONG_ONE_URL,
+        ErrorCorrection::High,
+        version_ten,
+        version_ten,
+    ))
+    .unwrap();
+    let profile = SUPPORTED_PROFILES
+        .into_iter()
+        .find(|profile| profile.id() == ProfileId::AdaptiveBranded)
+        .unwrap();
+    let options = RenderOptions::safe(profile)
+        .unwrap()
+        .with_logo(LogoStyle::Bundled)
+        .unwrap();
+    let placement = RenderModel::new(&encoded, options)
+        .unwrap()
+        .logo_placement()
+        .unwrap();
+    let source = placement.source_bounds();
+    let knockout = placement.knockout_bounds();
+
+    assert_eq!(source.left_ten_thousandths(), 220_000);
+    assert_eq!(source.top_ten_thousandths(), 200_625);
+    assert_eq!(source.width_ten_thousandths(), 130_000);
+    assert_eq!(source.height_ten_thousandths(), 48_750);
+    assert_eq!(
+        (
+            knockout.left().get(),
+            knockout.top().get(),
+            knockout.width().get(),
+            knockout.height().get(),
+        ),
+        (21, 19, 15, 7),
+    );
+    assert_eq!(placement.obscured_modules(), 105);
+
+    for y in knockout.top().get()..knockout.top().get() + knockout.height().get() {
+        for x in knockout.left().get()..knockout.left().get() + knockout.width().get() {
+            assert!(matches!(
+                encoded
+                    .modules()
+                    .module(u16::try_from(x).unwrap(), u16::try_from(y).unwrap())
+                    .unwrap()
+                    .kind(),
+                ModuleKind::Data | ModuleKind::Remainder
+            ));
+        }
+    }
+}
+
+#[test]
+fn every_enabled_fixed_and_adaptive_logo_placement_is_function_safe() {
     for profile in SUPPORTED_PROFILES {
         for version_number in 1..=profile.maximum_version().number() {
             let text = high_versions::payload_for_high_version(version_number).unwrap();
@@ -66,7 +122,9 @@ fn only_the_reviewed_version_six_geometry_is_enabled_and_function_safe() {
                 .with_logo(LogoStyle::Bundled)
                 .unwrap();
             let model = RenderModel::new(&encoded, options);
-            if version_number != 6 {
+            let adaptive = profile.id() == ProfileId::AdaptiveBranded;
+            let enabled = version_number == 6 || (adaptive && version_number > 6);
+            if !enabled {
                 assert_eq!(model.unwrap_err(), RenderError::UnsafeLogoGeometry);
                 continue;
             }
@@ -83,11 +141,19 @@ fn only_the_reviewed_version_six_geometry_is_enabled_and_function_safe() {
                 matrix_width * 10_000,
                 "version {version_number} logo is not horizontally centered",
             );
-            assert_eq!(
-                source.top_ten_thousandths() * 2 + source.height_ten_thousandths(),
-                matrix_width * 10_000,
-                "version {version_number} logo is not vertically centered",
-            );
+            if version_number == 6 {
+                assert_eq!(
+                    source.top_ten_thousandths() * 2 + source.height_ten_thousandths(),
+                    matrix_width * 10_000,
+                    "version {version_number} logo is not vertically centered",
+                );
+            } else {
+                assert_eq!(
+                    source.top_ten_thousandths() * 2 + source.height_ten_thousandths() + 120_000,
+                    matrix_width * 10_000,
+                    "version {version_number} logo is not shifted six modules upward",
+                );
+            }
 
             assert!(knockout.width().get() * 5 <= matrix_width * 2);
             assert!(knockout.height().get() * 5 <= matrix_width * 2);

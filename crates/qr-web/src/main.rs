@@ -341,6 +341,7 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Non-finder modules" value=move || diagnostic_value(state, |details| module_style_label(details.module_style()).to_owned()) />
                                 <Diagnostic label="Finders" value=move || diagnostic_value(state, |details| finder_style_label(details.finder_style()).to_owned()) />
                                 <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
+                                <Diagnostic label="Logo bounds" value=move || diagnostic_value(state, |details| logo_bounds_label(details.logo_placement())) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
                                 <Diagnostic label="Safety" value=move || diagnostic_value(state, |details| safety_label(details.safety()).to_owned()) />
                             </dl>
@@ -553,6 +554,38 @@ fn logo_label(style: LogoStyle, placement: Option<qr_render::LogoPlacement>) -> 
             placement.obscured_remainder_modules()
         ),
         (LogoStyle::Bundled, None) => "Unavailable".to_owned(),
+    }
+}
+
+fn logo_bounds_label(placement: Option<qr_render::LogoPlacement>) -> String {
+    let Some(placement) = placement else {
+        return "None".to_owned();
+    };
+    let source = placement.source_bounds();
+    let knockout = placement.knockout_bounds();
+    format!(
+        "source ({}, {}) {} × {} modules · knockout ({}, {}) {} × {} modules · {} module protected clearance",
+        module_decimal(source.left_ten_thousandths()),
+        module_decimal(source.top_ten_thousandths()),
+        module_decimal(source.width_ten_thousandths()),
+        module_decimal(source.height_ten_thousandths()),
+        knockout.left().get(),
+        knockout.top().get(),
+        knockout.width().get(),
+        knockout.height().get(),
+        placement.protected_clearance(),
+    )
+}
+
+fn module_decimal(ten_thousandths: u32) -> String {
+    let whole = ten_thousandths / 10_000;
+    let fractional = ten_thousandths % 10_000;
+    if fractional == 0 {
+        whole.to_string()
+    } else {
+        format!("{whole}.{fractional:04}")
+            .trim_end_matches('0')
+            .to_owned()
     }
 }
 

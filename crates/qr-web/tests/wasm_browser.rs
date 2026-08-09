@@ -63,6 +63,33 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
     assert!(state.exports_enabled());
 }
 
+#[wasm_bindgen_test]
+fn adaptive_branded_long_url_selects_version_ten_and_exports_on_wasm() {
+    let payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
+    let mut state = WorkflowState::new(ProfileId::AdaptiveBranded);
+    let request = state
+        .set_payload(payload.to_owned())
+        .expect("revision is available");
+    assert_eq!(request.payload(), payload);
+    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+
+    let diagnostics = state
+        .preview()
+        .expect("adaptive preview is ready")
+        .diagnostics();
+    assert_eq!(diagnostics.selected_version().number(), 10);
+    assert_eq!(diagnostics.maximum_version().number(), 10);
+    assert_eq!(diagnostics.module_scale(), 8);
+    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 520);
+    assert_eq!(diagnostics.outer_padding_per_side(), 10);
+    let placement = diagnostics.logo_placement().expect("adaptive placement");
+    assert_eq!(placement.source_bounds().left_ten_thousandths(), 220_000);
+    assert_eq!(placement.source_bounds().top_ten_thousandths(), 200_625);
+    assert_eq!(placement.knockout_bounds().left().get(), 21);
+    assert_eq!(placement.knockout_bounds().top().get(), 19);
+    assert!(state.exports_enabled());
+}
+
 #[wasm_bindgen_test(async)]
 async fn repeated_object_urls_are_revoked_instead_of_retained() {
     let mut state = WorkflowState::new(ProfileId::Content);
