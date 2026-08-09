@@ -14,6 +14,7 @@ from collect_release_readiness import (
     ResultEvidenceError,
     collect_build_evidence,
     collect_result_evidence,
+    validate_adverse_evidence,
 )
 from validate_release_readiness import (
     EvidenceError,
@@ -47,7 +48,101 @@ def automated_evidence() -> dict[str, Any]:
     }
 
 
+def approved_matrix_rows() -> list[dict[str, Any]]:
+    rows = []
+    for index in range(248):
+        decoded = index < 142
+        logo = index == 0
+        outcome = "decoded" if decoded else "expected-invalid"
+        artifact = {
+            "outcome": outcome,
+            "sha256": "a" * 64 if decoded else None,
+            "decoder_input_sha256": "b" * 64 if decoded else None,
+        }
+        rows.append(
+            {
+                "id": f"row-{index}",
+                "case_kind": "required-payload" if index < 96 else "version-coverage",
+                "profile_index": index % 4,
+                "background_index": index % 2,
+                "logo_state_index": 1 if logo else 0,
+                "payload_class": [
+                    "short-url",
+                    "dense-url",
+                    "numeric",
+                    "alphanumeric",
+                    "ascii-byte",
+                    "utf8-eci26",
+                ][index % 6],
+                "version": 6 if logo else index % 13 + 1,
+                "safety": "caution" if decoded else None,
+                "logo_geometry": {
+                    "source_ten_thousandths": [140000, 180625, 130000, 48750],
+                    "knockout_modules": [13, 17, 15, 7],
+                    "protected_clearance_modules": 6,
+                    "obscured_data_modules": 105,
+                    "obscured_remainder_modules": 0,
+                }
+                if logo
+                else None,
+                "artifacts": {"png": dict(artifact), "svg": dict(artifact)},
+            }
+        )
+    return rows
+
+
+def adverse_outcomes() -> list[dict[str, str]]:
+    outcomes = []
+    for configuration, safety, count in (
+        ("print-compact-dots", "safe", 13),
+        ("transparent-compact-dots", "caution", 10),
+        ("centered-logo", "caution", 6),
+    ):
+        outcomes.extend(
+            {
+                "configuration": configuration,
+                "safety": safety,
+                "transform": f"transform-{index}",
+                "decoder": "ZXingReader version 3.0.2",
+                "outcome": "decoded",
+            }
+            for index in range(count)
+        )
+    return outcomes
+
+
 class ReleaseReadinessEvidenceTests(unittest.TestCase):
+    def test_adverse_evidence_requires_each_documented_pass_envelope(self) -> None:
+        with TemporaryDirectory() as temporary:
+            evidence = Path(temporary) / "adverse.json"
+            evidence.write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "parameters": "tests/adverse/parameters.json",
+                        "seed": 20260807,
+                        "outcomes": adverse_outcomes()[:-6],
+                    }
+                )
+            )
+
+            with self.assertRaises(ResultEvidenceError):
+                validate_adverse_evidence(evidence)
+
+    def test_critical_workflow_gate_names_the_final_branded_browser_behaviors(self) -> None:
+        self.assertIn(
+            "uses compact dots and standard square finders without a shape control",
+            CRITICAL_WORKFLOW_TESTS,
+        )
+        self.assertIn(
+            "rejects a centered logo when the payload naturally selects Version 7",
+            CRITICAL_WORKFLOW_TESTS,
+        )
+        self.assertNotIn(
+            "uses square modules and standard square finders without a shape control",
+            CRITICAL_WORKFLOW_TESTS,
+        )
+
     def test_result_evidence_is_derived_from_chromium_and_required_files(self) -> None:
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -75,13 +170,27 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             report_path.write_text(json.dumps(report))
             evidence = root / "evidence"
             evidence.mkdir()
-            (evidence / "approved-output-matrix.json").write_text(json.dumps({"rows": [{}] * 96}))
-            (evidence / "adverse-decode.json").write_text(json.dumps({"outcomes": [{}]}))
+            (evidence / "approved-output-matrix.json").write_text(
+                json.dumps({"schema_version": 2, "rows": approved_matrix_rows()})
+            )
+            (evidence / "adverse-decode.json").write_text(
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "parameters": "tests/adverse/parameters.json",
+                        "seed": 20260807,
+                        "outcomes": adverse_outcomes(),
+                    }
+                )
+            )
 
             result = collect_result_evidence(report_path, evidence)
 
             self.assertEqual(set(result["browsers"]), set(REQUIRED_PROJECTS))
-            self.assertEqual(result["artifact_evidence"]["matrix_rows"], 96)
+            self.assertEqual(result["artifact_evidence"]["matrix_rows"], 248)
+            self.assertEqual(result["artifact_evidence"]["decoded_rows"], 142)
+            self.assertEqual(result["artifact_evidence"]["expected_invalid_rows"], 106)
+            self.assertEqual(result["artifact_evidence"]["adverse_outcomes"], 29)
 
     def test_result_evidence_rejects_a_missing_required_project(self) -> None:
         with TemporaryDirectory() as temporary:

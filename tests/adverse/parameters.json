@@ -1,6 +1,55 @@
 {
   "schema_version": 1,
   "seed": 20260807,
+  "pass_envelopes": [
+    {
+      "configuration": "print-compact-dots",
+      "safety": "safe",
+      "transforms": [
+        "blur-r0.35",
+        "scale-80-percent",
+        "jpeg-q92",
+        "rotate-0.5-degrees",
+        "perspective-1-percent",
+        "contrast-minus-8",
+        "brightness-plus-6",
+        "light-gray-background",
+        "dark-gray-background",
+        "patterned-light-background",
+        "dot-gain-radius-1",
+        "ink-loss-period-997",
+        "grayscale-luma"
+      ]
+    },
+    {
+      "configuration": "transparent-compact-dots",
+      "safety": "caution",
+      "transforms": [
+        "blur-r0.35",
+        "scale-80-percent",
+        "jpeg-q92",
+        "rotate-0.5-degrees",
+        "contrast-minus-8",
+        "brightness-plus-6",
+        "light-gray-background",
+        "dark-gray-background",
+        "patterned-light-background",
+        "grayscale-luma"
+      ]
+    },
+    {
+      "configuration": "centered-logo",
+      "safety": "caution",
+      "transforms": [
+        "blur-r0.35",
+        "scale-80-percent",
+        "jpeg-q92",
+        "contrast-minus-8",
+        "brightness-plus-6",
+        "grayscale-luma"
+      ]
+    }
+  ],
   "transforms": [
     { "id": "blur-r0.35", "kind": "blur", "sigma": 0.35 },
     { "id": "scale-80-percent", "kind": "scaling", "percent": 80 },

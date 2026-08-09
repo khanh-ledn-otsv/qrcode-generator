@@ -75,16 +75,22 @@ pnpm run release:evidence
 ```
 
 This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
-hashes under `target/release-evidence/`. Each of the 96 generated matrix rows
-identifies the six configuration dimensions plus its payload class. Renderable
-rows record safety and a ZXing decode; unsupported logo/background or centered
-logo geometry records the expected typed rejection.
+hashes under `target/release-evidence/`. The matrix has 248 generated scenario
+rows: 96 required-payload rows and 152 exact-version coverage rows spanning all
+compiled profile, background, logo, payload, and enabled-version paths. Each row
+contains matched native-PNG and independently rasterized SVG evidence. The 142
+renderable rows record safety, deterministic artifact and decoder-input hashes,
+a ZXing decode, and reviewed logo geometry where applicable; the 106 unsupported
+logo/background or centered-logo geometry rows record the expected typed
+rejection.
 `tests/adverse/parameters.json` is the versioned transform manifest. The adverse
-evidence applies the named transforms to the safe square baseline, transparent
-output, and logo output. It compares decoded pixels before
-invoking ZXing and includes light, darker, and patterned placement backgrounds;
-each evidence row records the configuration, safety class, transform, decoder,
-and outcome.
+evidence records exactly 29 decoded outcomes across three declared envelopes:
+all 13 transforms for a low-density opaque Print compact-dot symbol (`safe`),
+10 placement-relevant transforms for transparent compact dots (`caution`), and
+six transforms for the centered Version 6 Print logo (`caution`). It compares
+decoded pixels before invoking ZXing and includes light, darker, and patterned
+placement backgrounds; each evidence row records the configuration, safety
+class, transform, decoder, and outcome.
 
 Approved matrix artifact and allocation ceilings live in
 `tests/baselines/resources.json` and are exercised in ordinary native tests.

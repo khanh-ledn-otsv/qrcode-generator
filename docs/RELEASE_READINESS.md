@@ -11,7 +11,7 @@ From a clean worktree, run setup and the readiness gate:
 pnpm run release:readiness
 ```
 
-The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs desktop Chromium with Playwright retries disabled, and runs the approved-output decoder evidence. It writes the machine evidence and final report under `target/release-readiness/`.
+The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs desktop Chromium with Playwright retries disabled, and validates the 248-row dual-format approved-output matrix plus all 29 declared adverse-decoder outcomes. It writes the machine evidence and final report under `target/release-readiness/`.
 
 ## Acceptance-criterion map
 
@@ -20,7 +20,7 @@ The command verifies pinned tool versions, produces two release builds in separa
 | No runtime payload or logo requests | Playwright privacy test in Chromium | `automated.network_inspection` |
 | Clean pinned reproducible build | tool capture plus two artifact hash maps | `automated.reproducible_builds` |
 | Chromium critical paths, downloads, and privacy with zero retries | desktop Chromium with `retries: 0` | `automated.browsers`, `automated.downloads` |
-| Approved artifact combinations and adverse decoding | generated decoder evidence | `automated.artifact_evidence` |
+| All approved payload/version paths, typed geometry rejections, and adverse decoding | generated PNG/SVG hashes, geometry facts, and pinned-decoder evidence | `automated.artifact_evidence` |
 | SVG-first, sizing, transparent/logo, and environment guidance | browser assertion against visible guidance | `automated.guidance` |
 
 The validator rejects missing tests, retry-based browser results, mismatched builds, invalid hashes, runtime network requests, or incomplete artifact evidence.

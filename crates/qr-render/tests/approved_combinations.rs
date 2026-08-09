@@ -5,6 +5,8 @@ mod styling;
 #[path = "support/versions.rs"]
 mod versions;
 
+use std::collections::HashSet;
+
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
     APPROVED_MODULE_STYLES, Background, FinderStyle, LogoStyle, ModuleStyle, Rgba,
@@ -36,9 +38,54 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
 fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
     let records = styling::approved_combination_records().expect("matrix generation succeeds");
 
-    assert_eq!(records.len(), 16 * styling::REQUIRED_PAYLOAD_CLASSES.len());
+    let required_payload_rows = 16 * styling::REQUIRED_PAYLOAD_CLASSES.len();
+    let tuple_version_rows = SUPPORTED_PROFILES
+        .iter()
+        .map(|profile| usize::from(profile.maximum_version().number()) * 4)
+        .sum::<usize>();
+    assert_eq!(required_payload_rows, 96);
+    assert_eq!(tuple_version_rows, 152);
+    assert_eq!(records.len(), required_payload_rows + tuple_version_rows);
+    assert_eq!(
+        records
+            .iter()
+            .map(styling::ApprovedCombinationRecord::label)
+            .collect::<HashSet<_>>()
+            .len(),
+        records.len(),
+        "every matrix scenario needs a stable unique evidence ID"
+    );
 
-    for record in records {
+    for tuple in styling::approved_style_tuples() {
+        let tuple_records = records
+            .iter()
+            .filter(|record| record.tuple.label() == tuple.label())
+            .collect::<Vec<_>>();
+        let payload_classes = tuple_records
+            .iter()
+            .filter(|record| record.case_kind == styling::MatrixCaseKind::RequiredPayload)
+            .map(|record| record.payload_class)
+            .collect::<HashSet<_>>();
+        assert_eq!(
+            payload_classes,
+            styling::REQUIRED_PAYLOAD_CLASSES.into_iter().collect(),
+            "{} required payload coverage",
+            tuple.label()
+        );
+        let versions = tuple_records
+            .iter()
+            .filter(|record| record.case_kind == styling::MatrixCaseKind::VersionCoverage)
+            .map(|record| record.version.expect("version rows identify their version"))
+            .collect::<HashSet<_>>();
+        assert_eq!(
+            versions,
+            (1..=tuple.profile.maximum_version().number()).collect(),
+            "{} version coverage",
+            tuple.label()
+        );
+    }
+
+    for record in &records {
         if record.outcome.is_renderable() {
             assert_eq!(
                 record.outcome.safety(),
@@ -59,5 +106,25 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
             "{}",
             record.label()
         );
+        if record.outcome.is_renderable() && record.tuple.logo == LogoStyle::Bundled {
+            assert_eq!(
+                record.version,
+                Some(6),
+                "{} branded version",
+                record.label()
+            );
+            let placement = record
+                .logo_placement
+                .expect("renderable branded rows record geometry");
+            assert_eq!(placement.obscured_data_modules(), 105);
+            assert_eq!(placement.obscured_remainder_modules(), 0);
+            assert_eq!(placement.protected_clearance(), 6);
+        } else {
+            assert!(
+                record.logo_placement.is_none(),
+                "{} geometry",
+                record.label()
+            );
+        }
     }
 }

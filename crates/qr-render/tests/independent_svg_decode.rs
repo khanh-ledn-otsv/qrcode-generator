@@ -1,4 +1,6 @@
+use std::collections::HashSet;
 use std::error::Error;
+use std::fs;
 use std::path::Path;
 
 use fixture_tool::{
@@ -25,6 +27,8 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
         manifest.decoder().source_commit(),
     );
     let output = tempfile::tempdir()?;
+    let mut matrix_outcomes = Vec::new();
+    let mut decoded_matrix_labels = HashSet::new();
 
     let mut case_index = 0;
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
@@ -66,8 +70,10 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
     }
 
     for case in styling::approved_decode_cases()? {
+        let label = case.label.clone();
         let model = RenderModel::new(&case.encoded, case.options)?;
         let svg = render_svg(&model)?;
+        let artifact_sha256 = styling::sha256_hex(svg.as_bytes());
         let dimensions = case.options.profile().png_dimensions();
         let pixmap =
             raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
@@ -75,11 +81,12 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
             .path()
             .join(format!("svg-approved-{}.png", case.label));
         pixmap.save_png(&artifact)?;
+        let decoder_input_sha256 = styling::sha256_hex(&fs::read(&artifact)?);
         decoder
             .inspect_and_compare(
                 &artifact,
                 &DecodeExpectation {
-                    payload: case.payload,
+                    payload: case.payload.clone(),
                     version: QrVersion::new(case.encoded.version().number())?,
                     ecc: fixture_ecc(case.ecc),
                     eci_assignment: case
@@ -89,6 +96,48 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
                 },
             )
             .map_err(|error| format!("approved SVG case {}: {error}", case.label))?;
+        decoded_matrix_labels.insert(label);
+        matrix_outcomes.push(styling::decoded_evidence(
+            &case,
+            "svg",
+            artifact_sha256,
+            decoder_input_sha256,
+        ));
+    }
+
+    let records = styling::approved_combination_records()?;
+    let expected_renderable = records
+        .iter()
+        .filter(|record| record.outcome.is_renderable())
+        .count();
+    if decoded_matrix_labels.len() != expected_renderable {
+        return Err(format!(
+            "decoded {} approved SVG matrix rows; expected {expected_renderable}",
+            decoded_matrix_labels.len()
+        )
+        .into());
+    }
+    for record in records {
+        if let Some(error) = record.outcome.expected_error() {
+            matrix_outcomes.push(styling::invalid_evidence(&record, "svg", error));
+        }
+    }
+    matrix_outcomes.sort_by(|left, right| left["id"].as_str().cmp(&right["id"].as_str()));
+    if let Some(evidence_dir) = std::env::var_os("QR_RELEASE_EVIDENCE_DIR") {
+        let configured = Path::new(&evidence_dir);
+        let evidence_dir = if configured.is_absolute() {
+            configured.to_path_buf()
+        } else {
+            workspace.join(configured)
+        };
+        fs::create_dir_all(&evidence_dir)?;
+        fs::write(
+            evidence_dir.join("approved-output-svg.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "rows": matrix_outcomes,
+            }))?,
+        )?;
     }
     Ok(())
 }

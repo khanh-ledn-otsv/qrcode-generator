@@ -355,6 +355,15 @@ For each approved tuple of foreground, background/transparency, finder style, lo
 
 The generated coverage test must fail if a new approved enum variant is not included in the matrix.
 
+The release evidence contains 248 generated scenario rows: 96 required-payload
+rows (six payload classes for each compiled profile/background/logo tuple) and
+152 exact-version rows (every version admitted by each profile for the same
+background/logo choices). Both the native PNG and independently rasterized SVG
+artifact are hashed and passed to the pinned decoder for each accepted row.
+There are 142 accepted rows and 106 expected-invalid rows. Accepted logo rows
+must record the reviewed Version 6 placement facts; all other logo versions and
+profiles below the branded minimum record their typed rejection.
+
 The branded-geometry approval experiment is replayed separately with:
 
 - every centered dot diameter from 0.45 through 0.60 module in 0.01-module
@@ -403,6 +412,14 @@ Keep transforms deterministic with named parameters and seeds. Start with separa
 - simulated print dot gain, ink loss, and grayscale conversion.
 
 Define a baseline pass envelope before launch from real approved outputs. Do not invent universal thresholds. Safe presets should meet a stronger envelope than logo caution presets. Store transform parameters and decoder outcomes as machine-readable release evidence.
+
+The release-1 manifest defines three explicit pass envelopes rather than a
+universal compact-dot claim: a low-density opaque Print symbol passes all 13
+named transforms and is classified safe; transparent compact dots pass 10
+placement-relevant transforms as a caution; and the centered Version 6 logo on
+the Print profile passes six transforms as a caution. The exact fixture payload,
+seed, parameters, membership, safety, decoder version, and 29 outcomes are
+machine-validated release evidence.
 
 ## 7. Web and WASM tests
 

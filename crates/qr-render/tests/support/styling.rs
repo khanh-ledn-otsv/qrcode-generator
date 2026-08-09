@@ -4,10 +4,11 @@ use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
-    APPROVED_MODULE_STYLES, BRANDED_LOGO_VERSION, Background, FinderStyle, Foreground, LogoStyle,
-    ModuleStyle, OutputProfile, OutputSafety, RenderError, RenderModel, RenderOptions,
-    SUPPORTED_PROFILES,
+    APPROVED_MODULE_STYLES, BRANDED_LOGO_VERSION, Background, FinderStyle, Foreground,
+    LogoPlacement, LogoStyle, ModuleStyle, OutputProfile, OutputSafety, RenderError, RenderModel,
+    RenderOptions, SUPPORTED_PROFILES,
 };
+use sha2::{Digest, Sha256};
 
 #[derive(Clone, Copy)]
 pub struct ApprovedStyleTuple {
@@ -97,7 +98,7 @@ pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
     tuples
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum PayloadClass {
     ShortUrl,
     DenseUrl,
@@ -130,6 +131,7 @@ pub const REQUIRED_PAYLOAD_CLASSES: [PayloadClass; 6] = [
 ];
 
 pub struct DecodeCase {
+    pub kind: MatrixCaseKind,
     pub class: PayloadClass,
     pub label: String,
     pub text: String,
@@ -137,15 +139,33 @@ pub struct DecodeCase {
     pub expected_version: Option<u8>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum MatrixCaseKind {
+    RequiredPayload,
+    VersionCoverage,
+}
+
+impl MatrixCaseKind {
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::RequiredPayload => "required-payload",
+            Self::VersionCoverage => "version-coverage",
+        }
+    }
+}
+
 pub struct PreparedDecodeCase {
     pub label: String,
+    pub case_label: String,
     pub tuple: ApprovedStyleTuple,
     pub payload_class: PayloadClass,
+    pub case_kind: MatrixCaseKind,
     pub payload: Vec<u8>,
     pub eci_assignment: Option<u32>,
     pub ecc: ErrorCorrection,
     pub encoded: EncodedQr,
     pub options: RenderOptions,
+    pub logo_placement: Option<LogoPlacement>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -181,6 +201,10 @@ impl CombinationOutcome {
 pub struct ApprovedCombinationRecord {
     pub tuple: ApprovedStyleTuple,
     pub payload_class: PayloadClass,
+    pub case_kind: MatrixCaseKind,
+    pub case_label: String,
+    pub version: Option<u8>,
+    pub logo_placement: Option<LogoPlacement>,
     pub outcome: CombinationOutcome,
 }
 
@@ -189,35 +213,170 @@ impl ApprovedCombinationRecord {
         format!(
             "{}-{}",
             self.tuple.label().replace('/', "-"),
-            self.payload_class.label()
+            self.case_label
         )
     }
+}
+
+pub fn decoded_evidence(
+    case: &PreparedDecodeCase,
+    format: &'static str,
+    artifact_sha256: String,
+    decoder_input_sha256: String,
+) -> serde_json::Value {
+    evidence_row(
+        &case.label,
+        &case.case_label,
+        case.tuple,
+        case.payload_class,
+        case.case_kind,
+        Some(case.encoded.version().number()),
+        Some(case.options.safety()),
+        case.logo_placement,
+        serde_json::json!({
+            "format": format,
+            "outcome": "decoded",
+            "sha256": artifact_sha256,
+            "decoder_input_sha256": decoder_input_sha256,
+        }),
+    )
+}
+
+pub fn invalid_evidence(
+    record: &ApprovedCombinationRecord,
+    format: &'static str,
+    error: RenderError,
+) -> serde_json::Value {
+    evidence_row(
+        &record.label(),
+        &record.case_label,
+        record.tuple,
+        record.payload_class,
+        record.case_kind,
+        record.version,
+        None,
+        None,
+        serde_json::json!({
+            "format": format,
+            "outcome": "expected-invalid",
+            "error": error.to_string(),
+            "sha256": null,
+            "decoder_input_sha256": null,
+        }),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn evidence_row(
+    id: &str,
+    case_label: &str,
+    tuple: ApprovedStyleTuple,
+    payload_class: PayloadClass,
+    case_kind: MatrixCaseKind,
+    version: Option<u8>,
+    safety: Option<OutputSafety>,
+    logo_placement: Option<LogoPlacement>,
+    artifact: serde_json::Value,
+) -> serde_json::Value {
+    let profile = tuple.profile;
+    serde_json::json!({
+        "id": id,
+        "case_kind": case_kind.label(),
+        "case_label": case_label,
+        "profile_index": tuple.profile_index,
+        "profile": format!("{:?}", profile.id()),
+        "foreground_index": tuple.foreground_index,
+        "background_index": tuple.background_index,
+        "module_style_index": tuple.module_style_index,
+        "finder_style_index": tuple.finder_index,
+        "logo_state_index": tuple.logo_index,
+        "payload_class": payload_class.label(),
+        "ecc": format!("{:?}", tuple.ecc()),
+        "version": version,
+        "matrix_modules": version.map(|number| 17 + u16::from(number) * 4),
+        "svg_dimensions": [profile.svg_dimensions().width().get(), profile.svg_dimensions().height().get()],
+        "png_dimensions": [profile.png_dimensions().width().get(), profile.png_dimensions().height().get()],
+        "safety": safety.map(safety_label),
+        "logo_geometry": logo_placement.map(logo_geometry),
+        "artifact": artifact,
+    })
+}
+
+fn logo_geometry(placement: LogoPlacement) -> serde_json::Value {
+    let source = placement.source_bounds();
+    let knockout = placement.knockout_bounds();
+    serde_json::json!({
+        "source_ten_thousandths": [
+            source.left_ten_thousandths(),
+            source.top_ten_thousandths(),
+            source.width_ten_thousandths(),
+            source.height_ten_thousandths(),
+        ],
+        "knockout_modules": [
+            knockout.left().get(),
+            knockout.top().get(),
+            knockout.width().get(),
+            knockout.height().get(),
+        ],
+        "protected_clearance_modules": placement.protected_clearance(),
+        "obscured_data_modules": placement.obscured_data_modules(),
+        "obscured_remainder_modules": placement.obscured_remainder_modules(),
+    })
+}
+
+const fn safety_label(safety: OutputSafety) -> &'static str {
+    match safety {
+        OutputSafety::Safe => "safe",
+        OutputSafety::Caution => "caution",
+    }
+}
+
+pub fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 pub fn approved_combination_records() -> Result<Vec<ApprovedCombinationRecord>, Box<dyn Error>> {
     let mut records = Vec::new();
     for tuple in approved_style_tuples() {
-        for case in required_payload_cases(tuple.profile, tuple.ecc())? {
+        for case in matrix_cases(tuple)? {
             let payload_class = case.class;
-            let outcome = match prepare_decode_case(tuple, case) {
-                Ok(_) => CombinationOutcome::Renderable {
-                    safety: tuple
-                        .expected_safety()
-                        .ok_or("renderable tuple has no safety classification")?,
-                },
+            let case_kind = case.kind;
+            let case_label = case.label.clone();
+            let requested_version = case.expected_version;
+            let (outcome, version, logo_placement) = match prepare_decode_case(tuple, case) {
+                Ok(prepared) => (
+                    CombinationOutcome::Renderable {
+                        safety: tuple
+                            .expected_safety()
+                            .ok_or("renderable tuple has no safety classification")?,
+                    },
+                    Some(prepared.encoded.version().number()),
+                    prepared.logo_placement,
+                ),
                 Err(error)
                     if matches!(
                         error,
                         RenderError::LogoRequiresOpaqueWhite | RenderError::UnsafeLogoGeometry
                     ) =>
                 {
-                    CombinationOutcome::ExpectedInvalid { error }
+                    (
+                        CombinationOutcome::ExpectedInvalid { error },
+                        requested_version,
+                        None,
+                    )
                 }
                 Err(error) => return Err(error.into()),
             };
             records.push(ApprovedCombinationRecord {
                 tuple,
                 payload_class,
+                case_kind,
+                case_label,
+                version,
+                logo_placement,
                 outcome,
             });
         }
@@ -228,7 +387,7 @@ pub fn approved_combination_records() -> Result<Vec<ApprovedCombinationRecord>, 
 pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>> {
     let mut prepared = Vec::new();
     for tuple in approved_style_tuples() {
-        for case in required_payload_cases(tuple.profile, tuple.ecc())? {
+        for case in matrix_cases(tuple)? {
             match prepare_decode_case(tuple, case) {
                 Ok(case) => prepared.push(case),
                 Err(RenderError::LogoRequiresOpaqueWhite | RenderError::UnsafeLogoGeometry) => {}
@@ -237,38 +396,25 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
         }
     }
 
-    for version in [1, 2, 5, 6, 7, 8, 12, 13] {
-        let (profile_index, profile) = SUPPORTED_PROFILES
-            .into_iter()
-            .enumerate()
-            .find(|(_, profile)| version <= profile.maximum_version().number())
-            .ok_or("transition version has no supporting profile")?;
-        let tuple = ApprovedStyleTuple {
-            profile_index,
-            foreground_index: 0,
-            background_index: 0,
-            module_style_index: 0,
-            finder_index: 0,
-            logo_index: 0,
-            profile,
-            foreground: Foreground::Brand,
-            background: APPROVED_BACKGROUNDS[0],
-            module_style: APPROVED_MODULE_STYLES[0],
-            finder: APPROVED_FINDERS[0],
-            logo: LogoStyle::None,
-        };
-        prepared.push(prepare_decode_case(
-            tuple,
-            DecodeCase {
-                class: PayloadClass::AsciiByte,
-                label: format!("transition-version-{version}"),
-                text: "a".repeat(crate::versions::first_byte_length(version)),
-                eci_assignment: None,
-                expected_version: Some(version),
-            },
-        )?);
-    }
     Ok(prepared)
+}
+
+fn matrix_cases(tuple: ApprovedStyleTuple) -> Result<Vec<DecodeCase>, Box<dyn Error>> {
+    let mut cases = required_payload_cases(tuple.profile, tuple.ecc())?;
+    for version in 1..=tuple.profile.maximum_version().number() {
+        cases.push(DecodeCase {
+            kind: MatrixCaseKind::VersionCoverage,
+            class: PayloadClass::AsciiByte,
+            label: format!("version-v{version}"),
+            text: "a".repeat(crate::versions::first_byte_length_at_ecc(
+                version,
+                tuple.ecc(),
+            )),
+            eci_assignment: None,
+            expected_version: Some(version),
+        });
+    }
+    Ok(cases)
 }
 
 fn prepare_decode_case(
@@ -276,8 +422,14 @@ fn prepare_decode_case(
     case: DecodeCase,
 ) -> Result<PreparedDecodeCase, RenderError> {
     let payload_class = case.class;
+    let case_kind = case.kind;
+    let case_label = case.label.clone();
     let options = tuple.options()?;
-    let request = if tuple.logo == LogoStyle::Bundled
+    let request = if let Some(version) = case.expected_version {
+        let version =
+            qr_core::Version::try_from(version).map_err(|_| RenderError::RenderFailure)?;
+        EncodeRequest::with_version_range(&case.text, tuple.ecc(), version, version)
+    } else if tuple.logo == LogoStyle::Bundled
         && tuple.profile.maximum_version() >= BRANDED_LOGO_VERSION
     {
         EncodeRequest::with_version_range(
@@ -299,16 +451,20 @@ fn prepare_decode_case(
     if options.safety() != tuple.expected_safety().ok_or(RenderError::RenderFailure)? {
         return Err(RenderError::RenderFailure);
     }
-    RenderModel::new(&encoded, options)?;
+    let model = RenderModel::new(&encoded, options)?;
+    let logo_placement = model.logo_placement();
     Ok(PreparedDecodeCase {
         label: format!("{}-{}", tuple.label().replace('/', "-"), case.label),
+        case_label,
         tuple,
         payload_class,
+        case_kind,
         payload: case.text.into_bytes(),
         eci_assignment: case.eci_assignment,
         ecc: tuple.ecc(),
         encoded,
         options,
+        logo_placement,
     })
 }
 
@@ -319,6 +475,7 @@ pub fn required_payload_cases(
     let dense_url = dense_url_at_profile_ceiling(profile, ecc)?;
     Ok(vec![
         DecodeCase {
+            kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::ShortUrl,
             label: PayloadClass::ShortUrl.label().to_owned(),
             text: "https://example.test/a".to_owned(),
@@ -326,6 +483,7 @@ pub fn required_payload_cases(
             expected_version: None,
         },
         DecodeCase {
+            kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::DenseUrl,
             label: PayloadClass::DenseUrl.label().to_owned(),
             text: dense_url,
@@ -333,6 +491,7 @@ pub fn required_payload_cases(
             expected_version: Some(profile.maximum_version().number()),
         },
         DecodeCase {
+            kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::Numeric,
             label: PayloadClass::Numeric.label().to_owned(),
             text: "12345678901234567890".to_owned(),
@@ -340,6 +499,7 @@ pub fn required_payload_cases(
             expected_version: None,
         },
         DecodeCase {
+            kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::Alphanumeric,
             label: PayloadClass::Alphanumeric.label().to_owned(),
             text: "APPROVED OUTPUT 123".to_owned(),
@@ -347,6 +507,7 @@ pub fn required_payload_cases(
             expected_version: None,
         },
         DecodeCase {
+            kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::AsciiByte,
             label: PayloadClass::AsciiByte.label().to_owned(),
             text: "lowercase-ascii-output".to_owned(),
@@ -354,6 +515,7 @@ pub fn required_payload_cases(
             expected_version: None,
         },
         DecodeCase {
+            kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::Utf8Eci26,
             label: PayloadClass::Utf8Eci26.label().to_owned(),
             text: "café output".to_owned(),

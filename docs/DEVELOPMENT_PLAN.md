@@ -140,6 +140,15 @@ candidate evidence is committed in
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
+Release evidence exhausts the selectable surface with 248 generated scenarios:
+96 required-payload rows and 152 exact-version rows. Native PNG and independently
+rasterized SVG artifacts share one scenario identity and record deterministic
+hashes, safety, decode outcome, and Version 6 logo geometry. The resulting policy
+has 142 accepted rows and 106 typed expected rejections. Deterministic adverse
+evidence separately records 29 outcomes across explicit safe opaque-Print,
+transparent-caution, and centered-logo-caution pass envelopes; it does not imply
+that every compact-dot density passes every transform.
+
 The exported symbol always retains exactly four quiet-zone modules per side.
 Decorative export borders, frames, labels, and strokes remain excluded; fixed
 PNG canvas surplus is background-only.

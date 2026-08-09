@@ -37,6 +37,16 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
             "grayscale",
         ]
     );
+    assert_eq!(
+        suite.envelope_ids("print-compact-dots")?,
+        suite
+            .transforms()
+            .iter()
+            .map(|transform| transform.id())
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(suite.envelope_ids("transparent-compact-dots")?.len(), 10);
+    assert_eq!(suite.envelope_ids("centered-logo")?.len(), 6);
     Ok(())
 }
 
@@ -46,7 +56,7 @@ fn adverse_transforms_are_reproducible_and_preserve_canvas_dimensions() -> Resul
     let encoded = encode(EncodeRequest::first_fit(
         "https://example.test/adverse",
         ErrorCorrection::Medium,
-        SUPPORTED_PROFILES[1].maximum_version(),
+        SUPPORTED_PROFILES[3].maximum_version(),
     ))?;
     let options = RenderOptions::approved(
         SUPPORTED_PROFILES[1],
@@ -89,16 +99,16 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         &source_checkout,
         manifest.decoder().source_commit(),
     );
-    let safe_payload = "https://example.test/adverse-envelope";
+    let safe_payload = "https://x.test";
     let safe_encoded = encode(EncodeRequest::first_fit(
         safe_payload,
         ErrorCorrection::Medium,
-        SUPPORTED_PROFILES[1].maximum_version(),
+        SUPPORTED_PROFILES[3].maximum_version(),
     ))?;
     let safe_source = render_png(&RenderModel::new(
         &safe_encoded,
         RenderOptions::approved(
-            SUPPORTED_PROFILES[1],
+            SUPPORTED_PROFILES[3],
             Foreground::Brand,
             Background::Opaque(qr_render::Rgba::WHITE),
         )?,
@@ -137,11 +147,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         logo_payload,
         ErrorCorrection::High,
         Version::try_from(6)?,
-        SUPPORTED_PROFILES[1].maximum_version(),
+        SUPPORTED_PROFILES[3].maximum_version(),
     ))?;
     let logo_source = render_png(&RenderModel::new(
         &logo_encoded,
-        RenderOptions::safe(SUPPORTED_PROFILES[1])?.with_logo(LogoStyle::Bundled)?,
+        RenderOptions::safe(SUPPORTED_PROFILES[3])?.with_logo(LogoStyle::Bundled)?,
     )?)?;
     let logo_expected = DecodeExpectation {
         payload: logo_payload.as_bytes().to_vec(),
@@ -151,41 +161,22 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     };
 
     let configurations = [
-        ("safe-square", "safe", safe_source, safe_expected),
+        ("print-compact-dots", safe_source, safe_expected),
         (
-            "transparent",
-            "caution",
+            "transparent-compact-dots",
             transparent_source,
             transparent_expected,
         ),
-        ("logo", "caution", logo_source, logo_expected),
+        ("centered-logo", logo_source, logo_expected),
     ];
     let suite = adverse::TransformSuite::load()?;
     let output = tempfile::tempdir()?;
     let mut outcomes = Vec::new();
 
-    for (configuration, safety, source, expected) in configurations {
+    for (configuration, source, expected) in configurations {
+        let safety = suite.envelope_safety(configuration)?;
         for transform in suite.transforms() {
-            let included = match configuration {
-                "safe-square" => true,
-                "transparent" => matches!(
-                    transform.kind(),
-                    "blur"
-                        | "scaling"
-                        | "jpeg"
-                        | "rotation"
-                        | "contrast"
-                        | "brightness"
-                        | "background"
-                        | "grayscale"
-                ),
-                "logo" => matches!(
-                    transform.kind(),
-                    "blur" | "scaling" | "jpeg" | "contrast" | "brightness" | "grayscale"
-                ),
-                _ => false,
-            };
-            if !included {
+            if !suite.includes(configuration, transform.id())? {
                 continue;
             }
             let artifact = output

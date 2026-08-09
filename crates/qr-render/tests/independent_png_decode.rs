@@ -75,13 +75,14 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
 
     for case in styling::approved_decode_cases()? {
         let label = case.label.clone();
-        let safety = safety_label(case.options.safety());
         let model = RenderModel::new(&case.encoded, case.options)?;
         let png = render_png(&model)?;
+        let artifact_sha256 = styling::sha256_hex(&png);
         let effective_png = match case.options.background() {
             Background::Transparent => composite_on_white(&png)?,
             Background::Opaque(_) => png,
         };
+        let decoder_input_sha256 = styling::sha256_hex(&effective_png);
         let artifact = output
             .path()
             .join(format!("png-approved-{}.png", case.label));
@@ -90,7 +91,7 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
             .inspect_and_compare(
                 &artifact,
                 &DecodeExpectation {
-                    payload: case.payload,
+                    payload: case.payload.clone(),
                     version: QrVersion::new(case.encoded.version().number())?,
                     ecc: fixture_ecc(case.ecc),
                     eci_assignment: case
@@ -100,22 +101,13 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
                 },
             )
             .map_err(|error| format!("approved PNG case {}: {error}", case.label))?;
-        if !label.contains("transition-version-") {
-            decoded_matrix_labels.insert(label.clone());
-            matrix_outcomes.push(serde_json::json!({
-                "id": label,
-                "format": "png",
-                "profile_index": case.tuple.profile_index,
-                "foreground_index": case.tuple.foreground_index,
-                "background_index": case.tuple.background_index,
-                "module_style_index": case.tuple.module_style_index,
-                "finder_style_index": case.tuple.finder_index,
-                "logo_state_index": case.tuple.logo_index,
-                "payload_class": case.payload_class.label(),
-                "safety": safety,
-                "outcome": "decoded",
-            }));
-        }
+        decoded_matrix_labels.insert(label);
+        matrix_outcomes.push(styling::decoded_evidence(
+            &case,
+            "png",
+            artifact_sha256,
+            decoder_input_sha256,
+        ));
     }
 
     let records = styling::approved_combination_records()?;
@@ -132,20 +124,7 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
     }
     for record in records {
         if let Some(error) = record.outcome.expected_error() {
-            matrix_outcomes.push(serde_json::json!({
-                "id": record.label(),
-                "format": "png",
-                "profile_index": record.tuple.profile_index,
-                "foreground_index": record.tuple.foreground_index,
-                "background_index": record.tuple.background_index,
-                "module_style_index": record.tuple.module_style_index,
-                "finder_style_index": record.tuple.finder_index,
-                "logo_state_index": record.tuple.logo_index,
-                "payload_class": record.payload_class.label(),
-                "safety": null,
-                "outcome": "expected-invalid",
-                "error": error.to_string(),
-            }));
+            matrix_outcomes.push(styling::invalid_evidence(&record, "png", error));
         }
     }
     matrix_outcomes.sort_by(|left, right| left["id"].as_str().cmp(&right["id"].as_str()));
@@ -158,7 +137,7 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
         };
         fs::create_dir_all(&evidence_dir)?;
         fs::write(
-            evidence_dir.join("approved-output-matrix.json"),
+            evidence_dir.join("approved-output-png.json"),
             serde_json::to_vec_pretty(&serde_json::json!({
                 "schema_version": 1,
                 "rows": matrix_outcomes,
@@ -166,13 +145,6 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
         )?;
     }
     Ok(())
-}
-
-const fn safety_label(safety: qr_render::OutputSafety) -> &'static str {
-    match safety {
-        qr_render::OutputSafety::Safe => "safe",
-        qr_render::OutputSafety::Caution => "caution",
-    }
 }
 
 fn fixture_ecc(ecc: ErrorCorrection) -> FixtureEcc {

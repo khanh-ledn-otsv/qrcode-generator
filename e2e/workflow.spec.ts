@@ -194,10 +194,9 @@ test("uses compact dots and standard square finders without a shape control", as
   await expect.poll(() => diagnostic(page, "Finders")).toBe("Standard square");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
-  await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
-    "d",
-    /M\d+\.275 \d+\.500a0\.225 0\.225 0 1 0 0\.450 0/,
-  );
+  const modulePath = page.getByTestId("qr-preview").locator("path").first();
+  await expect(modulePath).toHaveAttribute("d", /M\d+\.275 \d+\.500a0\.225 0\.225 0 1 0 0\.450 0/);
+  await expect(modulePath).toHaveAttribute("d", /M4 4h1v1h-1z/);
 });
 
 test("explains export, physical sizing, and placement validation before generation", async ({

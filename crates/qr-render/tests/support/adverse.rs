@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
 use std::io::Cursor;
@@ -12,15 +13,47 @@ use serde::Deserialize;
 pub struct TransformSuite {
     schema_version: u8,
     seed: u64,
+    pass_envelopes: Vec<PassEnvelope>,
     transforms: Vec<Transform>,
+}
+
+#[derive(Deserialize)]
+pub struct PassEnvelope {
+    configuration: String,
+    safety: String,
+    transforms: Vec<String>,
 }
 
 impl TransformSuite {
     pub fn load() -> Result<Self, Box<dyn Error>> {
         let path = workspace_root().join("tests/adverse/parameters.json");
         let suite: Self = serde_json::from_slice(&fs::read(path)?)?;
-        if suite.schema_version != 1 || suite.transforms.is_empty() {
+        if suite.schema_version != 1
+            || suite.transforms.is_empty()
+            || suite.pass_envelopes.is_empty()
+        {
             return Err("unsupported or empty adverse-transform manifest".into());
+        }
+        let transform_ids = suite
+            .transforms
+            .iter()
+            .map(Transform::id)
+            .collect::<HashSet<_>>();
+        if transform_ids.len() != suite.transforms.len() {
+            return Err("adverse-transform IDs must be unique".into());
+        }
+        let mut configurations = HashSet::new();
+        for envelope in &suite.pass_envelopes {
+            if !configurations.insert(envelope.configuration.as_str())
+                || !matches!(envelope.safety.as_str(), "safe" | "caution")
+                || envelope.transforms.is_empty()
+                || envelope
+                    .transforms
+                    .iter()
+                    .any(|id| !transform_ids.contains(id.as_str()))
+            {
+                return Err("invalid adverse pass envelope".into());
+            }
         }
         Ok(suite)
     }
@@ -35,6 +68,34 @@ impl TransformSuite {
 
     pub fn transforms(&self) -> &[Transform] {
         &self.transforms
+    }
+
+    pub fn envelope_ids(&self, configuration: &str) -> Result<Vec<&str>, Box<dyn Error>> {
+        Ok(self
+            .envelope(configuration)?
+            .transforms
+            .iter()
+            .map(String::as_str)
+            .collect())
+    }
+
+    pub fn includes(&self, configuration: &str, transform: &str) -> Result<bool, Box<dyn Error>> {
+        Ok(self
+            .envelope(configuration)?
+            .transforms
+            .iter()
+            .any(|id| id == transform))
+    }
+
+    pub fn envelope_safety(&self, configuration: &str) -> Result<&str, Box<dyn Error>> {
+        Ok(&self.envelope(configuration)?.safety)
+    }
+
+    fn envelope(&self, configuration: &str) -> Result<&PassEnvelope, Box<dyn Error>> {
+        self.pass_envelopes
+            .iter()
+            .find(|envelope| envelope.configuration == configuration)
+            .ok_or_else(|| format!("unknown adverse pass envelope {configuration}").into())
     }
 }
 
