@@ -255,7 +255,14 @@ fn adaptive_branded_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     assert_eq!(request.payload(), payload);
     assert_eq!(request.ecc(), ErrorCorrection::High);
     assert_eq!(request.minimum_version().number(), 6);
-    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+    let first = evaluate_preview(&request).expect("adaptive branded URL renders");
+    let second = evaluate_preview(&request).expect("repeated adaptive branded URL renders");
+    assert_eq!(first.svg(), second.svg());
+    assert_eq!(
+        first.artifact(ArtifactKind::Png).bytes(),
+        second.artifact(ArtifactKind::Png).bytes(),
+    );
+    assert!(state.complete_preview(request.revision(), Ok(first)));
 
     let preview = state.preview().expect("adaptive branded URL fits");
     let diagnostics = preview.diagnostics();

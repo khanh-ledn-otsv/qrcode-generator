@@ -51,10 +51,12 @@ Content, Landing, and Print available and unchanged.
   adaptive branded version, placement candidate, required payload class,
   profile/size, background, and intentional typed rejection with deterministic
   hashes and pinned independent decoding.
-- [x] Native/WASM byte equality, resource baselines, adverse transforms, and
-  zero-retry desktop Chromium cover the supplied long URL, Version 6 regression
-  behavior, adaptive sizing/placement, downloads, accessibility, and the rule
-  that production makes no payload or logo network request.
+- [x] Native/WASM byte equality uses a generated synthetic 110-byte URL under
+  the repository fixture policy. Native, WASM, resource baselines, adverse
+  transforms, and zero-retry desktop Chromium separately cover the supplied
+  long URL, Version 6 regression behavior, adaptive sizing/placement,
+  deterministic downloads, accessibility, and the rule that production makes
+  no payload or logo network request.
 - [x] Development policy, testing strategy, generated logo-placement policy,
   approved-output matrix policy, release hardening/readiness guidance, and the
   local implementation map are revised consistently before resolution.
@@ -114,9 +116,11 @@ candidates were rejected for protected alignment overlap.
 
 The exact 110-byte ONE URL now produces an ECC-H Version 10 branded preview and
 deterministic downloads with eight PNG pixels/module, a 520 px rendered symbol,
-and 10 px symmetric padding. Native, WASM, and zero-retry Chromium tests pin the
-artifacts and diagnostics; the Chromium download independently decodes to the
-original URL. The release matrix now owns 316 scenarios (194 decoded, 122 typed
+and 10 px symmetric padding. Native, WASM, and zero-retry Chromium tests verify
+repeated artifact bytes and diagnostics for that URL; the Chromium download
+independently decodes to the original URL. A generated synthetic 110-byte URL
+pins native/WASM byte equality without placing external content in a golden
+fixture. The release matrix now owns 316 scenarios (194 decoded, 122 typed
 invalid), and adverse evidence owns 35 outcomes including the adaptive long-URL
 caution envelope. Existing-profile failures recommend Adaptive Branded without
 silently switching the user’s selection.

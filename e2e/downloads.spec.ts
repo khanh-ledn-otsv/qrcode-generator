@@ -96,8 +96,18 @@ test("downloads and decodes the deterministic Adaptive Branded Version 10 artifa
     page.waitForEvent("download"),
     page.getByTestId("download-png").click(),
   ]);
+  const [repeatedSvgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-svg").click(),
+  ]);
+  const [repeatedPngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
   const svg = await readFile(await svgDownload.path());
   const png = await readFile(await pngDownload.path());
+  expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
+  expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
   expect(svg.toString("utf8")).toContain('width="180"');
   expect(png.readUInt32BE(16)).toBe(540);
   expect(png.readUInt32BE(20)).toBe(540);

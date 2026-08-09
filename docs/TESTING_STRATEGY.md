@@ -405,6 +405,13 @@ equal-distance tie. Production and matrix tests additionally cover every enabled
 Adaptive Branded version from 6 through 10, native/WASM byte equality, exact
 payload preservation, and the typed rejection surface.
 
+The native/WASM artifact golden uses a generated synthetic 110-byte URL, as
+required by the fixture policy. Separate native and WASM workflow tests verify
+repeatable SVG/PNG bytes for the exact reported ONE URL, while Chromium verifies
+repeatable downloads and pinned-reader decoding of that exact payload. This
+keeps external content out of golden fixtures without substituting the
+synthetic URL for the reported-payload behavior gate.
+
 Replay the focused experiment explicitly with:
 
 ```sh

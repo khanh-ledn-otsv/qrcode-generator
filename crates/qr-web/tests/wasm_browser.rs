@@ -71,7 +71,14 @@ fn adaptive_branded_long_url_selects_version_ten_and_exports_on_wasm() {
         .set_payload(payload.to_owned())
         .expect("revision is available");
     assert_eq!(request.payload(), payload);
-    assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
+    let first = evaluate_preview(&request).expect("adaptive branded URL renders");
+    let second = evaluate_preview(&request).expect("repeated adaptive branded URL renders");
+    assert_eq!(first.svg(), second.svg());
+    assert_eq!(
+        first.artifact(ArtifactKind::Png).bytes(),
+        second.artifact(ArtifactKind::Png).bytes(),
+    );
+    assert!(state.complete_preview(request.revision(), Ok(first)));
 
     let diagnostics = state
         .preview()
