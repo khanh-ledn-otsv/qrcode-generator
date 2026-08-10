@@ -36,6 +36,9 @@ async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
 #[wasm_bindgen_test]
 fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
     let mut state = WorkflowState::new(ProfileId::Inline);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let request = state
         .set_payload("browser logo".to_owned())
         .expect("revision is available");
@@ -67,6 +70,9 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
 fn adaptive_long_url_selects_version_ten_and_exports_on_wasm() {
     let payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
     let mut state = WorkflowState::new(ProfileId::Adaptive);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let request = state
         .set_payload(payload.to_owned())
         .expect("revision is available");

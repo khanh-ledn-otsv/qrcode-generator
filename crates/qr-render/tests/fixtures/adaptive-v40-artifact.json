@@ -23,8 +23,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-31-visible-round-dot-review",
+    "reviewer": "ticket-32-opaque-square-review",
     "verified_at": "2026-08-10",
-    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG and PNG hashes were reviewed after increasing compact circles to 0.75 module for visible roundness; decoder evidence separately establishes native PNG and rasterized-SVG readability."
+    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG and PNG hashes record the opaque-white Rounded ONE output; decoder evidence separately establishes native PNG and rasterized-SVG readability."
   }
 }

@@ -294,11 +294,10 @@ Exhaustively iterate every version permitted by each profile:
 - direct RGBA allocation lengths above the target-independent 64 MiB ceiling are rejected identically on native and WASM;
 - outer padding is symmetric and integral;
 - maximum profile versions use at least 6 px/module;
-- surplus padding contains only the selected background treatment and no artwork;
-- transparent surplus padding has zero alpha and opaque surplus padding exactly matches the configured background;
+- surplus padding is opaque white and contains no artwork;
 - unsafe logo geometry is rejected before rendering.
 
-Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, 260 px SVG, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 740 px SVG, and 1110 px PNG. Chromium rasterizes the selected Adaptive SVG at its declared size and requires compact modules outside the finder/logo regions to remain visibly magenta.
+Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, 260 px SVG, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 740 px SVG, and 1110 px PNG. Chromium rasterizes the selected Adaptive SVG at its declared size and requires rounded modules outside the logo region to remain visibly magenta.
 
 ### 6.2 SVG artifact tests
 
@@ -306,13 +305,13 @@ Parse every generated SVG and assert:
 
 - exact profile-base `width` and `height` and the tight matrix-plus-quiet-zone `viewBox` defined above;
 - valid XML with no scripts, events, remote URLs, external stylesheets, foreign objects, or payload metadata;
-- background rectangle is present/absent according to opacity;
+- an opaque-white background rectangle is always present;
 - quiet zone remains unpainted by QR modules and branding;
 - no frame, label, stroke, or path exists outside the QR symbol geometry;
 - paths stay inside their cells and within checked bounds;
-- the three finder regions retain full-cell square glyphs while every other
-  visible module uses an exactly centered 0.75-module circle; separator modules
-  remain blank;
+- every non-finder visible module uses the fixed centered 0.75-module rounded
+  glyph, the three finder regions use full-cell square glyphs, and separator
+  modules remain blank;
 - the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with unchanged geometry, the reviewed `180 180 640 240` presentation box, and no external reference;
 - logo knockout geometry is opaque white, outside the four-module quiet zone, function-safe, deterministic, and independently decoded for every enabled H-level profile/version row;
 - stable element/path ordering and normalized number formatting;
@@ -337,11 +336,9 @@ Decode the emitted PNG as a file and inspect:
 - configured, deterministic metadata/chunk policy;
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
-- full-cell square finder rectangles have no intermediate colors; centered dot
-  coverage uses deterministic 8×8 sampling inside the approved 0.75-module
-  circle envelope, retains an exact brand core, and has a symmetric
-  antialiased contour (brand RGB beneath partial alpha for transparent output);
-- approved edge coverage only for the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
+- standard finder cells contain only exact brand pixels, while rounded
+  non-finder contours use deterministic opaque antialiasing against white;
+- approved edge coverage for the bundled PNG logo includes intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
 - byte-for-byte equality for repeated requests on native and WASM where encoder output is specified to be cross-target identical.
 
 Decode the resulting pixels through ZXing-C++; do not declare success merely because the same `png` crate can read its own output.
@@ -350,7 +347,7 @@ Decode the resulting pixels through ZXing-C++; do not declare success merely bec
 
 Testing every control independently is insufficient because failures interact. Build a generated list from compiled approved presets and require that every selectable tuple appears in the test report.
 
-For each approved tuple of foreground, background/transparency, finder style, logo state, and profile:
+For each approved tuple of profile and logo state:
 
 - render at least a short URL, a dense URL near the profile ceiling, Numeric, Alphanumeric, ASCII Byte, and UTF-8+ECI payload;
 - test safe baseline versions across all allowed versions;
@@ -363,55 +360,24 @@ The generated coverage test must fail if a new approved enum variant is not incl
 The versioned coverage contract is
 [`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
 which is consumed by both the Rust generator test and Python readiness validator.
-The release evidence contains 436 generated scenario rows: 120 required-payload
-rows (six payload classes for each compiled profile/background/logo tuple) and
-316 exact-version rows (every version admitted by each profile for the same
-background/logo choices). Both the native PNG and independently rasterized SVG
+The release evidence contains 218 generated scenario rows: 60 required-payload
+rows (six payload classes for each compiled profile/logo tuple) and
+158 exact-version rows (every version admitted by each profile for both logo
+choices). Both the native PNG and independently rasterized SVG
 artifact are hashed and passed to the pinned decoder for each accepted row.
-There are 254 accepted rows and 182 expected-invalid rows. Accepted fixed-profile
+There are 145 accepted rows and 73 expected-invalid rows. Accepted fixed-profile
 logo rows record the reviewed Version 6 placement. Adaptive records the
 reviewed Version 6–11 placement for each accepted row; profiles/versions outside
 those policies record their typed rejection.
 
-The branded-geometry approval experiment is replayed separately with:
-
-- every centered dot diameter from 0.45 through 0.60 module in 0.01-module
-  increments, plus the 0.75-module visual-legibility candidate;
-- both square-function controls and non-finder-dot treatment;
-- all four fixed profiles, opaque-white and transparent-background handling, all six
-  required payload classes, and both direct RGBA PNG and independently
-  rasterized SVG artifacts;
-- the pinned ZXing-C++ 3.0.2 reader at commit
-  `8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825` comparing exact payload bytes;
-- ECC-H candidate minima 4, 5, and 6; every integer exact-centered ONE source
-  width from 10 through 18 modules; checked one-module outward knockout
-  clearance; protected-module rejection; and obscured data/remainder counts.
-
-The committed record in
-[`generated/branded-geometry-policy.json`](generated/branded-geometry-policy.json)
-must stay strict-schema valid. A diameter/treatment is selectable only after
-every one of its 96 artifact cases decodes. The approved 0.75-module
-non-finder-dot treatment passed 96/96 and renders at a three-CSS-pixel diameter
-for Adaptive's four-pixel module scale. Version 6 is the first branded version
-meeting the 13-module logo hierarchy, and its selected 13×4.875-module logo
-passed 48/48 artifact cases across all four profiles that admit Version 6.
-Inline's 100 px SVG / 300 px PNG profile retains a six-pixel PNG module scale
-at its Version 6 ceiling. Versions 7–13 are expected-invalid exact-centering
-rows because of protected alignment geometry. Exactly four quiet-zone modules
-and the absence of decorative export borders are invariant across candidates.
-
-Adaptive has a separate focused Version 10 placement experiment in
-[`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json).
-It evaluates source widths 10–13 modules at the center and six modules above and
-below it, over seven payload classes (including the exact ONE news URL) and both
-native PNG and independently rasterized SVG. Every function-safe candidate must
-decode all 14 artifacts; protected-module intersections remain unrendered. The
-largest full-pass candidate is selected, with upward winning the deterministic
-equal-distance tie. Production and matrix tests additionally cover every enabled
-Adaptive version from 6 through 11, native/WASM byte equality, exact payload
-preservation, the Version 40 unbranded boundary, and typed logo rejection for
-Versions 12–40. The pinned decoder campaign independently decodes native PNG
-and rasterized SVG for every enabled row, including Version 11.
+Production and matrix tests cover every enabled Adaptive logo version from 6
+through 11, native/WASM byte equality, exact payload preservation, the Version
+40 unbranded boundary, and typed logo rejection for Versions 12–40. The pinned
+decoder campaign independently decodes native PNG and rasterized SVG for every
+enabled row, including Version 11. The placement facts retained in
+[`generated/logo-placement-policy.md`](generated/logo-placement-policy.md) are
+the reviewed geometry contract; obsolete appearance-candidate experiments are
+not release artifacts.
 
 The native/WASM artifact golden uses generated synthetic payloads through
 Version 11, including a 110-byte URL as required by the fixture policy, plus an
@@ -423,21 +389,6 @@ interception covers Version 40 generation and download. This keeps external
 content out of golden fixtures without substituting the synthetic URL for the
 reported-payload behavior gate.
 
-Replay the focused experiment explicitly with:
-
-```sh
-cargo test -p qr-render --test adaptive_branded_placement_experiment \
-  compare_and_record_adaptive_branded_placement_candidates -- --ignored --exact --nocapture
-```
-
-Replay and regenerate the committed record explicitly with:
-
-```sh
-QR_BRANDED_GEOMETRY_EVIDENCE=docs/generated/branded-geometry-policy.json \
-  cargo test -p qr-render --test branded_geometry_experiment \
-  compare_and_record_branded_geometry_candidates -- --ignored --nocapture
-```
-
 ### 6.5 Adverse-image tests
 
 Keep transforms deterministic with named parameters and seeds. Start with separate transforms before combining them:
@@ -448,20 +399,18 @@ Keep transforms deterministic with named parameters and seeds. Start with separa
 - rotations at small angles;
 - four-point perspective distortion;
 - reduced contrast and brightness shifts;
-- light and dark/patterned backgrounds for transparent output;
+- light and dark/patterned placement backgrounds around opaque output;
 - simulated print dot gain, ink loss, and grayscale conversion.
 
 Define a baseline pass envelope before launch from real approved outputs. Do not invent universal thresholds. Safe presets should meet a stronger envelope than logo caution presets. Store transform parameters and decoder outcomes as machine-readable release evidence.
 
-The release-1 manifest defines five explicit pass envelopes rather than a
-universal compact-dot claim: a low-density opaque Print symbol passes all 13
-named transforms and is classified safe; transparent compact dots pass 10
-placement-relevant transforms as a caution; and the centered Version 6 logo on
+The release-1 manifest defines four explicit pass envelopes rather than a
+universal density claim: a low-density opaque Print Rounded ONE symbol passes
+all 13 named transforms and is classified safe; the centered Version 6 logo on
 the Print profile passes six transforms as a caution. The Adaptive Version 10
 and Version 11 long-URL artifacts each pass a five-transform caution envelope;
-the 80% display downscale is excluded because the new compact adaptive exports
-do not satisfy that transform. The exact fixture payload, seed, parameters,
-membership, safety, decoder version, and 39 outcomes are
+the 80% display downscale is excluded from their reviewed envelopes. The exact
+fixture payload, seed, parameters, membership, safety, decoder version, and 29 outcomes are
 machine-validated release evidence.
 
 ## 7. Web and WASM tests
@@ -508,9 +457,10 @@ Test through the user-visible UI:
 - character count versus UTF-8 byte count;
 - all profile selections and displayed diagnostics;
 - version/ECC changes, including logo-triggered H;
-- the default logo workflow selects at least Version 6, explains a branding-raised version, and keeps valid exports enabled;
+- the default logo workflow selects at least Version 6, explains a branding-raised version, keeps valid exports enabled, and can be turned off;
 - invalid capacity and unsafe-style states;
-- transparent/background warnings;
+- the fixed opaque-white background and unconditional Rounded ONE modules with
+  standard square finders;
 - keyboard-only operation and visible focus;
 - rapid typing/debounce with latest-value wins;
 - SVG and PNG downloads, filenames, dimensions, hashes, and independent decode;
@@ -538,7 +488,7 @@ Use custom `proptest` strategies that favor boundaries rather than uniformly ran
 - payload lengths around each capacity boundary;
 - mode-changing characters such as lowercase, space, `:`, non-ASCII, and multi-byte UTF-8;
 - all ECC and mask values;
-- transparent/opaque backgrounds and allowed styles;
+- logo-off and logo-on render policies;
 - malformed internal configuration in test-only constructors.
 
 Core properties:
@@ -646,11 +596,15 @@ Test defensive resource limits explicitly:
 
 Manual product checks are performed separately by the owner and are not collected, validated, or signed by the repository evidence tooling.
 
-Repository-owned automation and publishing are intentionally deferred and are not specified here.
-
 The repository-owned local command surface and machine-readable evidence layout
 for these suites is now specified in [`RELEASE_HARDENING.md`](RELEASE_HARDENING.md).
-Publishing and hosted CI remain owner-managed.
+The `Correctness` hosted workflow runs `pnpm run verify` for pull requests and
+pushes to `main`, and runs the complete pinned ZXing-C++ plus representative
+quirc decoder campaigns on `main` and the weekly schedule. Pages publishing
+repeats the routine gate before uploading an artifact, so a revision that fails
+its applicable correctness checks is not deployed. Successful jobs never
+rewrite committed goldens or evidence; extended failures upload logs and
+generated failure evidence.
 
 ## 13. Flake and failure policy
 

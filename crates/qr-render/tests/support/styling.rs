@@ -3,45 +3,28 @@ use std::error::Error;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
-    APPROVED_MODULE_STYLES, BRANDED_LOGO_VERSION, Background, FinderStyle, Foreground,
-    LogoPlacement, LogoStyle, ModuleStyle, OutputProfile, OutputSafety, RenderError, RenderModel,
-    RenderOptions, SUPPORTED_PROFILES,
+    APPROVED_LOGO_STYLES, BRANDED_LOGO_VERSION, LogoPlacement, LogoStyle, OutputProfile,
+    OutputSafety, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
 };
 use sha2::{Digest, Sha256};
 
 #[derive(Clone, Copy)]
 pub struct ApprovedStyleTuple {
     pub profile_index: usize,
-    pub foreground_index: usize,
-    pub background_index: usize,
-    pub module_style_index: usize,
-    pub finder_index: usize,
     pub logo_index: usize,
     pub profile: OutputProfile,
-    pub foreground: Foreground,
-    pub background: Background,
-    pub module_style: ModuleStyle,
-    pub finder: FinderStyle,
     pub logo: LogoStyle,
 }
 
 impl ApprovedStyleTuple {
     pub fn options(self) -> Result<RenderOptions, RenderError> {
-        let options = RenderOptions::approved(self.profile, self.foreground, self.background)?
-            .with_logo(self.logo)?;
-        if options.module_style() != self.module_style || options.finder_style() != self.finder {
-            return Err(RenderError::RenderFailure);
-        }
-        Ok(options)
+        RenderOptions::safe(self.profile)?.with_logo(self.logo)
     }
 
-    pub const fn expected_safety(self) -> Option<OutputSafety> {
-        match (self.logo, self.background) {
-            (LogoStyle::Bundled, Background::Transparent) => None,
-            (LogoStyle::Bundled, Background::Opaque(_))
-            | (LogoStyle::None, Background::Transparent) => Some(OutputSafety::Caution),
-            (LogoStyle::None, Background::Opaque(_)) => Some(OutputSafety::Safe),
+    pub const fn expected_safety(self) -> OutputSafety {
+        match self.logo {
+            LogoStyle::Bundled => OutputSafety::Caution,
+            LogoStyle::None => OutputSafety::Safe,
         }
     }
 
@@ -53,46 +36,20 @@ impl ApprovedStyleTuple {
     }
 
     pub fn label(self) -> String {
-        format!(
-            "{}/{}/{}/{}/{}/{}",
-            self.profile_index,
-            self.foreground_index,
-            self.background_index,
-            self.module_style_index,
-            self.finder_index,
-            self.logo_index,
-        )
+        format!("{}/{}", self.profile_index, self.logo_index)
     }
 }
 
 pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
     let mut tuples = Vec::new();
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
-        for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
-            for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                for (module_style_index, module_style) in
-                    APPROVED_MODULE_STYLES.into_iter().enumerate()
-                {
-                    for (finder_index, finder) in APPROVED_FINDERS.into_iter().enumerate() {
-                        for (logo_index, logo) in APPROVED_LOGO_STYLES.into_iter().enumerate() {
-                            tuples.push(ApprovedStyleTuple {
-                                profile_index,
-                                foreground_index,
-                                background_index,
-                                module_style_index,
-                                finder_index,
-                                logo_index,
-                                profile,
-                                foreground,
-                                background,
-                                module_style,
-                                finder,
-                                logo,
-                            });
-                        }
-                    }
-                }
-            }
+        for (logo_index, logo) in APPROVED_LOGO_STYLES.into_iter().enumerate() {
+            tuples.push(ApprovedStyleTuple {
+                profile_index,
+                logo_index,
+                profile,
+                logo,
+            });
         }
     }
     tuples
@@ -309,10 +266,6 @@ fn evidence_row(metadata: EvidenceMetadata<'_>, artifact: serde_json::Value) -> 
         "case_label": case_label,
         "profile_index": tuple.profile_index,
         "profile": format!("{:?}", profile.id()),
-        "foreground_index": tuple.foreground_index,
-        "background_index": tuple.background_index,
-        "module_style_index": tuple.module_style_index,
-        "finder_style_index": tuple.finder_index,
         "logo_state_index": tuple.logo_index,
         "payload_class": payload_class.label(),
         "ecc": format!("{:?}", tuple.ecc()),
@@ -373,25 +326,16 @@ pub fn approved_combination_records() -> Result<Vec<ApprovedCombinationRecord>, 
             let (outcome, version, logo_placement) = match prepare_decode_case(tuple, case) {
                 Ok(prepared) => (
                     CombinationOutcome::Renderable {
-                        safety: tuple
-                            .expected_safety()
-                            .ok_or("renderable tuple has no safety classification")?,
+                        safety: tuple.expected_safety(),
                     },
                     Some(prepared.encoded.version().number()),
                     prepared.logo_placement,
                 ),
-                Err(error)
-                    if matches!(
-                        error,
-                        RenderError::LogoRequiresOpaqueWhite | RenderError::UnsafeLogoGeometry
-                    ) =>
-                {
-                    (
-                        CombinationOutcome::ExpectedInvalid { error },
-                        requested_version,
-                        None,
-                    )
-                }
+                Err(error) if matches!(error, RenderError::UnsafeLogoGeometry) => (
+                    CombinationOutcome::ExpectedInvalid { error },
+                    requested_version,
+                    None,
+                ),
                 Err(error) => return Err(error.into()),
             };
             records.push(ApprovedCombinationRecord {
@@ -414,7 +358,7 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
         for case in matrix_cases(tuple)? {
             match prepare_decode_case(tuple, case) {
                 Ok(case) => prepared.push(case),
-                Err(RenderError::LogoRequiresOpaqueWhite | RenderError::UnsafeLogoGeometry) => {}
+                Err(RenderError::UnsafeLogoGeometry) => {}
                 Err(error) => return Err(error.into()),
             }
         }
@@ -472,7 +416,7 @@ fn prepare_decode_case(
     {
         return Err(RenderError::RenderFailure);
     }
-    if options.safety() != tuple.expected_safety().ok_or(RenderError::RenderFailure)? {
+    if options.safety() != tuple.expected_safety() {
         return Err(RenderError::RenderFailure);
     }
     let model = RenderModel::new(&encoded, options)?;

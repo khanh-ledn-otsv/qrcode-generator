@@ -32,13 +32,13 @@ CRITICAL_WORKFLOW_TESTS = {
     "disposing the page with pending debounce work initializes cleanly",
     "profile controls work by keyboard",
     "shows the opaque preview at its real SVG size",
-    "uses only magenta and shows transparent placement cautions",
-    "logo mode is selected by default, uses ECC H, and requires opaque white",
+    "uses one opaque white rounded ONE appearance",
+    "logo mode is enabled by default and can be turned off",
     "fixed profiles recommend Adaptive when centered branding is unavailable",
     "Adaptive preserves and exports the long ONE URL at Version 10",
     "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
     "Adaptive reaches the exact unbranded Version 40 boundary",
-    "uses round compact dots and standard square finders without a shape control",
+    "always uses rounded ONE modules without an appearance control",
 }
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 MATRIX_POLICY_PATH = WORKSPACE_ROOT / "tests/approved-output-matrix-policy.json"
@@ -85,14 +85,7 @@ def _matrix_policy() -> dict[str, Any]:
 
 def _expected_matrix_keys(policy: dict[str, Any]) -> set[tuple[object, ...]]:
     dimensions = _mapping(policy.get("tuple_dimensions"), "approved matrix dimensions")
-    dimension_names = (
-        "profiles",
-        "foregrounds",
-        "backgrounds",
-        "module_styles",
-        "finder_styles",
-        "logo_states",
-    )
+    dimension_names = ("profiles", "logo_states")
     counts: list[int] = []
     for name in dimension_names:
         count = dimensions.get(name)
@@ -159,10 +152,6 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     actual_keys = {
         (
             row.get("profile_index"),
-            row.get("foreground_index"),
-            row.get("background_index"),
-            row.get("module_style_index"),
-            row.get("finder_style_index"),
             row.get("logo_state_index"),
             row.get("case_kind"),
             row.get("payload_class"),
@@ -183,10 +172,6 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     dimensions = _mapping(policy.get("tuple_dimensions"), "approved matrix dimensions")
     dimension_fields = {
         "profile_index": "profiles",
-        "foreground_index": "foregrounds",
-        "background_index": "backgrounds",
-        "module_style_index": "module_styles",
-        "finder_style_index": "finder_styles",
         "logo_state_index": "logo_states",
     }
     for field, dimension in dimension_fields.items():

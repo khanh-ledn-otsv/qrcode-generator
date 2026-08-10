@@ -3,7 +3,7 @@
   "seed": 20260807,
   "pass_envelopes": [
     {
-      "configuration": "print-compact-dots",
+      "configuration": "print-rounded-one",
       "safety": "safe",
       "transforms": [
         "blur-r0.35",
@@ -18,22 +18,6 @@
         "patterned-light-background",
         "dot-gain-radius-1",
         "ink-loss-period-997",
-        "grayscale-luma"
-      ]
-    },
-    {
-      "configuration": "transparent-compact-dots",
-      "safety": "caution",
-      "transforms": [
-        "blur-r0.35",
-        "scale-80-percent",
-        "jpeg-q92",
-        "rotate-0.5-degrees",
-        "contrast-minus-8",
-        "brightness-plus-6",
-        "light-gray-background",
-        "dark-gray-background",
-        "patterned-light-background",
         "grayscale-luma"
       ]
     },

@@ -4,6 +4,8 @@
 /tests/oracles/.venv
 /playwright-report
 /tests/oracles/zxing-cpp
+/tests/oracles/quirc
+/tests/oracles/quirc-reader
 .ruff_cache/
 .ty_cache/
 __pycache__/

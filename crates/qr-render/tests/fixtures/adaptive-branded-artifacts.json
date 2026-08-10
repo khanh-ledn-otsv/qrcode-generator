@@ -62,8 +62,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-31-visible-round-dot-review",
+    "reviewer": "ticket-32-opaque-square-review",
     "verified_at": "2026-08-10",
-    "notes": "All payloads are generated, synthetic, and non-sensitive. The Version 10 URL matches the reported URL's 110-byte length without copying external content. SVG and PNG hashes were reviewed after increasing compact circles to 0.75 module for a three-pixel Adaptive rendering floor; native/WASM equality and pinned decoder evidence establish determinism and readability."
+    "notes": "All payloads are generated, synthetic, and non-sensitive. The Version 10 URL matches the reported URL's 110-byte length without copying external content. SVG and PNG hashes record opaque-white Rounded ONE output; native/WASM equality and pinned decoder evidence establish determinism and readability."
   }
 }

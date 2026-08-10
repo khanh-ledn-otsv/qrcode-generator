@@ -27,12 +27,11 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   ).not.toHaveLength(0);
 
   await enterPayload(page, SAFE_PAYLOAD);
-  await page.getByText("ONE lettermark", { exact: true }).click();
-  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /Rounded ONE modules/ })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();
   await selectProfile(page, "Print");
-  await page.getByText("Transparent", { exact: true }).click();
   await expect(page.getByRole("radio", { name: /Print/ })).toBeChecked();
-  await expect(page.getByRole("radio", { name: /Transparent/ })).toBeChecked();
+  await expect(page.getByRole("group", { name: "Background treatment" })).toHaveCount(0);
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [svgDownload] = await Promise.all([
     page.waitForEvent("download"),
@@ -53,7 +52,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
     );
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
 
-  await page.getByText("Opaque white", { exact: true }).click();
+  await page.getByText("ONE lettermark", { exact: true }).click();
   await selectProfile(page, "Adaptive");
   await enterPayload(page, "a".repeat(2_331));
   await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();

@@ -42,30 +42,6 @@ impl Rgba {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Background {
-    Opaque(Rgba),
-    Transparent,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Foreground {
-    Brand,
-}
-
-impl Foreground {
-    #[must_use]
-    pub const fn rgba(self) -> Rgba {
-        match self {
-            Self::Brand => Rgba::BRAND,
-        }
-    }
-}
-
-pub const APPROVED_FOREGROUNDS: [Foreground; 1] = [Foreground::Brand];
-pub const APPROVED_BACKGROUNDS: [Background; 2] =
-    [Background::Opaque(Rgba::WHITE), Background::Transparent];
-
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ContrastRatio(u16);
 
@@ -108,13 +84,6 @@ pub enum OutputSafety {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ModuleStyle {
-    CompactDots,
-}
-
-pub const APPROVED_MODULE_STYLES: [ModuleStyle; 1] = [ModuleStyle::CompactDots];
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct CompactDotGeometry {
     diameter_thousandths: u16,
     samples_per_axis: u8,
@@ -140,13 +109,6 @@ pub(crate) const COMPACT_DOT_GEOMETRY: CompactDotGeometry = CompactDotGeometry {
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum FinderStyle {
-    StandardSquare,
-}
-
-pub const APPROVED_FINDERS: [FinderStyle; 1] = [FinderStyle::StandardSquare];
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogoStyle {
     None,
     Bundled,
@@ -161,54 +123,14 @@ pub const APPROVED_LOGO_STYLES: [LogoStyle; 2] = [LogoStyle::None, LogoStyle::Bu
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RenderOptions {
     profile: OutputProfile,
-    foreground: Rgba,
-    background: Background,
-    module_style: ModuleStyle,
-    finder_style: FinderStyle,
     logo_style: LogoStyle,
 }
 
 impl RenderOptions {
     pub fn safe(profile: OutputProfile) -> Result<Self, RenderError> {
-        Self::approved(profile, Foreground::Brand, Background::Opaque(Rgba::WHITE))
-    }
-
-    pub fn approved(
-        profile: OutputProfile,
-        foreground: Foreground,
-        background: Background,
-    ) -> Result<Self, RenderError> {
-        Self::try_new(profile, foreground.rgba(), background)
-    }
-
-    pub fn try_new(
-        profile: OutputProfile,
-        foreground: Rgba,
-        background: Background,
-    ) -> Result<Self, RenderError> {
         profile.validate().map_err(RenderError::InvalidProfile)?;
-        if let Background::Opaque(background_color) = background {
-            let actual = ContrastRatio::between(foreground, background_color);
-            if contrast_value(foreground, background_color) < 4.5 {
-                return Err(RenderError::UnsafeContrast {
-                    actual,
-                    minimum: ContrastRatio::MINIMUM_OPAQUE,
-                });
-            }
-        }
-        if !APPROVED_FOREGROUNDS
-            .into_iter()
-            .any(|approved| approved.rgba() == foreground)
-            || !APPROVED_BACKGROUNDS.contains(&background)
-        {
-            return Err(RenderError::UnapprovedColorCombination);
-        }
         Ok(Self {
             profile,
-            foreground,
-            background,
-            module_style: ModuleStyle::CompactDots,
-            finder_style: FinderStyle::StandardSquare,
             logo_style: LogoStyle::None,
         })
     }
@@ -220,22 +142,12 @@ impl RenderOptions {
 
     #[must_use]
     pub const fn foreground(self) -> Rgba {
-        self.foreground
+        Rgba::BRAND
     }
 
     #[must_use]
-    pub const fn background(self) -> Background {
-        self.background
-    }
-
-    #[must_use]
-    pub const fn module_style(self) -> ModuleStyle {
-        self.module_style
-    }
-
-    #[must_use]
-    pub const fn finder_style(self) -> FinderStyle {
-        self.finder_style
+    pub const fn background(self) -> Rgba {
+        Rgba::WHITE
     }
 
     #[must_use]
@@ -244,29 +156,21 @@ impl RenderOptions {
     }
 
     pub fn with_logo(mut self, logo_style: LogoStyle) -> Result<Self, RenderError> {
-        if logo_style == LogoStyle::Bundled && self.background != Background::Opaque(Rgba::WHITE) {
-            return Err(RenderError::LogoRequiresOpaqueWhite);
-        }
         self.logo_style = logo_style;
         Ok(self)
     }
 
     #[must_use]
     pub const fn safety(self) -> OutputSafety {
-        match (self.logo_style, self.background) {
-            (LogoStyle::Bundled, _) | (_, Background::Transparent) => OutputSafety::Caution,
-            (LogoStyle::None, Background::Opaque(_)) => OutputSafety::Safe,
+        match self.logo_style {
+            LogoStyle::Bundled => OutputSafety::Caution,
+            LogoStyle::None => OutputSafety::Safe,
         }
     }
 
     #[must_use]
-    pub fn contrast_ratio(self) -> Option<ContrastRatio> {
-        match self.background {
-            Background::Opaque(background) => {
-                Some(ContrastRatio::between(self.foreground, background))
-            }
-            Background::Transparent => None,
-        }
+    pub fn contrast_ratio(self) -> ContrastRatio {
+        ContrastRatio::between(Rgba::BRAND, Rgba::WHITE)
     }
 }
 
@@ -740,13 +644,7 @@ pub enum RenderError {
         required_bytes: u64,
         maximum_bytes: u64,
     },
-    UnsafeContrast {
-        actual: ContrastRatio,
-        minimum: ContrastRatio,
-    },
-    UnapprovedColorCombination,
     LogoRequiresHighEcc,
-    LogoRequiresOpaqueWhite,
     UnsafeLogoGeometry,
     RenderFailure,
 }
@@ -764,21 +662,7 @@ impl fmt::Display for RenderError {
                 formatter,
                 "render buffer requires {required_bytes} bytes; maximum is {maximum_bytes} bytes"
             ),
-            Self::UnsafeContrast { actual, minimum } => write!(
-                formatter,
-                "opaque foreground/background contrast is {}.{:02}:1; minimum is {}.{:02}:1",
-                actual.hundredths() / 100,
-                actual.hundredths() % 100,
-                minimum.hundredths() / 100,
-                minimum.hundredths() % 100,
-            ),
-            Self::UnapprovedColorCombination => {
-                formatter.write_str("the foreground/background combination is not approved")
-            }
             Self::LogoRequiresHighEcc => formatter.write_str("the bundled logo requires ECC H"),
-            Self::LogoRequiresOpaqueWhite => {
-                formatter.write_str("the bundled logo requires an opaque white background")
-            }
             Self::UnsafeLogoGeometry => formatter
                 .write_str("the bundled logo cannot avoid protected modules at this QR version"),
             Self::RenderFailure => formatter.write_str("rendering failed"),

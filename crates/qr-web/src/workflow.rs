@@ -1,20 +1,19 @@
 //! Plain-Rust state transitions for the interactive QR workflow.
 
-use qr_core::encoding::EncodingError;
+use qr_core::encoding::{EciAssignment, EncodingError};
 use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, Background, ContrastRatio, FinderStyle, Foreground, LogoPlacement,
-    LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, ModuleStyle, OutputProfile, OutputSafety, ProfileId,
-    RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
+    BRANDED_LOGO_VERSION, ContrastRatio, LogoPlacement, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
+    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
+    SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
 
 const CONTROL_CHARACTER_CAUTION: &str =
     "This payload contains control characters. Confirm that they are intentional.";
-const TRANSPARENT_OUTPUT_CAUTION: &str = "Transparent output has unknown effective contrast. Check it on white, light-gray, dark, and patterned placement surfaces.";
 const LOGO_OUTPUT_CAUTION: &str = "The bundled logo obscures QR data modules. Validate the exported code in its actual environment.";
 const INTERNAL_FAILURE_MESSAGE: &str =
     "QR generation failed unexpectedly. Change the input and try again.";
@@ -142,8 +141,6 @@ pub struct PreviewRequest {
     payload: String,
     profile_id: ProfileId,
     logo_enabled: bool,
-    foreground: Foreground,
-    background: Background,
 }
 
 impl PreviewRequest {
@@ -179,6 +176,7 @@ impl PreviewRequest {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Diagnostics {
     mode: DataMode,
+    eci_assignment: Option<EciAssignment>,
     ecc: ErrorCorrection,
     mask: MaskId,
     minimum_version: Version,
@@ -196,12 +194,8 @@ pub struct Diagnostics {
     rendered_symbol_side_pixels: u32,
     outer_padding_per_side: u32,
     print_guidance: &'static str,
-    foreground: Foreground,
-    background: Background,
     safety: OutputSafety,
-    contrast_ratio: Option<ContrastRatio>,
-    module_style: ModuleStyle,
-    finder_style: FinderStyle,
+    contrast_ratio: ContrastRatio,
     logo_style: LogoStyle,
     logo_placement: Option<LogoPlacement>,
 }
@@ -210,6 +204,11 @@ impl Diagnostics {
     #[must_use]
     pub const fn mode(self) -> DataMode {
         self.mode
+    }
+
+    #[must_use]
+    pub const fn eci_assignment(self) -> Option<EciAssignment> {
+        self.eci_assignment
     }
 
     #[must_use]
@@ -298,13 +297,13 @@ impl Diagnostics {
     }
 
     #[must_use]
-    pub const fn foreground(self) -> Foreground {
-        self.foreground
+    pub const fn foreground(self) -> Rgba {
+        Rgba::BRAND
     }
 
     #[must_use]
-    pub const fn background(self) -> Background {
-        self.background
+    pub const fn background(self) -> Rgba {
+        Rgba::WHITE
     }
 
     #[must_use]
@@ -313,18 +312,8 @@ impl Diagnostics {
     }
 
     #[must_use]
-    pub const fn contrast_ratio(self) -> Option<ContrastRatio> {
+    pub const fn contrast_ratio(self) -> ContrastRatio {
         self.contrast_ratio
-    }
-
-    #[must_use]
-    pub const fn module_style(self) -> ModuleStyle {
-        self.module_style
-    }
-
-    #[must_use]
-    pub const fn finder_style(self) -> FinderStyle {
-        self.finder_style
     }
 
     #[must_use]
@@ -424,11 +413,6 @@ pub enum WorkflowFailure {
         maximum_version: Version,
         adaptive_recommended: bool,
     },
-    UnsafeContrast {
-        actual: ContrastRatio,
-        minimum: ContrastRatio,
-    },
-    LogoRequiresOpaqueWhite,
     LogoMinimumUnavailable {
         minimum_version: Version,
         maximum_version: Version,
@@ -457,16 +441,6 @@ impl WorkflowFailure {
                 maximum_version.number(),
                 adaptive_recommendation(*adaptive_recommended),
             ),
-            Self::UnsafeContrast { actual, minimum } => format!(
-                "Opaque QR contrast is {}.{:02}:1; at least {}.{:02}:1 is required.",
-                actual.hundredths() / 100,
-                actual.hundredths() % 100,
-                minimum.hundredths() / 100,
-                minimum.hundredths() % 100,
-            ),
-            Self::LogoRequiresOpaqueWhite => {
-                "Logo mode requires an opaque white QR background.".to_owned()
-            }
             Self::LogoMinimumUnavailable {
                 minimum_version,
                 maximum_version,
@@ -503,8 +477,6 @@ pub struct WorkflowState {
     payload: TextAreaBuffer,
     profile_id: ProfileId,
     logo_enabled: bool,
-    foreground: Foreground,
-    background: Background,
     revision: Revision,
     preview_state: PreviewState,
 }
@@ -516,8 +488,6 @@ impl WorkflowState {
             payload: TextAreaBuffer::new(String::new()),
             profile_id,
             logo_enabled: true,
-            foreground: Foreground::Brand,
-            background: Background::Opaque(Rgba::WHITE),
             revision: Revision(0),
             preview_state: PreviewState::Invalid(WorkflowFailure::EmptyPayload),
         }
@@ -583,28 +553,6 @@ impl WorkflowState {
 
     pub fn set_logo_enabled(&mut self, enabled: bool) -> Result<PreviewRequest, WorkflowFailure> {
         self.logo_enabled = enabled;
-        if enabled {
-            self.background = Background::Opaque(Rgba::WHITE);
-        }
-        self.begin_preview()
-    }
-
-    pub fn select_foreground(
-        &mut self,
-        foreground: Foreground,
-    ) -> Result<PreviewRequest, WorkflowFailure> {
-        self.foreground = foreground;
-        self.begin_preview()
-    }
-
-    pub fn select_background(
-        &mut self,
-        background: Background,
-    ) -> Result<PreviewRequest, WorkflowFailure> {
-        if self.logo_enabled && background != Background::Opaque(Rgba::WHITE) {
-            return Err(WorkflowFailure::LogoRequiresOpaqueWhite);
-        }
-        self.background = background;
         self.begin_preview()
     }
 
@@ -634,13 +582,13 @@ impl WorkflowState {
     }
 
     #[must_use]
-    pub const fn foreground(&self) -> Foreground {
-        self.foreground
+    pub const fn foreground(&self) -> Rgba {
+        Rgba::BRAND
     }
 
     #[must_use]
-    pub const fn background(&self) -> Background {
-        self.background
+    pub const fn background(&self) -> Rgba {
+        Rgba::WHITE
     }
 
     #[must_use]
@@ -686,13 +634,8 @@ impl WorkflowState {
     #[must_use]
     pub fn caution(&self) -> Option<String> {
         let control = control_character_caution(self.payload.raw());
-        let transparent = matches!(self.background, Background::Transparent)
-            .then_some(TRANSPARENT_OUTPUT_CAUTION);
         let logo = self.logo_enabled.then_some(LOGO_OUTPUT_CAUTION);
-        let cautions = [control, transparent, logo]
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>();
+        let cautions = [control, logo].into_iter().flatten().collect::<Vec<_>>();
         (!cautions.is_empty()).then(|| cautions.join(" "))
     }
 
@@ -727,8 +670,6 @@ impl WorkflowState {
             payload: self.payload.raw().to_owned(),
             profile_id: self.profile_id,
             logo_enabled: self.logo_enabled,
-            foreground: self.foreground,
-            background: self.background,
         })
     }
 
@@ -747,7 +688,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         profile.maximum_version(),
     ))
     .map_err(|error| classify_encode_error(error, request, profile))?;
-    let options = RenderOptions::approved(profile, request.foreground, request.background)
+    let options = RenderOptions::safe(profile)
         .and_then(|options| {
             options.with_logo(if request.logo_enabled {
                 LogoStyle::Bundled
@@ -775,6 +716,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         png,
         diagnostics: Diagnostics {
             mode: encoded.mode(),
+            eci_assignment: encoded.eci_assignment(),
             ecc: encoded.ecc(),
             mask: encoded.mask(),
             minimum_version: request.minimum_version(),
@@ -793,12 +735,8 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             rendered_symbol_side_pixels: png_placement.rendered_symbol_dimensions().width().get(),
             outer_padding_per_side: outer_padding.left.get(),
             print_guidance: profile_presentation(profile.id()).guidance(),
-            foreground: request.foreground,
-            background: request.background,
             safety: options.safety(),
             contrast_ratio: options.contrast_ratio(),
-            module_style: options.module_style(),
-            finder_style: options.finder_style(),
             logo_style: options.logo_style(),
             logo_placement: model.logo_placement(),
         },
@@ -884,10 +822,6 @@ fn classify_encode_error(
 
 fn classify_render_error(error: RenderError, profile: OutputProfile) -> WorkflowFailure {
     match error {
-        RenderError::UnsafeContrast { actual, minimum } => {
-            WorkflowFailure::UnsafeContrast { actual, minimum }
-        }
-        RenderError::LogoRequiresOpaqueWhite => WorkflowFailure::LogoRequiresOpaqueWhite,
         RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry {
             adaptive_recommended: profile.id() != ProfileId::Adaptive,
         },

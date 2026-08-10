@@ -16,6 +16,8 @@ use std::process::Command;
 pub struct FixtureManifest {
     schema_version: u8,
     decoder: DecoderProvenance,
+    #[serde(default)]
+    secondary_decoder: Option<DecoderProvenance>,
     fixtures: Vec<Fixture>,
     #[serde(default)]
     algorithm_fixtures: Vec<AlgorithmFixture>,
@@ -59,6 +61,11 @@ impl FixtureManifest {
         &self.decoder
     }
 
+    #[must_use]
+    pub fn secondary_decoder(&self) -> Option<&DecoderProvenance> {
+        self.secondary_decoder.as_ref()
+    }
+
     pub fn fixture(&self, id: &str) -> Result<&Fixture, VerificationError> {
         self.fixtures
             .iter()
@@ -74,6 +81,9 @@ impl FixtureManifest {
             )));
         }
         self.decoder.verify()?;
+        if let Some(decoder) = &self.secondary_decoder {
+            decoder.verify()?;
+        }
         if self.fixtures.is_empty() {
             return Err(VerificationError::new(
                 "fixture manifest must contain at least one fixture",

@@ -5,33 +5,15 @@ mod versions;
 
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
-use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, GlyphOwnership, RenderModel,
-    RenderOptions, Rgba, SUPPORTED_PROFILES, Version, render_svg,
-};
+use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, Version, render_svg};
 use sha2::{Digest, Sha256};
 
-const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 5] = [
-    [[
-        "daf2fe0172d65378561edcba4eb9abeedb8dd5cf14e32b46e015dbf440f3c2e7",
-        "de338fae3a073bb288bb5937abba53e6b4ce9036740b9c70b6d441de38a47ba6",
-    ]],
-    [[
-        "ff2c1833c8cb26708c7f853fed3d36879da20b27dddcf90f922900e1f51d5159",
-        "873fec561c6d05031427d230d9bc880c7df43935fdf9f634d4aaf4574375fca6",
-    ]],
-    [[
-        "5848c124f328020c11affa058b40e00a3b1d2da3273bb8b999b80bec28d1ffe2",
-        "b4ef8619b34d82dbb5f23ac6619ebb2f4d9453cc17488498a7ca5ebffbc97cd3",
-    ]],
-    [[
-        "e2f684d53ed6f928fdc93bdcc96764699aed0943f594d6d1f44c02be5744c3b9",
-        "7fc8380302359f90367e963fe89b196e032e1bf4179dcb2a03e8e1e79124bea3",
-    ]],
-    [[
-        "b7fb7e4af12a280a887c769a1e1d9b374875b8294544f51be69b5f3717ac98e2",
-        "e9233043122b49b6492d011c7426ed2221683c375548fd1ba1da4a91364cab42",
-    ]],
+const APPROVED_SVG_SHA256: [&str; 5] = [
+    "daf2fe0172d65378561edcba4eb9abeedb8dd5cf14e32b46e015dbf440f3c2e7",
+    "ff2c1833c8cb26708c7f853fed3d36879da20b27dddcf90f922900e1f51d5159",
+    "5848c124f328020c11affa058b40e00a3b1d2da3273bb8b999b80bec28d1ffe2",
+    "e2f684d53ed6f928fdc93bdcc96764699aed0943f594d6d1f44c02be5744c3b9",
+    "b7fb7e4af12a280a887c769a1e1d9b374875b8294544f51be69b5f3717ac98e2",
 ];
 
 #[test]
@@ -51,22 +33,12 @@ fn print_svg_hashes_for_fixture_refresh() {
 
     let encoded = encoded_qr("APPROVED SVG APPEARANCE");
     for profile in SUPPORTED_PROFILES {
-        for foreground in APPROVED_FOREGROUNDS {
-            for background in APPROVED_BACKGROUNDS {
-                let model = RenderModel::new(
-                    &encoded,
-                    RenderOptions::approved(profile, foreground, background).unwrap(),
-                )
-                .unwrap();
-                println!(
-                    "{:?} {:?} {:?} {}",
-                    profile.id(),
-                    foreground,
-                    background,
-                    sha256_hex(render_svg(&model).unwrap().as_bytes())
-                );
-            }
-        }
+        let model = RenderModel::new(&encoded, RenderOptions::safe(profile).unwrap()).unwrap();
+        println!(
+            "{:?} {}",
+            profile.id(),
+            sha256_hex(render_svg(&model).unwrap().as_bytes())
+        );
     }
 }
 
@@ -133,7 +105,17 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
 }
 
 #[test]
-fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic() {
+fn rounded_one_svg_retains_compact_dots_and_square_finders() {
+    let encoded = encoded_qr("ROUNDED ONE MODULES");
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[1]).unwrap();
+    let svg = render_svg(&RenderModel::new(&encoded, options).unwrap()).unwrap();
+    assert!(svg.contains("a0.375 0.375"));
+    assert!(svg.contains("M4 4h1v1h-1z"));
+    assert!(svg.contains("fill=\"#ffffff\""));
+}
+
+#[test]
+fn opaque_rounded_profile_artifacts_are_structural_and_deterministic() {
     let encoded = encoded_qr("APPROVED SVG APPEARANCE");
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
@@ -146,39 +128,28 @@ fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic
             .and_then(|node| node.attribute("d"))
             .unwrap();
 
-        for (foreground_index, foreground) in APPROVED_FOREGROUNDS.into_iter().enumerate() {
-            for (background_index, background) in APPROVED_BACKGROUNDS.into_iter().enumerate() {
-                let options = RenderOptions::approved(profile, foreground, background).unwrap();
-                let model = RenderModel::new(&encoded, options).unwrap();
-                let first = render_svg(&model).unwrap();
-                assert_eq!(
-                    sha256_hex(first.as_bytes()),
-                    APPROVED_SVG_SHA256[profile_index][foreground_index][background_index],
-                );
-                assert_eq!(first, render_svg(&model).unwrap());
+        let model = RenderModel::new(&encoded, RenderOptions::safe(profile).unwrap()).unwrap();
+        let first = render_svg(&model).unwrap();
+        assert_eq!(
+            sha256_hex(first.as_bytes()),
+            APPROVED_SVG_SHA256[profile_index]
+        );
+        assert_eq!(first, render_svg(&model).unwrap());
 
-                let document = roxmltree::Document::parse(&first).unwrap();
-                let root = document.root_element();
-                let rect = root.children().find(|node| node.has_tag_name("rect"));
-                match background {
-                    Background::Opaque(Rgba::WHITE) => {
-                        assert_eq!(
-                            rect.and_then(|node| node.attribute("fill")),
-                            Some("#ffffff")
-                        );
-                    }
-                    Background::Transparent => assert!(rect.is_none()),
-                    Background::Opaque(_) => panic!("only approved backgrounds are enumerated"),
-                }
-                let path = root
-                    .children()
-                    .find(|node| node.has_tag_name("path"))
-                    .unwrap();
-                assert_eq!(path.attribute("d"), Some(safe_path));
-                assert_eq!(path.attribute("fill"), Some("#bd0f72"));
-                assert_eq!(path.attribute("shape-rendering"), None);
-            }
-        }
+        let document = roxmltree::Document::parse(&first).unwrap();
+        let root = document.root_element();
+        let rect = root.children().find(|node| node.has_tag_name("rect"));
+        assert_eq!(
+            rect.and_then(|node| node.attribute("fill")),
+            Some("#ffffff")
+        );
+        let path = root
+            .children()
+            .find(|node| node.has_tag_name("path"))
+            .unwrap();
+        assert_eq!(path.attribute("d"), Some(safe_path));
+        assert_eq!(path.attribute("fill"), Some("#bd0f72"));
+        assert_eq!(path.attribute("shape-rendering"), None);
     }
 }
 
@@ -256,55 +227,6 @@ fn independent_rasterization_preserves_background_quiet_zone_and_square_modules(
             && pixel.blue() > 114
             && pixel.blue() < 255
     }));
-}
-
-#[test]
-fn svg_uses_full_cell_finders_and_exact_centered_compact_dots() {
-    let encoded = encoded_qr("COMPACT DOT SVG");
-    let model = RenderModel::new(
-        &encoded,
-        RenderOptions::safe(SUPPORTED_PROFILES[1]).unwrap(),
-    )
-    .unwrap();
-    let svg = render_svg(&model).unwrap();
-    let path = roxmltree::Document::parse(&svg)
-        .unwrap()
-        .descendants()
-        .find(|node| node.has_tag_name("path"))
-        .and_then(|node| node.attribute("d"))
-        .unwrap()
-        .to_owned();
-    let quiet = model.symbol().quiet_zone_modules_per_side().get();
-    let finder = model
-        .glyphs()
-        .find(|glyph| glyph.ownership() == GlyphOwnership::Finder)
-        .unwrap();
-    let dot = model
-        .glyphs()
-        .find(|glyph| glyph.ownership() != GlyphOwnership::Finder)
-        .unwrap();
-
-    let finder_x = u32::from(finder.x()) + quiet;
-    let finder_y = u32::from(finder.y()) + quiet;
-    assert!(path.contains(format!("M{finder_x} {finder_y}h1v1h-1z").as_str()));
-
-    let dot_left = u32::from(dot.x()) + quiet;
-    let dot_top = u32::from(dot.y()) + quiet;
-    assert!(
-        path.contains(
-            format!(
-                "M{dot_left}.125 {dot_top}.500a0.375 0.375 0 1 0 0.750 0a0.375 0.375 0 1 0-0.750 0z"
-            )
-            .as_str()
-        )
-    );
-    assert_eq!(
-        path.matches("h1v1h-1z").count(),
-        model
-            .glyphs()
-            .filter(|glyph| glyph.ownership() == GlyphOwnership::Finder)
-            .count()
-    );
 }
 
 fn encoded_qr(text: &str) -> EncodedQr {

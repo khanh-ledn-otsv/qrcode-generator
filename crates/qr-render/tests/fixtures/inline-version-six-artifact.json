@@ -22,8 +22,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-31-visible-round-dot-review",
+    "reviewer": "ticket-32-opaque-square-review",
     "verified_at": "2026-08-10",
-    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target artifact equality after increasing compact circles to 0.75 module for visible roundness, while pinned decoder evidence separately establishes readability."
+    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target equality for the opaque-white Rounded ONE output, while independent decoder evidence separately establishes readability."
   }
 }

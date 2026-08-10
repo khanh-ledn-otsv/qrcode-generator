@@ -120,6 +120,12 @@
 
 ## Fog
 
+- [Ticket 32](issues/32-simplify-output-and-automate-correctness.md): Fix the CI
+  caches and pinned tools, add routine and extended hosted correctness gates,
+  add the documented quirc decoder, remove transparent output, and make the
+  ordinary opaque output path use unconditional Rounded ONE modules with the
+  bundled logo enabled by default and removable. The licensed ISO audit and
+  physical-device validation remain owner-dependent work outside the ticket.
 - [Ticket 10 penalty-oracle disagreement](penalty-oracle-disagreement.md):
   Nayuki 1.8.0 and python-qrcode 8.2 agree on completed matrices but disagree
   on exposed Rule 3 penalty totals, blocking fixture acceptance under the

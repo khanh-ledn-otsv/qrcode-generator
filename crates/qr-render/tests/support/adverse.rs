@@ -224,11 +224,6 @@ pub fn pixels_differ(left: &[u8], right: &[u8]) -> Result<bool, Box<dyn Error>> 
     Ok(left != right)
 }
 
-pub fn composite_on(source: &[u8], rgba: [u8; 4]) -> Result<Vec<u8>, Box<dyn Error>> {
-    let source = image::load_from_memory_with_format(source, ImageFormat::Png)?.into_rgba8();
-    encode_png(&composite_background(&source, Rgba(rgba)))
-}
-
 fn scale_simulation(source: &RgbaImage, percent: u32) -> Result<RgbaImage, Box<dyn Error>> {
     if percent == 0 || percent >= 100 {
         return Err("scaling percent must be between 1 and 99".into());

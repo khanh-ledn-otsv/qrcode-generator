@@ -50,9 +50,21 @@ Use the tagged sources, recording exact file and symbol:
 
 This project is separately maintained from Nayuki. Agreement is useful corroboration, not proof of standards conformance; shared historical ancestry or the same mistake remains possible.
 
-### Independent decode oracle: ZXing-C++ 2.3.0
+### Independent decode oracles
 
-Use the tagged decoder sources [`QRBitMatrixParser.cpp`](https://github.com/zxing-cpp/zxing-cpp/blob/v2.3.0/core/src/qrcode/QRBitMatrixParser.cpp), [`QRDataBlock.cpp`](https://github.com/zxing-cpp/zxing-cpp/blob/v2.3.0/core/src/qrcode/QRDataBlock.cpp), and [`QRDecoder.cpp`](https://github.com/zxing-cpp/zxing-cpp/blob/v2.3.0/core/src/qrcode/QRDecoder.cpp) to contextualize parser, de-interleaving, and Reed–Solomon decode behavior. The project is Apache-2.0 licensed and is used as the pinned artifact decoder, not as an encoder implementation source.
+ZXing-C++ 3.0.2 at commit
+[`8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825`](https://github.com/zxing-cpp/zxing-cpp/commit/8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825)
+is the manifest-pinned authoritative artifact decoder, including UTF-8/ECI
+metadata checks. Its checkout, submodules, tracked worktree, and reported
+version are verified before use. The project is Apache-2.0 licensed and is used
+as a decoder, not as an encoder implementation source.
+
+quirc 1.2 at commit
+[`542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca`](https://github.com/dlbeer/quirc/commit/542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca)
+is a secondary test-only decoder for representative synthetic ordinary, dense,
+unbranded, and branded ASCII rasters. Exact decoded payload bytes must match.
+It is not linked into any production crate and does not replace ZXing-C++ for
+UTF-8/ECI metadata evidence.
 
 Successful decode cannot prove the exact required matrix: many valid encodings and some damaged symbols decode. Exact explicit-mask matrices and structural invariants remain mandatory.
 

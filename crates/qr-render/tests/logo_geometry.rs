@@ -5,8 +5,8 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    Background, Foreground, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, OutputSafety, ProfileId,
-    RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
+    LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, OutputSafety, ProfileId, RenderError, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES,
 };
 
 const LONG_ONE_URL: &str = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
@@ -207,7 +207,7 @@ fn every_enabled_fixed_and_adaptive_logo_placement_is_function_safe() {
 }
 
 #[test]
-fn logo_requires_high_ecc_and_opaque_white() {
+fn logo_requires_high_ecc_and_uses_the_fixed_opaque_white_background() {
     let profile = SUPPORTED_PROFILES[0];
     let encoded = encode(EncodeRequest::first_fit(
         "logo",
@@ -221,11 +221,5 @@ fn logo_requires_high_ecc_and_opaque_white() {
         .unwrap();
     assert!(RenderModel::new(&encoded, options).is_err());
 
-    assert!(
-        RenderOptions::approved(profile, Foreground::Brand, Background::Transparent,)
-            .unwrap()
-            .with_logo(LogoStyle::Bundled)
-            .is_err()
-    );
-    assert_eq!(options.background(), Background::Opaque(Rgba::WHITE));
+    assert_eq!(options.background(), Rgba::WHITE);
 }

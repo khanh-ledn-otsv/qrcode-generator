@@ -57,14 +57,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
     payload_classes = policy["required_payload_classes"]
     branding = policy["branded_geometry_policy"]
     rows = []
-    dimension_order = (
-        "profiles",
-        "foregrounds",
-        "backgrounds",
-        "module_styles",
-        "finder_styles",
-        "logo_states",
-    )
+    dimension_order = ("profiles", "logo_states")
     tuples = itertools.product(*(range(dimensions[name]) for name in dimension_order))
     scenarios = []
     for indices in tuples:
@@ -84,10 +77,6 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
     for index, scenario in enumerate(scenarios):
         (
             profile_index,
-            foreground_index,
-            background_index,
-            module_style_index,
-            finder_style_index,
             logo_state_index,
             case_kind,
             payload_class,
@@ -96,22 +85,19 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         ) = scenario
         logo = logo_state_index == 1
         decoded = not logo or (
-            background_index == 0
-            and (
-                (
-                    case_kind == "required-payload"
-                    and (payload_class != "dense-url" or profile_index == 0)
-                )
-                or (
-                    case_kind == "version-coverage"
-                    and (
-                        covered_version == branding["minimum_version"]
-                        or (
-                            profile_index == branding["adaptive_profile_index"]
-                            and branding["minimum_version"]
-                            <= covered_version
-                            <= branding["adaptive_maximum_version"]
-                        )
+            (
+                case_kind == "required-payload"
+                and (payload_class != "dense-url" or profile_index == 0)
+            )
+            or (
+                case_kind == "version-coverage"
+                and (
+                    covered_version == branding["minimum_version"]
+                    or (
+                        profile_index == branding["adaptive_profile_index"]
+                        and branding["minimum_version"]
+                        <= covered_version
+                        <= branding["adaptive_maximum_version"]
                     )
                 )
             )
@@ -135,10 +121,6 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             "case_kind": case_kind,
             "case_label": case_label,
             "profile_index": profile_index,
-            "foreground_index": foreground_index,
-            "background_index": background_index,
-            "module_style_index": module_style_index,
-            "finder_style_index": finder_style_index,
             "logo_state_index": logo_state_index,
             "payload_class": payload_class,
             "version": row_version,
@@ -230,7 +212,7 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
 
     def test_critical_workflow_gate_names_the_final_branded_browser_behaviors(self) -> None:
         self.assertIn(
-            "uses round compact dots and standard square finders without a shape control",
+            "uses one opaque white rounded ONE appearance",
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(
@@ -249,8 +231,8 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             "Adaptive reaches the exact unbranded Version 40 boundary",
             CRITICAL_WORKFLOW_TESTS,
         )
-        self.assertNotIn(
-            "uses square modules and standard square finders without a shape control",
+        self.assertIn(
+            "always uses rounded ONE modules without an appearance control",
             CRITICAL_WORKFLOW_TESTS,
         )
 

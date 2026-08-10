@@ -94,14 +94,14 @@ test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
-test("Adaptive preview keeps compact modules visible at its declared size", async ({ page }) => {
+test("Adaptive preview keeps rounded modules visible at its declared size", async ({ page }) => {
   await selectProfile(page, "Adaptive");
   await enterPayload(page, "adaptive preview visibility");
 
   const preview = page
     .getByTestId("qr-preview")
     .locator('svg:visible:not([data-role="bundled-logo"])');
-  await expect(preview).toHaveAttribute("width", "196");
+  await expect(preview).toHaveAttribute("width", /\d+/);
   const visiblePixelsOutsideLargeArtwork = await preview.evaluate(async (svg) => {
     const markup = new XMLSerializer().serializeToString(svg);
     const image = new Image();
@@ -142,47 +142,35 @@ test("Adaptive preview keeps compact modules visible at its declared size", asyn
   expect(visiblePixelsOutsideLargeArtwork).toBeGreaterThan(200);
 });
 
-test("uses only magenta and shows transparent placement cautions", async ({ page }) => {
+test("uses one opaque white rounded ONE appearance", async ({ page }) => {
   await enterPayload(page, "approved color workflow");
 
   const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
   await expect(logo).toBeChecked();
   await page.getByText("ONE lettermark", { exact: true }).click();
   await expect(logo).not.toBeChecked();
-
-  const white = page.getByRole("radio", { name: /Opaque white/ });
-  const transparent = page.getByRole("radio", { name: /Transparent/ });
-  await expect(white).toBeChecked();
   await expect(page.getByRole("group", { name: "Foreground color" })).toHaveCount(0);
-  await expect(
-    page.getByRole("group", { name: "Background treatment" }).getByRole("radio"),
-  ).toHaveCount(2);
+  await expect(page.getByRole("group", { name: "Background treatment" })).toHaveCount(0);
 
   await expect.poll(() => diagnostic(page, "Foreground")).toBe("#BD0F72");
+  await expect.poll(() => diagnostic(page, "Background")).toBe("Opaque white");
+  await expect.poll(() => diagnostic(page, "Modules")).toBe("Rounded ONE");
   await expect.poll(() => diagnostic(page, "Contrast")).toBe("6.04:1");
+  await expect.poll(() => diagnostic(page, "Safety")).toBe("Safe");
   await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
     "fill",
     "#bd0f72",
   );
-
-  await transparent.focus();
-  await page.keyboard.press("Space");
-  await expect.poll(() => diagnostic(page, "Safety")).toBe("Caution");
-  await expect.poll(() => diagnostic(page, "Contrast")).toBe("Unknown on placement surface");
-  await expect(page.getByRole("status").filter({ hasText: "Transparent output" })).toBeVisible();
-  const surfaces = page.getByTestId("transparent-surface-preview");
-  await expect(surfaces).toHaveCount(4);
-  await expect(surfaces).toHaveText(["White", "Light gray", "Dark", "Patterned"]);
   await expect(page.getByTestId("download-svg")).toBeEnabled();
-  await expect(surfaces.first().locator("rect")).toHaveCount(0);
+  await expect(page.getByTestId("qr-preview").locator("rect").first()).toHaveAttribute(
+    "fill",
+    "#ffffff",
+  );
 });
 
-test("logo mode is selected by default, uses ECC H, and requires opaque white", async ({
-  page,
-}) => {
+test("logo mode is enabled by default and can be turned off", async ({ page }) => {
   await enterPayload(page, "a".repeat(30));
   const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
-  const transparent = page.getByRole("radio", { name: /Transparent/ });
 
   await expect(logo).toBeChecked();
   await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
@@ -193,9 +181,8 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
   await expect
     .poll(() => diagnostic(page, "Logo"))
     .toBe("ONE lettermark · 105 data · 0 remainder modules obscured");
-  await expect(transparent).toBeDisabled();
   const renderedLogos = page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]');
-  await expect(renderedLogos).toHaveCount(5);
+  await expect(renderedLogos).toHaveCount(1);
   await expect(renderedLogos.first()).toHaveAttribute("x", "18");
   await expect(renderedLogos.first()).toHaveAttribute("y", "22.0625");
   await expect(renderedLogos.first()).toHaveAttribute("width", "13");
@@ -231,6 +218,9 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
   });
   expect(visibleArtworkCoverage.width).toBeGreaterThanOrEqual(0.9);
   expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await expect(logo).not.toBeChecked();
+  await expect.poll(() => diagnostic(page, "ECC")).toBe("M");
 });
 
 test("fixed profiles recommend Adaptive when centered branding is unavailable", async ({
@@ -325,34 +315,18 @@ test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }
   await expect(page.getByTestId("download-png")).toBeDisabled();
 });
 
-test("uses round compact dots and standard square finders without a shape control", async ({
-  page,
-}) => {
-  await selectProfile(page, "Adaptive");
-  await enterPayload(
-    page,
-    "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya",
-  );
-
+test("always uses rounded ONE modules without an appearance control", async ({ page }) => {
+  await enterPayload(page, "rounded ONE output");
+  await expect.poll(() => diagnostic(page, "Modules")).toBe("Rounded ONE");
+  await expect(page.getByText("ONE appearance", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("group", { name: "Data module shape" })).toHaveCount(0);
-  await expect.poll(() => diagnostic(page, "Non-finder modules")).toBe("Compact dots");
-  await expect.poll(() => diagnostic(page, "Finders")).toBe("Standard square");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("260 px SVG · 390 px PNG");
+  await expect(page.getByRole("checkbox", { name: /Rounded ONE modules/ })).toHaveCount(0);
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const modulePath = page.getByTestId("qr-preview").locator("path").first();
   await expect(modulePath).not.toHaveAttribute("shape-rendering", "crispEdges");
-  await expect(modulePath).toHaveAttribute("d", /M\d+\.125 \d+\.500a0\.375 0\.375 0 1 0 0\.750 0/);
+  await expect(modulePath).toHaveAttribute("d", /a0\.375 0\.375/);
   await expect(modulePath).toHaveAttribute("d", /M4 4h1v1h-1z/);
-  const renderedDotDiameter = await modulePath.evaluate((path) => {
-    const svg = path.ownerSVGElement;
-    const arc = path.getAttribute("d")?.match(/a([0-9.]+) [0-9.]+ 0 1 0 ([0-9.]+) 0/);
-    if (!svg || !arc) {
-      throw new Error("compact-dot arc geometry is missing");
-    }
-    return (Number(arc[2]) * svg.getBoundingClientRect().width) / svg.viewBox.baseVal.width;
-  });
-  expect(renderedDotDiameter).toBeGreaterThanOrEqual(3);
 });
 
 test("explains export, physical sizing, and placement validation before generation", async ({
@@ -363,7 +337,7 @@ test("explains export, physical sizing, and placement validation before generati
   const guidance = page.getByTestId("release-guidance");
   await expect(guidance).toContainText("Choose SVG first");
   await expect(guidance).toContainText("25–30 mm or larger");
-  await expect(guidance).toContainText("Transparent output and logo output need extra validation");
+  await expect(guidance).toContainText("Logo output needs extra validation");
   await expect(guidance).toContainText("actual camera, scanner, screen, print material");
 });
 

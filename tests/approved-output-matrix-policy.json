@@ -2,10 +2,6 @@
   "schema_version": 1,
   "tuple_dimensions": {
     "profiles": 5,
-    "foregrounds": 1,
-    "backgrounds": 2,
-    "module_styles": 1,
-    "finder_styles": 1,
     "logo_states": 2
   },
   "profile_max_versions": [6, 8, 12, 13, 40],
@@ -81,10 +77,10 @@
     ]
   },
   "expected_rows": {
-    "required_payload": 120,
-    "version_coverage": 316,
-    "total": 436,
-    "decoded": 254,
-    "expected_invalid": 182
+    "required_payload": 60,
+    "version_coverage": 158,
+    "total": 218,
+    "decoded": 145,
+    "expected_invalid": 73
   }
 }

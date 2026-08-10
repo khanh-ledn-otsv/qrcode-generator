@@ -6,8 +6,7 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FOREGROUNDS, Background, ContrastRatio, FinderStyle, Foreground,
-    GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, ModuleStyle, OutputProfile, OutputSafety,
+    ContrastRatio, GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile, OutputSafety,
     ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, Version,
     render_png, render_svg,
 };
@@ -27,92 +26,18 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
     assert_eq!(model.ecc(), encoded.ecc());
     assert_eq!(model.mask(), encoded.mask());
     assert_eq!(model.options().foreground(), Rgba::BRAND);
-    assert_eq!(
-        model.options().background(),
-        Background::Opaque(Rgba::WHITE)
-    );
-    assert_eq!(model.options().module_style(), ModuleStyle::CompactDots);
-    assert_eq!(model.options().finder_style(), FinderStyle::StandardSquare);
+    assert_eq!(model.options().background(), Rgba::WHITE);
     assert_eq!(model.options().logo_style(), LogoStyle::None);
 }
 
 #[test]
-fn approved_color_and_background_options_have_measurable_safety() {
+fn fixed_opaque_appearance_has_measurable_safety() {
     let profile = SUPPORTED_PROFILES[1];
-
-    let safe = RenderOptions::approved(profile, Foreground::Brand, Background::Opaque(Rgba::WHITE))
-        .unwrap();
+    let safe = RenderOptions::safe(profile).unwrap();
     assert_eq!(safe.foreground(), Rgba::BRAND);
+    assert_eq!(safe.background(), Rgba::WHITE);
     assert_eq!(safe.safety(), OutputSafety::Safe);
-    assert_eq!(
-        safe.contrast_ratio(),
-        Some(ContrastRatio::from_hundredths(604))
-    );
-
-    let brand =
-        RenderOptions::approved(profile, Foreground::Brand, Background::Opaque(Rgba::WHITE))
-            .unwrap();
-    assert_eq!(brand.foreground(), Rgba::BRAND);
-    assert_eq!(brand.safety(), OutputSafety::Safe);
-    assert_eq!(
-        brand.contrast_ratio(),
-        Some(ContrastRatio::from_hundredths(604))
-    );
-
-    let transparent =
-        RenderOptions::approved(profile, Foreground::Brand, Background::Transparent).unwrap();
-    assert_eq!(transparent.safety(), OutputSafety::Caution);
-    assert_eq!(transparent.contrast_ratio(), None);
-}
-
-#[test]
-fn only_approved_combinations_can_be_rendered_and_unsafe_contrast_is_typed() {
-    let profile = SUPPORTED_PROFILES[1];
-    let unsafe_gray = Rgba::opaque(119, 119, 119);
-
-    assert_eq!(
-        RenderOptions::try_new(profile, unsafe_gray, Background::Opaque(Rgba::WHITE)),
-        Err(RenderError::UnsafeContrast {
-            actual: ContrastRatio::from_hundredths(447),
-            minimum: ContrastRatio::MINIMUM_OPAQUE,
-        })
-    );
-    assert_eq!(
-        RenderOptions::try_new(
-            profile,
-            Rgba::opaque(119, 118, 124),
-            Background::Opaque(Rgba::WHITE),
-        ),
-        Err(RenderError::UnsafeContrast {
-            actual: ContrastRatio::from_hundredths(449),
-            minimum: ContrastRatio::MINIMUM_OPAQUE,
-        })
-    );
-    assert_eq!(
-        RenderOptions::try_new(
-            profile,
-            Rgba::opaque(0, 96, 0),
-            Background::Opaque(Rgba::WHITE),
-        ),
-        Err(RenderError::UnapprovedColorCombination)
-    );
-}
-
-#[test]
-fn generated_approved_color_background_profile_matrix_is_complete() {
-    let combinations =
-        SUPPORTED_PROFILES.len() * APPROVED_FOREGROUNDS.len() * APPROVED_BACKGROUNDS.len();
-    assert_eq!(combinations, 10);
-
-    for profile in SUPPORTED_PROFILES {
-        for foreground in APPROVED_FOREGROUNDS {
-            for background in APPROVED_BACKGROUNDS {
-                let options = RenderOptions::approved(profile, foreground, background).unwrap();
-                assert_eq!(options.module_style(), ModuleStyle::CompactDots);
-                assert_eq!(options.finder_style(), FinderStyle::StandardSquare);
-            }
-        }
-    }
+    assert_eq!(safe.contrast_ratio(), ContrastRatio::from_hundredths(604));
 }
 
 proptest! {
@@ -122,17 +47,11 @@ proptest! {
     fn approved_appearance_preserves_encoding_and_deterministic_artifacts(
         payload in "[A-Za-z0-9:/._-]{1,80}",
         profile_index in 0_usize..SUPPORTED_PROFILES.len(),
-        foreground_index in 0_usize..APPROVED_FOREGROUNDS.len(),
-        background_index in 0_usize..APPROVED_BACKGROUNDS.len(),
     ) {
         let profile = SUPPORTED_PROFILES[profile_index];
         let encoded = encode(EncodeRequest::first_fit(&payload, ErrorCorrection::Medium, profile.maximum_version())).unwrap();
         let original = encoded.clone();
-        let options = RenderOptions::approved(
-            profile,
-            APPROVED_FOREGROUNDS[foreground_index],
-            APPROVED_BACKGROUNDS[background_index],
-        ).unwrap();
+        let options = RenderOptions::safe(profile).unwrap();
         let model = RenderModel::new(&encoded, options).unwrap();
 
         prop_assert_eq!(&encoded, &original);

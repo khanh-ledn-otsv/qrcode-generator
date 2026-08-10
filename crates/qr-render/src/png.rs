@@ -2,7 +2,7 @@ use png::{BitDepth, ColorType, Compression, Encoder, Filter};
 
 use crate::logo::{logo_contains_source_point, source_view_box};
 use crate::model::COMPACT_DOT_GEOMETRY;
-use crate::{Background, GlyphOwnership, PixelDimensions, RenderError, RenderModel, Rgba};
+use crate::{GlyphOwnership, PixelDimensions, RenderError, RenderModel, Rgba};
 
 const LOGO_SAMPLES_PER_AXIS: u32 = 4;
 const LOGO_SAMPLE_COUNT: u32 = LOGO_SAMPLES_PER_AXIS * LOGO_SAMPLES_PER_AXIS;
@@ -15,10 +15,7 @@ pub fn render_png(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
 
 fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
     let placement = model.png_placement();
-    let background = match model.options().background() {
-        Background::Opaque(color) => color.channels(),
-        Background::Transparent => [0, 0, 0, 0],
-    };
+    let background = model.options().background().channels();
     let mut pixels = Vec::new();
     pixels
         .try_reserve_exact(placement.rgba_buffer_len())
@@ -257,50 +254,45 @@ fn fill_dot(
     y: u32,
     side: u32,
     foreground: Rgba,
-    background: Background,
+    background: Rgba,
 ) -> Result<(), RenderError> {
     let x_end = x.checked_add(side).ok_or(RenderError::DimensionOverflow)?;
     let y_end = y.checked_add(side).ok_or(RenderError::DimensionOverflow)?;
     if x_end > dimensions.width().get() || y_end > dimensions.height().get() {
         return Err(RenderError::RenderFailure);
     }
-
-    let samples_per_axis = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
+    let samples = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
     let center = u64::from(side)
-        .checked_mul(u64::from(samples_per_axis))
+        .checked_mul(u64::from(samples))
         .ok_or(RenderError::DimensionOverflow)?;
-    let scaled_radius = center
+    let radius = center
         .checked_mul(u64::from(COMPACT_DOT_GEOMETRY.diameter_thousandths()))
         .ok_or(RenderError::DimensionOverflow)?;
-    let radius_squared = scaled_radius
-        .checked_mul(scaled_radius)
+    let radius_squared = radius
+        .checked_mul(radius)
         .ok_or(RenderError::DimensionOverflow)?;
     for offset_y in 0..side {
         for offset_x in 0..side {
-            let mut covered_samples = 0;
-            for sample_y in 0..samples_per_axis {
-                for sample_x in 0..samples_per_axis {
-                    let sample_x = u64::from(offset_x)
-                        .checked_mul(u64::from(samples_per_axis) * 2)
-                        .and_then(|value| value.checked_add(u64::from(sample_x) * 2 + 1))
-                        .ok_or(RenderError::DimensionOverflow)?;
-                    let sample_y = u64::from(offset_y)
-                        .checked_mul(u64::from(samples_per_axis) * 2)
-                        .and_then(|value| value.checked_add(u64::from(sample_y) * 2 + 1))
-                        .ok_or(RenderError::DimensionOverflow)?;
+            let mut covered = 0;
+            for sample_y in 0..samples {
+                for sample_x in 0..samples {
+                    let sample_x =
+                        u64::from(offset_x) * u64::from(samples) * 2 + u64::from(sample_x) * 2 + 1;
+                    let sample_y =
+                        u64::from(offset_y) * u64::from(samples) * 2 + u64::from(sample_y) * 2 + 1;
                     let dx = sample_x.abs_diff(center);
                     let dy = sample_y.abs_diff(center);
-                    let distance_squared = dx
+                    let distance = dx
                         .checked_mul(dx)
                         .and_then(|value| dy.checked_mul(dy).and_then(|dy| value.checked_add(dy)))
                         .and_then(|value| value.checked_mul(1_000_000))
                         .ok_or(RenderError::DimensionOverflow)?;
-                    if distance_squared <= radius_squared {
-                        covered_samples += 1;
+                    if distance <= radius_squared {
+                        covered += 1;
                     }
                 }
             }
-            if covered_samples > 0 {
+            if covered > 0 {
                 blend_dot_pixel(
                     pixels,
                     dimensions,
@@ -308,7 +300,7 @@ fn fill_dot(
                     y + offset_y,
                     foreground,
                     background,
-                    covered_samples,
+                    covered,
                 )?;
             }
         }
@@ -322,12 +314,11 @@ fn blend_dot_pixel(
     x: u32,
     y: u32,
     foreground: Rgba,
-    background: Background,
-    covered_samples: u32,
+    background: Rgba,
+    covered: u32,
 ) -> Result<(), RenderError> {
-    let width = u64::from(dimensions.width().get());
     let offset = u64::from(y)
-        .checked_mul(width)
+        .checked_mul(u64::from(dimensions.width().get()))
         .and_then(|value| value.checked_add(u64::from(x)))
         .and_then(|value| value.checked_mul(4))
         .and_then(|value| usize::try_from(value).ok())
@@ -336,35 +327,17 @@ fn blend_dot_pixel(
         .get_mut(offset..offset + 4)
         .ok_or(RenderError::RenderFailure)?;
     let foreground = foreground.channels();
-    match background {
-        Background::Transparent => {
-            pixel[..3].copy_from_slice(&foreground[..3]);
-            pixel[3] = blend_dot_channel(u8::MAX, 0, covered_samples)?;
-        }
-        Background::Opaque(background) => {
-            let background = background.channels();
-            for channel in 0..3 {
-                pixel[channel] =
-                    blend_dot_channel(foreground[channel], background[channel], covered_samples)?;
-            }
-            pixel[3] = u8::MAX;
-        }
+    let background = background.channels();
+    let samples = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
+    let total = samples * samples;
+    for channel in 0..3 {
+        let blended = u32::from(foreground[channel]) * covered
+            + u32::from(background[channel]) * (total - covered);
+        pixel[channel] =
+            u8::try_from((blended + total / 2) / total).map_err(|_| RenderError::RenderFailure)?;
     }
+    pixel[3] = u8::MAX;
     Ok(())
-}
-
-fn blend_dot_channel(
-    foreground: u8,
-    background: u8,
-    covered_samples: u32,
-) -> Result<u8, RenderError> {
-    let samples_per_axis = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
-    let sample_count = samples_per_axis * samples_per_axis;
-    let uncovered_samples = sample_count - covered_samples;
-    let blended =
-        u32::from(foreground) * covered_samples + u32::from(background) * uncovered_samples;
-    u8::try_from((blended + sample_count / 2) / sample_count)
-        .map_err(|_| RenderError::RenderFailure)
 }
 
 fn serialize_png(dimensions: PixelDimensions, pixels: &[u8]) -> Result<Vec<u8>, RenderError> {

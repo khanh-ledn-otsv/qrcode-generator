@@ -10,10 +10,7 @@ use fixture_tool::{
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{
-    Background, Foreground, LogoStyle, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES,
-    render_png,
-};
+use qr_render::{LogoStyle, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 
 #[test]
 fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(), Box<dyn Error>> {
@@ -39,14 +36,13 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
         ]
     );
     assert_eq!(
-        suite.envelope_ids("print-compact-dots")?,
+        suite.envelope_ids("print-rounded-one")?,
         suite
             .transforms()
             .iter()
             .map(|transform| transform.id())
             .collect::<Vec<_>>()
     );
-    assert_eq!(suite.envelope_ids("transparent-compact-dots")?.len(), 10);
     assert_eq!(suite.envelope_ids("centered-logo")?.len(), 6);
     assert_eq!(suite.envelope_ids("adaptive-v10-long-url")?.len(), 5);
     assert_eq!(suite.envelope_ids("adaptive-v11-long-url")?.len(), 5);
@@ -61,11 +57,7 @@ fn adverse_transforms_are_reproducible_and_preserve_canvas_dimensions() -> Resul
         ErrorCorrection::Medium,
         SUPPORTED_PROFILES[3].maximum_version(),
     ))?;
-    let options = RenderOptions::approved(
-        SUPPORTED_PROFILES[1],
-        Foreground::Brand,
-        Background::Transparent,
-    )?;
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[1])?;
     let source = render_png(&RenderModel::new(&encoded, options)?)?;
     let suite = adverse::TransformSuite::load()?;
 
@@ -110,37 +102,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     ))?;
     let safe_source = render_png(&RenderModel::new(
         &safe_encoded,
-        RenderOptions::approved(
-            SUPPORTED_PROFILES[3],
-            Foreground::Brand,
-            Background::Opaque(qr_render::Rgba::WHITE),
-        )?,
+        RenderOptions::safe(SUPPORTED_PROFILES[3])?,
     )?)?;
     let safe_expected = DecodeExpectation {
         payload: safe_payload.as_bytes().to_vec(),
         version: QrVersion::new(safe_encoded.version().number())?,
-        ecc: FixtureEcc::M,
-        eci_assignment: None,
-    };
-
-    let transparent_payload = "https://example.test/transparent-caution";
-    let transparent_encoded = encode(EncodeRequest::first_fit(
-        transparent_payload,
-        ErrorCorrection::Medium,
-        SUPPORTED_PROFILES[1].maximum_version(),
-    ))?;
-    let transparent_source = render_png(&RenderModel::new(
-        &transparent_encoded,
-        RenderOptions::approved(
-            SUPPORTED_PROFILES[1],
-            Foreground::Brand,
-            Background::Transparent,
-        )?,
-    )?)?;
-    let transparent_source = adverse::composite_on(&transparent_source, [255, 255, 255, 255])?;
-    let transparent_expected = DecodeExpectation {
-        payload: transparent_payload.as_bytes().to_vec(),
-        version: QrVersion::new(transparent_encoded.version().number())?,
         ecc: FixtureEcc::M,
         eci_assignment: None,
     };
@@ -206,12 +172,7 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     };
 
     let configurations = [
-        ("print-compact-dots", safe_source, safe_expected),
-        (
-            "transparent-compact-dots",
-            transparent_source,
-            transparent_expected,
-        ),
+        ("print-rounded-one", safe_source, safe_expected),
         ("centered-logo", logo_source, logo_expected),
         ("adaptive-v10-long-url", adaptive_source, adaptive_expected),
         (

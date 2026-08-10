@@ -8,6 +8,14 @@
     "checkout_command": "git clone --recurse-submodules https://github.com/zxing-cpp/zxing-cpp.git tests/oracles/zxing-cpp && git -C tests/oracles/zxing-cpp checkout --detach 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825 && git -C tests/oracles/zxing-cpp submodule update --init --recursive",
     "build_command": "cmake -S tests/oracles/zxing-cpp -B tests/oracles/zxing-cpp/build -DCMAKE_BUILD_TYPE=Release -DZXING_EXAMPLES=ON && cmake --build tests/oracles/zxing-cpp/build --config Release"
   },
+  "secondary_decoder": {
+    "tool": "quirc",
+    "version": "1.2",
+    "source_url": "https://github.com/dlbeer/quirc.git",
+    "source_commit": "542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca",
+    "checkout_command": "git clone https://github.com/dlbeer/quirc.git tests/oracles/quirc && git -C tests/oracles/quirc checkout --detach 542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca",
+    "build_command": "make -C tests/oracles/quirc SDL_CFLAGS= libquirc.a && cc -std=c11 -Wall -Wextra -Werror -Itests/oracles/quirc/lib tests/oracles/quirc-reader.c tests/oracles/quirc/libquirc.a -lm -o tests/oracles/quirc-reader"
+  },
   "fixtures": [
     {
       "id": "synthetic-v01-m-mask0-byte-001",

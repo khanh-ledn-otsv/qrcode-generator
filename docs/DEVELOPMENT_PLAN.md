@@ -74,34 +74,28 @@ Version 6-only geometry; Adaptive branding reflects approval through Version
 bytes plus ECI overhead, QR-alphanumeric-only input can sometimes fit more,
 and the exact preview result remains authoritative.
 
-Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
+The bundled logo is enabled by default and is the only release-1 choice that changes ECC: logo mode uses ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
 ### 2.5 PNG renderer
 
 Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rust `png` crate. Do not use Canvas, browser SVG screenshots, or a general scene renderer for production PNG export.
 
-- Finder cells and logo-knockout cells are filled by exact integer pixel
-  rectangles. Every other visible module uses the approved centered circular
-  glyph described below.
-- PNG dots use deterministic 8×8 final-pixel coverage inside the approved
-  0.75-module circular envelope. Fully covered pixels use exact `#BD0F72`;
-  contour pixels blend with an opaque background or retain brand RGB beneath
-  partial alpha on a transparent background. This preserves a solid brand core
-  and a visibly round edge without introducing a second foreground token. The
-  complete image is never resized.
+- Standard output uses deterministic 8×8 coverage for centered 0.75-module
+  dots in `#BD0F72` outside the square finder regions on opaque white. Logo
+  knockout cells are exact opaque-white rectangles. The complete image is
+  never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
 - Fixed profiles retain their compiled dimensions and 3× PNG relationship.
   Adaptive uses the selected matrix plus the four-module quiet zone to derive a
   four-pixel-per-logical-module SVG side and a six-pixel-per-logical-module PNG
-  side. This keeps 0.75-module compact dots visibly round when Chromium displays the
-  SVG at its declared size; the PNG retains an integer six-pixel module scale
-  and needs no surplus padding.
+  side. The PNG retains an integer six-pixel module scale and needs no surplus
+  padding.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering
-  and numeric formatting. Compact modules remain true circular arc paths with
-  the exact brand fill and normal edge antialiasing; forcing crisp-edge shape
-  rendering is prohibited because it rasterizes small circles as diamonds.
+  and numeric formatting. Rounded ONE modules use true circular arc paths
+  outside square finders. The document always contains an explicit opaque-white
+  background rectangle.
 
 This keeps the pixel geometry testable on native Rust and WASM and avoids browser-dependent rasterization.
 
@@ -109,29 +103,24 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 
 These release-1 defaults use the approved ONE treatment. The decode-backed
 geometry below was accepted on 2026-08-09 for implementation by Tickets 24–29
-and extended on 2026-08-10 by Ticket 30;
-the production renderer applies the selected dot treatment, the unchanged
-fixed-profile Version 6 placement, and the decode-backed adaptive placements.
+and extended on 2026-08-10 by Ticket 30. The production renderer always uses
+Rounded ONE modules with the unchanged fixed-profile Version 6 placement and
+the decode-backed adaptive placements.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
-- Visible data, remainder, timing, alignment, format, version, and fixed-dark
-  modules use exactly centered circular glyphs with a diameter of `0.75`
-  module. Encoded values and module coordinates are unchanged.
-- All three 7×7 finder regions remain full-cell square patterns. Separator
-  modules remain blank. The closer-reference non-finder dot treatment is
-  approved; the conservative square-function treatment remains recorded as a
-  passing experiment control but is not the selected branded appearance.
-- Transparent background: supported as a caution, with export evaluated against white, light gray, and the documented dark/patterned previews. It is never the default.
+- Rounded ONE uses centered 0.75-module dots for non-finder modules while
+  keeping standard square finders. Separator modules remain blank. Encoded
+  values and coordinates are unchanged.
+- The background is always opaque white; transparency is absent from the public
+  product and internal selectable appearance model.
 - Module strokes and decorative borders: excluded from the product. Surplus fixed-canvas padding remains background-only.
 - Finder styling: standard square only.
 
-**Launch decisions accepted by the project owner on 2026-08-07 and revised on
-2026-08-09:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque
-contrast threshold, optional no-logo transparency as a caution, 0.75-module
-centered dots outside the full-size square finder regions, and the bundled ONE
-lettermark described below. Rounded modules remain excluded. The complete
-candidate evidence is committed in
-[`generated/branded-geometry-policy.json`](generated/branded-geometry-policy.json).
+**Launch decisions accepted by the project owner on 2026-08-07 and revised by
+Ticket 32:** release 1 uses only the magenta ONE foreground, an opaque-white
+background, rounded ONE modules with standard square finders, the 4.5:1
+contrast threshold, and the bundled ONE lettermark described below. The logo
+is enabled by default and can be disabled; transparent output is excluded.
 
 ### 2.7 Logo safety
 
@@ -185,8 +174,9 @@ candidate evidence is committed in
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
-- Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
-- The bundled logo option is selected by default. Users may turn it off to restore ECC M and transparent-background availability.
+- Logo mode requires an opaque white background and knockout.
+- The bundled logo is enabled by default. Users may turn it off to select ECC M,
+  the Version 1 minimum, and no occlusion.
 - Exact centering remains mandatory for the four fixed profiles. Adaptive alone
   may use the reviewed deterministic nearby search. The selected-version
   dimensions and generated evidence are recorded in
@@ -197,15 +187,15 @@ candidate evidence is committed in
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
-Release evidence exhausts the selectable surface with 436 generated scenarios:
-120 required-payload rows and 316 exact-version rows. Native PNG and independently
+Release evidence exhausts the selectable surface with 218 generated scenarios:
+60 required-payload rows and 158 exact-version rows. Native PNG and independently
 rasterized SVG artifacts share one scenario identity and record deterministic
 hashes, safety, decode outcome, and fixed/adaptive logo geometry. The resulting policy
-has 254 accepted rows and 182 typed expected rejections. Deterministic adverse
-evidence separately records 39 outcomes across explicit safe opaque-Print,
-transparent-caution, centered-logo-caution, and Adaptive-Version-10 and
-Version-11 long-URL caution pass envelopes; it does not imply
-that every compact-dot density passes every transform.
+has 145 accepted rows and 73 typed expected rejections. Deterministic adverse
+evidence separately records 29 outcomes across explicit safe opaque-Print,
+centered-logo-caution, and Adaptive-Version-10 and Version-11 long-URL caution
+pass envelopes; it does not imply that every payload density passes every
+transform.
 
 The exported symbol always retains exactly four quiet-zone modules per side.
 Decorative export borders, frames, labels, and strokes remain excluded; fixed
@@ -457,10 +447,9 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 - Apply the owner-approved launch preset list.
 - Implement contrast classification using the approved measurable thresholds.
-- Apply the single 0.75-module non-finder-dot treatment with standard square
-  finders.
+- Apply rounded ONE modules and standard square finders on opaque white.
 - Integrate sanitized bundled logo, knockout, function-overlap validation, and overlap diagnostics.
-- Add transparency surface previews and exhaustive approved-combination decode tests.
+- Add exhaustive approved-combination decode tests for logo-off and logo-on output.
 
 **Exit:** every selectable combination passes its required decode suite; unsafe combinations cannot be selected or exported.
 
@@ -478,7 +467,10 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, and adverse-image checks performed during release hardening.
 
-Repository-owned automation and publishing are intentionally deferred. The owner will configure them separately later.
+Repository-owned hosted correctness automation gates pull requests, pushes to
+`main`, scheduled decoder campaigns, and Pages publishing. Caches are keyed by
+the controlling lockfiles, toolchain/tool versions, runner OS, and architecture;
+restored tools and decoder checkouts are verified before use.
 
 ## 9. Development tickets in execution order
 
@@ -501,8 +493,8 @@ The following ticket slices are small enough for review and preserve dependency 
 15. Independent SVG/PNG decode harness.
 16. Leptos state model, payload/profile workflow, and preview.
 17. Diagnostics, validation, accessibility, and downloads.
-18. Approved color/contrast and transparency previews.
-19. Compact 0.75-module non-finder dots with standard square finders.
+18. Approved fixed brand/white contrast and opaque previews.
+19. Rounded ONE modules and standard square finders.
 20. Bundled magenta ONE lettermark, knockout, overlap checks, and decode matrix.
 21. Hardening, automated release evidence, and docs.
 
@@ -510,7 +502,11 @@ Tickets 3–11 should generally land sequentially because later code relies on e
 
 ## 10. Owner coordination still needed
 
-The implementation policy, launch presets, ECC behavior, contrast threshold, transparency behavior, styling set, and bundled ONE lettermark are accepted. Access to a licensed complete ISO/IEC 18004:2024 copy remains useful for a later audit but is not an implementation gate under the public-source corroboration policy in section 2.1.
+The implementation policy, launch presets, ECC behavior, contrast threshold,
+opaque-white Rounded ONE styling with square finders, and bundled ONE lettermark are accepted. Access to
+a licensed complete ISO/IEC 18004:2024 copy remains useful for a later audit but
+is not an implementation gate under the public-source corroboration policy in
+section 2.1.
 
 Manual browser, device, scanner, printer, material, and placement checks are owner-operated outside the repository and do not block the automated M5/ticket 21 evidence gate.
 

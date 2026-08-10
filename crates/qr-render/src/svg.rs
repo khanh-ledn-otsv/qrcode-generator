@@ -1,7 +1,7 @@
 use std::fmt::Write;
 
 use crate::{
-    Background, GlyphOwnership, RenderError, RenderModel, Rgba, logo::bundled_logo_body,
+    GlyphOwnership, RenderError, RenderModel, Rgba, logo::bundled_logo_body,
     model::COMPACT_DOT_GEOMETRY,
 };
 
@@ -34,16 +34,14 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
         view_box.height().get(),
     )
     .map_err(|_| RenderError::RenderFailure)?;
-    if let Background::Opaque(background) = model.options().background() {
-        write!(
-            svg,
-            "<rect width=\"{}\" height=\"{}\" fill=\"{}\"/>",
-            view_box.width().get(),
-            view_box.height().get(),
-            hex_color(background),
-        )
-        .map_err(|_| RenderError::RenderFailure)?;
-    }
+    write!(
+        svg,
+        "<rect width=\"{}\" height=\"{}\" fill=\"{}\"/>",
+        view_box.width().get(),
+        view_box.height().get(),
+        hex_color(model.options().background()),
+    )
+    .map_err(|_| RenderError::RenderFailure)?;
     write!(svg, "<path fill=\"{}\" d=\"", foreground).map_err(|_| RenderError::RenderFailure)?;
 
     for glyph in model.glyphs() {
@@ -93,6 +91,10 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
     Ok(svg)
 }
 
+fn decimal_thousandths(value: u32) -> String {
+    decimal_fixed(value, 1_000, 3)
+}
+
 fn write_logo(
     svg: &mut String,
     model: &RenderModel<'_>,
@@ -129,10 +131,6 @@ fn write_logo(
         decimal_fixed(source.height_ten_thousandths(), 10_000, 4),
     )
     .map_err(|_| RenderError::RenderFailure)
-}
-
-fn decimal_thousandths(value: u32) -> String {
-    decimal_fixed(value, 1_000, 3)
 }
 
 fn decimal_fixed(value: u32, units_per_whole: u32, fractional_digits: usize) -> String {

@@ -10,9 +10,7 @@ use std::fs;
 use std::path::Path;
 
 use qr_render::{
-    APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
-    APPROVED_MODULE_STYLES, Background, FinderStyle, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
-    ModuleStyle, Rgba, SUPPORTED_PROFILES,
+    APPROVED_LOGO_STYLES, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, SUPPORTED_PROFILES,
 };
 
 fn matrix_policy() -> serde_json::Value {
@@ -29,25 +27,10 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
     let policy = matrix_policy();
     let dimensions = &policy["tuple_dimensions"];
     assert_eq!(dimensions["profiles"], SUPPORTED_PROFILES.len());
-    assert_eq!(dimensions["foregrounds"], APPROVED_FOREGROUNDS.len());
-    assert_eq!(dimensions["backgrounds"], APPROVED_BACKGROUNDS.len());
-    assert_eq!(dimensions["module_styles"], APPROVED_MODULE_STYLES.len());
-    assert_eq!(dimensions["finder_styles"], APPROVED_FINDERS.len());
     assert_eq!(dimensions["logo_states"], APPROVED_LOGO_STYLES.len());
-    assert_eq!(
-        APPROVED_BACKGROUNDS,
-        [Background::Opaque(Rgba::WHITE), Background::Transparent]
-    );
-    assert_eq!(APPROVED_MODULE_STYLES, [ModuleStyle::CompactDots]);
-    assert_eq!(APPROVED_FINDERS, [FinderStyle::StandardSquare]);
     assert_eq!(APPROVED_LOGO_STYLES, [LogoStyle::None, LogoStyle::Bundled]);
 
-    let raw_tuple_count = SUPPORTED_PROFILES.len()
-        * APPROVED_FOREGROUNDS.len()
-        * APPROVED_BACKGROUNDS.len()
-        * APPROVED_MODULE_STYLES.len()
-        * APPROVED_FINDERS.len()
-        * APPROVED_LOGO_STYLES.len();
+    let raw_tuple_count = SUPPORTED_PROFILES.len() * APPROVED_LOGO_STYLES.len();
     assert_eq!(
         raw_tuple_count,
         dimensions
@@ -157,7 +140,7 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
         if record.outcome.is_renderable() {
             assert_eq!(
                 record.outcome.safety(),
-                record.tuple.expected_safety(),
+                Some(record.tuple.expected_safety()),
                 "{}",
                 record.label()
             );
@@ -166,10 +149,7 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
             record.outcome.is_renderable()
                 || matches!(
                     record.outcome.expected_error(),
-                    Some(
-                        qr_render::RenderError::LogoRequiresOpaqueWhite
-                            | qr_render::RenderError::UnsafeLogoGeometry
-                    )
+                    Some(qr_render::RenderError::UnsafeLogoGeometry)
                 ),
             "{}",
             record.label()

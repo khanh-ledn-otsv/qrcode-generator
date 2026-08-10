@@ -18,9 +18,11 @@ cargo install --locked cargo-fuzz --version 0.13.2
 rustup toolchain install nightly --component miri
 ```
 
-The ZXing-C++ checkout and executable are pinned by
+The ZXing-C++ and quirc checkouts and executables are pinned by
 `tests/fixtures/manifest.json` and built by `./scripts/setup.sh`. Release
-commands fail when that independent decoder is absent or at the wrong commit.
+commands fail when an independent decoder is absent, modified, or at the wrong
+commit. The representative secondary ASCII raster suite runs with
+`pnpm run test:quirc`; ZXing-C++ remains authoritative for UTF-8/ECI metadata.
 Artifact decoding uses ZXing's explicit fixed binarizer. Its default local
 binarizer fails a perfectly uniform 360 px Version 3 artifact while the same
 matrix decodes at the other approved sizes and with ZXing fixed and pure-symbol
@@ -77,21 +79,20 @@ pnpm run release:evidence
 ```
 
 This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
-hashes under `target/release-evidence/`. The matrix has 436 generated scenario
-rows: 120 required-payload rows and 316 exact-version coverage rows spanning all
-compiled profile, background, logo, payload, and enabled-version paths. Each row
-contains matched native-PNG and independently rasterized SVG evidence. The 254
+hashes under `target/release-evidence/`. The matrix has 218 generated scenario
+rows: 60 required-payload rows and 158 exact-version coverage rows spanning all
+compiled profile, logo, payload, and enabled-version paths. Each row
+contains matched native-PNG and independently rasterized SVG evidence. The 145
 renderable rows record safety, deterministic artifact and decoder-input hashes,
-a ZXing decode, and reviewed fixed/adaptive logo geometry where applicable; the 182 unsupported
-logo/background or profile-specific geometry rows record the expected typed
+a ZXing decode, and reviewed fixed/adaptive logo geometry where applicable; the 73 unsupported
+logo or profile-specific geometry rows record the expected typed
 rejection.
 The executable counts and dimensions have one versioned owner in
 `tests/approved-output-matrix-policy.json`; the Rust coverage test and Python
 readiness validator both reject drift from it.
 `tests/adverse/parameters.json` is the versioned transform manifest. The adverse
-evidence records exactly 39 decoded outcomes across five declared envelopes:
-all 13 transforms for a low-density opaque Print compact-dot symbol (`safe`),
-10 placement-relevant transforms for transparent compact dots (`caution`), and
+evidence records exactly 29 decoded outcomes across four declared envelopes:
+all 13 transforms for a low-density opaque Print Rounded ONE symbol (`safe`),
 six transforms for the centered Version 6 Print logo (`caution`), and five each
 for Adaptive Version 10 and Version 11 long-URL artifacts (`caution`). It compares
 decoded pixels before invoking ZXing and includes light, darker, and patterned

@@ -1,5 +1,7 @@
+use qr_core::encoding::EciAssignment;
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_render::{Background, ContrastRatio, Foreground, OutputSafety, ProfileId, Rgba};
+use qr_core::{EncodeRequest, encode};
+use qr_render::{ContrastRatio, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{
     ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview, link_capacity_guide,
 };
@@ -13,11 +15,63 @@ fn state_without_logo(profile_id: ProfileId) -> WorkflowState {
 }
 
 #[test]
-fn bundled_logo_is_selected_by_default() {
+fn branded_logo_output_is_selected_by_default() {
     let state = WorkflowState::new(ProfileId::Content);
 
     assert!(state.logo_enabled());
-    assert_eq!(state.background(), Background::Opaque(Rgba::WHITE));
+    assert_eq!(state.background(), Rgba::WHITE);
+}
+
+#[test]
+fn rounded_one_modules_are_always_used() {
+    let mut state = WorkflowState::new(ProfileId::Content);
+    let request = state.set_payload("exact payload".to_owned()).unwrap();
+    let preview = evaluate_preview(&request).unwrap();
+
+    assert!(preview.svg().contains("a0.375 0.375"));
+}
+
+#[test]
+fn logo_default_transition_preserves_payload_mode_and_eci_and_matches_each_encoding() {
+    for (payload, expected_eci) in [
+        ("ASCII byte payload", None),
+        ("café 🚢", Some(EciAssignment::Utf8)),
+    ] {
+        let mut state = WorkflowState::new(ProfileId::Content);
+        let branded_request = state.set_payload(payload.to_owned()).unwrap();
+        let branded = evaluate_preview(&branded_request).unwrap();
+        let unbranded_request = state.set_logo_enabled(false).unwrap();
+        let unbranded = evaluate_preview(&unbranded_request).unwrap();
+
+        assert_eq!(branded_request.payload(), payload);
+        assert_eq!(unbranded_request.payload(), payload);
+        assert_eq!(branded.diagnostics().mode(), DataMode::Byte);
+        assert_eq!(unbranded.diagnostics().mode(), DataMode::Byte);
+        assert_eq!(branded.diagnostics().eci_assignment(), expected_eci);
+        assert_eq!(unbranded.diagnostics().eci_assignment(), expected_eci);
+        assert_eq!(branded.diagnostics().ecc(), ErrorCorrection::High);
+        assert_eq!(unbranded.diagnostics().ecc(), ErrorCorrection::Medium);
+
+        for (request, preview) in [
+            (&branded_request, &branded),
+            (&unbranded_request, &unbranded),
+        ] {
+            let encoded = encode(EncodeRequest::with_version_range(
+                request.payload(),
+                request.ecc(),
+                request.minimum_version(),
+                qr_render::SUPPORTED_PROFILES[1].maximum_version(),
+            ))
+            .unwrap();
+            assert_eq!(preview.diagnostics().selected_version(), encoded.version());
+            assert_eq!(preview.diagnostics().mask(), encoded.mask());
+            assert_eq!(preview.diagnostics().mode(), encoded.mode());
+            assert_eq!(
+                preview.diagnostics().eci_assignment(),
+                encoded.eci_assignment()
+            );
+        }
+    }
 }
 
 #[test]
@@ -118,58 +172,12 @@ fn safe_payload_fits_at_ecc_m_and_reports_exact_diagnostics() {
     assert_eq!(diagnostics.matrix_modules(), 21);
     assert_eq!(diagnostics.svg_side_pixels(), 100);
     assert_eq!(diagnostics.png_side_pixels(), 300);
-    assert_eq!(diagnostics.foreground(), Foreground::Brand);
-    assert_eq!(diagnostics.background(), Background::Opaque(Rgba::WHITE));
+    assert_eq!(diagnostics.foreground(), Rgba::BRAND);
+    assert_eq!(diagnostics.background(), Rgba::WHITE);
     assert_eq!(diagnostics.safety(), OutputSafety::Safe);
     assert_eq!(
         diagnostics.contrast_ratio(),
-        Some(ContrastRatio::from_hundredths(604))
-    );
-    assert!(state.exports_enabled());
-}
-
-#[test]
-fn approved_brand_and_transparency_selections_update_artifacts_and_safety() {
-    let mut state = state_without_logo(ProfileId::Content);
-    let payload = state
-        .set_payload("approved appearance".to_owned())
-        .expect("revision is available");
-    assert!(state.complete_preview(payload.revision(), evaluate_preview(&payload)));
-    let original = state.preview().unwrap().diagnostics();
-
-    let brand = state
-        .select_foreground(Foreground::Brand)
-        .expect("revision is available");
-    assert!(state.complete_preview(brand.revision(), evaluate_preview(&brand)));
-    let brand_preview = state.preview().unwrap();
-    assert!(brand_preview.svg().contains("fill=\"#bd0f72\""));
-    assert_eq!(brand_preview.diagnostics().foreground(), Foreground::Brand);
-    assert_eq!(
-        brand_preview.diagnostics().contrast_ratio(),
-        Some(ContrastRatio::from_hundredths(604))
-    );
-    assert_eq!(
-        brand_preview.diagnostics().selected_version(),
-        original.selected_version()
-    );
-    assert_eq!(brand_preview.diagnostics().mask(), original.mask());
-
-    let transparent = state
-        .select_background(Background::Transparent)
-        .expect("revision is available");
-    assert!(state.complete_preview(transparent.revision(), evaluate_preview(&transparent),));
-    let transparent_preview = state.preview().unwrap();
-    assert!(!transparent_preview.svg().contains("<rect"));
-    assert_eq!(
-        transparent_preview.diagnostics().safety(),
-        OutputSafety::Caution
-    );
-    assert_eq!(transparent_preview.diagnostics().contrast_ratio(), None);
-    assert_eq!(
-        state.caution().as_deref(),
-        Some(
-            "Transparent output has unknown effective contrast. Check it on white, light-gray, dark, and patterned placement surfaces."
-        )
+        ContrastRatio::from_hundredths(604)
     );
     assert!(state.exports_enabled());
 }
@@ -282,6 +290,9 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
         ));
 
         let mut branded = WorkflowState::new(row.profile_id());
+        branded
+            .set_logo_enabled(true)
+            .expect("enabling the logo produces a request");
         let exact = branded
             .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes()))
             .expect("exact branded boundary produces a request");
@@ -314,6 +325,9 @@ fn synthetic_ascii_url(length: usize) -> String {
 fn adaptive_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     let payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
     let mut state = WorkflowState::new(ProfileId::Adaptive);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let request = state
         .set_payload(payload.to_owned())
         .expect("revision is available");
@@ -354,6 +368,9 @@ fn adaptive_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
 fn adaptive_grows_past_version_ten_for_a_long_branded_url() {
     let payload = format!("https://example.test/{}", "a".repeat(105));
     let mut state = WorkflowState::new(ProfileId::Adaptive);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let request = state
         .set_payload(payload.clone())
         .expect("revision is available");
@@ -378,14 +395,22 @@ fn adaptive_url_crosses_the_exact_version_ten_byte_boundary() {
     let exact_payload = format!("{prefix}{}", "a".repeat(98));
     let one_over_payload = format!("{prefix}{}", "a".repeat(99));
 
+    let mut exact_state = WorkflowState::new(ProfileId::Adaptive);
+    exact_state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let exact = evaluate_preview(
-        &WorkflowState::new(ProfileId::Adaptive)
+        &exact_state
             .set_payload(exact_payload)
             .expect("revision is available"),
     )
     .expect("119-byte URL fits Version 10-H exactly");
+    let mut one_over_state = WorkflowState::new(ProfileId::Adaptive);
+    one_over_state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let one_over = evaluate_preview(
-        &WorkflowState::new(ProfileId::Adaptive)
+        &one_over_state
             .set_payload(one_over_payload)
             .expect("revision is available"),
     )
@@ -401,6 +426,9 @@ fn adaptive_url_crosses_the_exact_version_ten_byte_boundary() {
 fn adaptive_rejects_unreviewed_higher_version_branding_without_losing_unbranded_output() {
     let payload = format!("https://example.test/{}", "a".repeat(120));
     let mut state = WorkflowState::new(ProfileId::Adaptive);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let branded = state
         .set_payload(payload.clone())
         .expect("revision is available");
@@ -578,6 +606,9 @@ fn logo_transition_uses_ecc_h_before_fitting_and_disabling_restores_m() {
 #[test]
 fn inline_logo_mode_admits_the_branded_minimum_and_enables_exports() {
     let mut state = WorkflowState::new(ProfileId::Inline);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let request = state
         .set_payload("small payload".to_owned())
         .expect("revision is available");
@@ -603,6 +634,9 @@ fn inline_logo_mode_admits_the_branded_minimum_and_enables_exports() {
 #[test]
 fn logo_mode_rejects_a_naturally_larger_version_without_reviewed_centered_geometry() {
     let mut state = WorkflowState::new(ProfileId::Print);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
     let request = state
         .set_payload("a".repeat(59))
         .expect("revision is available");
@@ -630,22 +664,6 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     assert_eq!(
         state.validation_message().as_deref(),
         Some("Enter text to generate a QR code."),
-    );
-    assert!(!state.exports_enabled());
-
-    state
-        .set_payload("valid".to_owned())
-        .expect("revision is available");
-    let unsafe_contrast = state
-        .select_background(Background::Opaque(Rgba::opaque(116, 116, 116)))
-        .expect("revision is available");
-    assert!(state.complete_preview(
-        unsafe_contrast.revision(),
-        evaluate_preview(&unsafe_contrast),
-    ));
-    assert_eq!(
-        state.validation_message().as_deref(),
-        Some("Opaque QR contrast is 1.29:1; at least 4.50:1 is required."),
     );
     assert!(!state.exports_enabled());
 

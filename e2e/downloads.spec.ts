@@ -40,7 +40,7 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.subarray(0, 8)).toEqual(Buffer.from("89504e470d0a1a0a", "hex"));
   expect(png.readUInt32BE(16)).toBe(300);
   expect(png.readUInt32BE(20)).toBe(300);
-  // These hashes pin the Inline-profile V6 branded artifacts.
+  // These hashes pin the default branded rounded-module Inline artifacts.
   expect(await sha256(svg)).toBe(
     "218dbff7ed6e683088ce2e600d5b67c7570f358f0dd72dfd2efb337d0e344c6c",
   );

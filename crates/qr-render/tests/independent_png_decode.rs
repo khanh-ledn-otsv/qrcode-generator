@@ -8,7 +8,6 @@ mod versions;
 use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
-use std::io::Cursor;
 use std::path::Path;
 
 use fixture_tool::{
@@ -17,7 +16,7 @@ use fixture_tool::{
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{Background, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
+use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 
 #[test]
 #[ignore = "requires the manifest-pinned ZXing-C++ checkout and reader"]
@@ -78,10 +77,7 @@ fn emitted_pngs_independently_decode_across_profiles_and_versions() -> Result<()
         let model = RenderModel::new(&case.encoded, case.options)?;
         let png = render_png(&model)?;
         let artifact_sha256 = styling::sha256_hex(&png);
-        let effective_png = match case.options.background() {
-            Background::Transparent => composite_on_white(&png)?,
-            Background::Opaque(_) => png,
-        };
+        let effective_png = png;
         let decoder_input_sha256 = styling::sha256_hex(&effective_png);
         let artifact = output
             .path()
@@ -154,37 +150,6 @@ fn fixture_ecc(ecc: ErrorCorrection) -> FixtureEcc {
         ErrorCorrection::Quartile => FixtureEcc::Q,
         ErrorCorrection::High => FixtureEcc::H,
     }
-}
-
-fn composite_on_white(source: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    let decoder = png::Decoder::new(Cursor::new(source));
-    let mut reader = decoder.read_info()?;
-    let mut pixels = vec![
-        0;
-        reader
-            .output_buffer_size()
-            .ok_or("PNG output is too large")?
-    ];
-    let output = reader.next_frame(&mut pixels)?;
-    pixels.truncate(output.buffer_size());
-    for pixel in pixels.chunks_exact_mut(4) {
-        let alpha = u16::from(pixel[3]);
-        for channel in &mut pixel[..3] {
-            let composited = u16::from(*channel) * alpha + 255 * (255 - alpha);
-            *channel = u8::try_from((composited + 127) / 255)?;
-        }
-        pixel[3] = 255;
-    }
-
-    let mut composited = Vec::new();
-    {
-        let mut encoder = png::Encoder::new(&mut composited, output.width, output.height);
-        encoder.set_color(png::ColorType::Rgba);
-        encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder.write_header()?;
-        writer.write_image_data(&pixels)?;
-    }
-    Ok(composited)
 }
 
 fn payload_for_version(version: u8, _case_index: usize) -> String {

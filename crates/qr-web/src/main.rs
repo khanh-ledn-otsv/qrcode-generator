@@ -3,10 +3,7 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
-use qr_render::{
-    APPROVED_BACKGROUNDS, Background, FinderStyle, Foreground, LogoStyle, ModuleStyle,
-    OutputSafety, ProfileId, Rgba, SUPPORTED_PROFILES,
-};
+use qr_render::{LogoStyle, OutputSafety, ProfileId, SUPPORTED_PROFILES};
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
 use qr_web::workflow::{
@@ -17,13 +14,6 @@ use qr_web::workflow::{
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 type DebounceSignal = RwSignal<DebounceTimer>;
-
-#[derive(Clone, Copy)]
-struct BackgroundPresentation {
-    name: &'static str,
-    value: &'static str,
-    description: &'static str,
-}
 
 #[component]
 fn App() -> impl IntoView {
@@ -68,28 +58,6 @@ fn App() -> impl IntoView {
             </label>
         }
     });
-    let background_options = APPROVED_BACKGROUNDS.map(|background| {
-        let presentation = background_presentation(background);
-        view! {
-                <label class=move || profile_card_class(state.with(|current| current.background() == background))>
-                    <input
-                        class="peer sr-only"
-                        type="radio"
-                        name="background-treatment"
-                        value=presentation.value
-                        disabled=move || state.with(WorkflowState::logo_enabled) && matches!(background, Background::Transparent)
-                        prop:checked=move || state.with(|current| current.background() == background)
-                        on:change=move |_| {
-                            if let Some(Ok(request)) = state.try_update(|current| current.select_background(background)) {
-                                schedule_preview(state, pending_timer, request);
-                            }
-                        }
-                    />
-                <span class="block text-sm font-bold text-slate-950">{presentation.name}</span>
-                <span class="mt-1 block text-xs leading-5 text-slate-600">{presentation.description}</span>
-                </label>
-            }
-        });
     let link_capacity_rows = link_capacity_guide().map(|row| {
         let profile = profile_presentation(row.profile_id());
         view! {
@@ -399,11 +367,6 @@ fn App() -> impl IntoView {
                         </fieldset>
 
                         <fieldset class="mt-8" aria-describedby="payload-caution">
-                            <legend class="text-sm font-semibold text-slate-800">"Background treatment"</legend>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{background_options}</div>
-                        </fieldset>
-
-                        <fieldset class="mt-8" aria-describedby="payload-caution">
                             <legend class="text-sm font-semibold text-slate-800">"Bundled logo"</legend>
                             <label class=move || profile_card_class(state.with(WorkflowState::logo_enabled))>
                                 <input
@@ -438,33 +401,11 @@ fn App() -> impl IntoView {
                                 data-testid="qr-preview"
                             >
                                 <div
-                                    class:hidden=move || state.with(|value| value.preview().is_none() || matches!(value.background(), Background::Transparent))
+                                    class:hidden=move || state.with(|value| value.preview().is_none())
                                     class="[&>svg]:block [&>svg]:h-auto"
                                     aria-hidden="true"
                                     inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())
                                 ></div>
-                                <div
-                                    class:hidden=move || state.with(|value| value.preview().is_none() || !matches!(value.background(), Background::Transparent))
-                                    class="grid w-full grid-cols-2 gap-2"
-                                    aria-hidden="true"
-                                >
-                                    <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-300 bg-white p-2">
-                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
-                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"White"</figcaption>
-                                    </figure>
-                                    <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-300 bg-slate-200 p-2">
-                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
-                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Light gray"</figcaption>
-                                    </figure>
-                                    <figure data-testid="transparent-surface-preview" class="relative grid aspect-square place-items-center rounded-lg border border-slate-700 bg-slate-900 p-2">
-                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
-                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Dark"</figcaption>
-                                    </figure>
-                                    <figure data-testid="transparent-surface-preview" class="preview-surface-patterned relative grid aspect-square place-items-center rounded-lg border border-slate-400 p-2">
-                                        <div class="[&>svg]:block [&>svg]:h-auto" inner_html=move || state.with(|value| value.preview().map(|preview| preview.svg().to_owned()).unwrap_or_default())></div>
-                                        <figcaption class="absolute bottom-1 left-1 rounded bg-white/90 px-2 py-1 text-xs font-bold text-slate-800">"Patterned"</figcaption>
-                                    </figure>
-                                </div>
                                 <p class:hidden=move || state.with(|value| value.preview().is_some()) class="max-w-xs text-center text-sm leading-6 text-slate-500">
                                     {move || if state.with(WorkflowState::is_pending) { "Updating preview…" } else { "Enter a valid payload to see the QR preview." }}
                                 </p>
@@ -484,10 +425,9 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Quiet zone" value=move || diagnostic_value(state, |details| format!("{} modules per side", details.quiet_zone_modules())) />
                                 <Diagnostic label="PNG geometry" value=move || diagnostic_value(state, |details| format!("{} px/module · {} px symbol · {} px padding", details.module_scale(), details.rendered_symbol_side_pixels(), details.outer_padding_per_side())) />
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
-                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_color(details.foreground()).to_owned()) />
-                                <Diagnostic label="Background" value=move || diagnostic_value(state, |details| background_presentation(details.background()).name.to_owned()) />
-                                <Diagnostic label="Non-finder modules" value=move || diagnostic_value(state, |details| module_style_label(details.module_style()).to_owned()) />
-                                <Diagnostic label="Finders" value=move || diagnostic_value(state, |details| finder_style_label(details.finder_style()).to_owned()) />
+                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |_| "#BD0F72".to_owned()) />
+                                <Diagnostic label="Background" value=move || diagnostic_value(state, |_| "Opaque white".to_owned()) />
+                                <Diagnostic label="Modules" value=move || diagnostic_value(state, |_| "Rounded ONE".to_owned()) />
                                 <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
                                 <Diagnostic label="Logo bounds" value=move || diagnostic_value(state, |details| logo_bounds_label(details.logo_placement())) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
@@ -505,7 +445,7 @@ fn App() -> impl IntoView {
                             </p>
                             <div data-testid="release-guidance" class="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
                                 <p>"Choose SVG first when resizing or preparing print output. Place printed codes at 25–30 mm or larger."</p>
-                                <p class="mt-2">"Transparent output and logo output need extra validation. Test the final artifact with the actual camera, scanner, screen, print material, and placement environment before distribution."</p>
+                                <p class="mt-2">"Logo output needs extra validation. Test the final artifact with the actual camera, scanner, screen, print material, and placement environment before distribution."</p>
                             </div>
                             <div class="mt-5 grid gap-3 sm:grid-cols-2">
                                 <button
@@ -656,12 +596,6 @@ fn profile_card_class(selected: bool) -> &'static str {
     }
 }
 
-fn foreground_color(foreground: Foreground) -> &'static str {
-    match foreground {
-        Foreground::Brand => "#BD0F72",
-    }
-}
-
 fn format_capacity(bytes: usize) -> String {
     let amount = if bytes >= 1_000 {
         format!("{},{:03}", bytes / 1_000, bytes % 1_000)
@@ -669,38 +603,6 @@ fn format_capacity(bytes: usize) -> String {
         bytes.to_string()
     };
     format!("{amount} characters / bytes")
-}
-
-fn background_presentation(background: Background) -> BackgroundPresentation {
-    match background {
-        Background::Opaque(Rgba::WHITE) => BackgroundPresentation {
-            name: "Opaque white",
-            value: "white",
-            description: "Known placement contrast",
-        },
-        Background::Transparent => BackgroundPresentation {
-            name: "Transparent",
-            value: "transparent",
-            description: "Requires placement checks",
-        },
-        Background::Opaque(_) => BackgroundPresentation {
-            name: "Unapproved opaque color",
-            value: "unapproved",
-            description: "Unavailable",
-        },
-    }
-}
-
-const fn module_style_label(style: ModuleStyle) -> &'static str {
-    match style {
-        ModuleStyle::CompactDots => "Compact dots",
-    }
-}
-
-const fn finder_style_label(style: FinderStyle) -> &'static str {
-    match style {
-        FinderStyle::StandardSquare => "Standard square",
-    }
 }
 
 fn logo_label(style: LogoStyle, placement: Option<qr_render::LogoPlacement>) -> String {
@@ -747,16 +649,11 @@ fn module_decimal(ten_thousandths: u32) -> String {
     }
 }
 
-fn contrast_label(ratio: Option<qr_render::ContrastRatio>) -> String {
-    ratio.map_or_else(
-        || "Unknown on placement surface".to_owned(),
-        |ratio| {
-            format!(
-                "{}.{:02}:1",
-                ratio.hundredths() / 100,
-                ratio.hundredths() % 100
-            )
-        },
+fn contrast_label(ratio: qr_render::ContrastRatio) -> String {
+    format!(
+        "{}.{:02}:1",
+        ratio.hundredths() / 100,
+        ratio.hundredths() % 100
     )
 }
 

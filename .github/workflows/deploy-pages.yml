@@ -8,6 +8,10 @@ on:
 
 permissions: {}
 
+env:
+  TRUNK_VERSION: 0.21.14
+  WASM_BINDGEN_CLI_VERSION: 0.2.126
+
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -26,8 +30,23 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+
+      - name: Resolve pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package.json', 'pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-${{ runner.arch }}-
 
       - name: Cache Rust build
         uses: actions/cache@v5
@@ -44,19 +63,32 @@ jobs:
       - name: Cache pinned Trunk
         uses: actions/cache@v5
         with:
-          path: ~/.cargo/bin/trunk
-          key: trunk-${{ runner.os }}-${{ runner.arch }}-0.21.14
+          path: |
+            ~/.cargo/bin/trunk
+            ~/.cargo/bin/wasm-bindgen-test-runner
+          key: tools-${{ runner.os }}-${{ runner.arch }}-trunk-${{ env.TRUNK_VERSION }}-wasm-bindgen-${{ env.WASM_BINDGEN_CLI_VERSION }}
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: tests/oracles/uv.lock
 
       - name: Install JavaScript dependencies
-        run: |
-          corepack enable
-          corepack pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Install pinned Trunk
         run: |
-          if ! command -v trunk >/dev/null 2>&1; then
-            cargo install --locked trunk --version 0.21.14
+          if [[ "$(trunk --version 2>/dev/null || true)" != "trunk ${TRUNK_VERSION}" ]]; then
+            cargo install --locked --force trunk --version "${TRUNK_VERSION}"
           fi
+          if [[ "$(wasm-bindgen-test-runner --version 2>/dev/null || true)" != "wasm-bindgen-test-runner ${WASM_BINDGEN_CLI_VERSION}" ]]; then
+            cargo install --locked --force wasm-bindgen-cli --version "${WASM_BINDGEN_CLI_VERSION}"
+          fi
+
+      - name: Install correctness dependencies
+        run: |
+          uv sync --project tests/oracles --locked
+          pnpm exec playwright install --with-deps chromium
 
       - name: Configure GitHub Pages
         id: pages
@@ -66,7 +98,7 @@ jobs:
         env:
           TRUNK_BUILD_LOCKED: "true"
           TRUNK_BUILD_PUBLIC_URL: ${{ steps.pages.outputs.base_path }}/
-        run: corepack pnpm run build
+        run: pnpm run verify
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
