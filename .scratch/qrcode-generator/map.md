@@ -123,6 +123,18 @@
 
 - Implementation tickets are tracked under `issues/`.
 
+## Deferred review tasks
+
+- [Ticket 33](issues/33-bound-preview-resource-work.md): Reject oversized input
+  before request cloning and avoid unnecessary main-thread PNG preview work.
+- [Ticket 34](issues/34-complete-coverage-and-mutation-gates.md): Close the
+  documented coverage and mutation gaps and include them in release readiness.
+- [Ticket 35](issues/35-improve-capacity-and-recovery-guidance.md): Add
+  mode-aware remaining capacity and avoid suggesting Adaptive when it cannot
+  succeed.
+- [Ticket 36](issues/36-reconcile-standards-and-logo-evidence.md): Qualify
+  unaudited ISO clause mappings and repair missing adaptive-logo evidence links.
+
 ## Fog
 
 - [Ticket 10 penalty-oracle disagreement](penalty-oracle-disagreement.md):

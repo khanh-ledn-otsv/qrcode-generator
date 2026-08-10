@@ -599,12 +599,14 @@ Manual product checks are performed separately by the owner and are not collecte
 The repository-owned local command surface and machine-readable evidence layout
 for these suites is now specified in [`RELEASE_HARDENING.md`](RELEASE_HARDENING.md).
 The `Correctness` hosted workflow runs `pnpm run verify` for pull requests and
-pushes to `main`, and runs the complete pinned ZXing-C++ plus representative
-quirc decoder campaigns on `main` and the weekly schedule. Pages publishing
-repeats the routine gate before uploading an artifact, so a revision that fails
-its applicable correctness checks is not deployed. Successful jobs never
-rewrite committed goldens or evidence; extended failures upload logs and
-generated failure evidence.
+pushes to `main` when source, tests, tooling, or CI inputs change, and runs the
+complete pinned ZXing-C++ plus representative quirc decoder campaigns on
+matching pushes to `main`. Pages publishing is likewise limited to site and
+build-input changes and only builds, uploads, and deploys the site; correctness
+verification remains the responsibility of the separate workflow. Both
+workflows retain manual dispatch. Successful correctness jobs never rewrite
+committed goldens or evidence; extended failures upload logs and generated
+failure evidence.
 
 ## 13. Flake and failure policy
 

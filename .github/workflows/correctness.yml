@@ -1,11 +1,29 @@
 name: Correctness
 
 on:
-  pull_request:
   push:
     branches: [main]
-  schedule:
-    - cron: "17 3 * * 1"
+    paths:
+      - ".cargo/**"
+      - ".github/workflows/correctness.yml"
+      - ".nvmrc"
+      - ".oxfmtrc.json"
+      - ".oxlintrc.json"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "Trunk.toml"
+      - "assets/**"
+      - "crates/**"
+      - "e2e/**"
+      - "package.json"
+      - "playwright.config.ts"
+      - "pnpm-lock.yaml"
+      - "ruff.toml"
+      - "rust-toolchain.toml"
+      - "scripts/**"
+      - "tests/**"
+      - "tools/**"
+      - "ty.toml"
   workflow_dispatch:
 
 permissions:
@@ -64,16 +82,16 @@ jobs:
             ~/.cargo/bin/trunk
             ~/.cargo/bin/wasm-bindgen-test-runner
           key: tools-${{ runner.os }}-${{ runner.arch }}-trunk-${{ env.TRUNK_VERSION }}-wasm-bindgen-${{ env.WASM_BINDGEN_CLI_VERSION }}
-      - name: Install pinned tools and dependencies
+      - name: Cache verified decoder build inputs
+        uses: actions/cache@v5
+        with:
+          path: |
+            tests/oracles/zxing-cpp
+            tests/oracles/quirc
+          key: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-${{ hashFiles('tests/fixtures/manifest.json', 'tests/oracles/quirc-reader.c', 'tests/oracles/uv.lock') }}
+      - name: Install dependencies and verify pinned decoder builds
         run: |
-          if [[ "$(trunk --version 2>/dev/null || true)" != "trunk ${TRUNK_VERSION}" ]]; then
-            cargo install --locked --force trunk --version "${TRUNK_VERSION}"
-          fi
-          if [[ "$(wasm-bindgen-test-runner --version 2>/dev/null || true)" != "wasm-bindgen-test-runner ${WASM_BINDGEN_CLI_VERSION}" ]]; then
-            cargo install --locked --force wasm-bindgen-cli --version "${WASM_BINDGEN_CLI_VERSION}"
-          fi
-          pnpm install --frozen-lockfile
-          uv sync --project tests/oracles --locked
+          ./scripts/setup.sh
           pnpm exec playwright install --with-deps chromium
       - name: Run routine correctness gate
         run: pnpm run verify

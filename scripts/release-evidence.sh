@@ -8,6 +8,7 @@ cd "${repository_root}"
 evidence_dir="target/release-evidence"
 mkdir -p "${evidence_dir}"
 
+pnpm run build
 pnpm run test:approved
 pnpm run test:decode
 uv run --project tests/oracles --locked python tests/support/collect_approved_output_evidence.py \
