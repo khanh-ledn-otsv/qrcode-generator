@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt;
 
 // ISO/IEC 18004:2024, 5.3.8 requires a four-module quiet zone for QR Code.
-const QUIET_ZONE_MODULES_PER_SIDE: u32 = 4;
+pub(crate) const QUIET_ZONE_MODULES_PER_SIDE: u32 = 4;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct PixelCount(u32);

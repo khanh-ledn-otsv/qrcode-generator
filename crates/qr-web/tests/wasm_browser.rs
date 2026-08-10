@@ -3,7 +3,7 @@
 use js_sys::{ArrayBuffer, Function, Promise, Reflect, Uint8Array};
 use qr_render::ProfileId;
 use qr_web::download::{ObjectUrl, create_blob};
-use qr_web::workflow::{ArtifactKind, WorkflowState, evaluate_preview};
+use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use wasm_bindgen_test::wasm_bindgen_test;
@@ -97,6 +97,39 @@ fn adaptive_long_url_selects_version_ten_and_exports_on_wasm() {
     assert_eq!(placement.knockout_bounds().left().get(), 21);
     assert_eq!(placement.knockout_bounds().top().get(), 19);
     assert!(state.exports_enabled());
+}
+
+#[wasm_bindgen_test]
+fn adaptive_version_forty_boundary_is_deterministic_on_wasm() {
+    let mut state = WorkflowState::new(ProfileId::Adaptive);
+    state
+        .set_logo_enabled(false)
+        .expect("Adaptive can disable the logo");
+    let exact = state
+        .set_payload("a".repeat(2_331))
+        .expect("revision is available");
+    let first = evaluate_preview(&exact).expect("Version 40 boundary renders");
+    let second = evaluate_preview(&exact).expect("repeated Version 40 boundary renders");
+    assert_eq!(first.svg(), second.svg());
+    assert_eq!(
+        first.artifact(ArtifactKind::Png).bytes(),
+        second.artifact(ArtifactKind::Png).bytes()
+    );
+    assert_eq!(first.diagnostics().selected_version().number(), 40);
+    assert_eq!(first.diagnostics().svg_side_pixels(), 370);
+    assert_eq!(first.diagnostics().png_side_pixels(), 1_110);
+    assert_eq!(first.diagnostics().module_scale(), 6);
+
+    let one_over = state
+        .set_payload("a".repeat(2_332))
+        .expect("revision is available");
+    assert_eq!(
+        evaluate_preview(&one_over),
+        Err(WorkflowFailure::OverCapacity {
+            maximum_version: qr_core::Version::new(40).unwrap(),
+            adaptive_recommended: false,
+        })
+    );
 }
 
 #[wasm_bindgen_test(async)]

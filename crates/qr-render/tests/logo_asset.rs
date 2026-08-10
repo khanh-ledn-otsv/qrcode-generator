@@ -1,5 +1,7 @@
 #[path = "support/adaptive_branded_artifact_fixture.rs"]
 mod adaptive_branded_artifact_fixture;
+#[path = "support/adaptive_v40_artifact_fixture.rs"]
+mod adaptive_v40_artifact_fixture;
 #[path = "support/branded_artifact_fixture.rs"]
 mod branded_artifact_fixture;
 
@@ -67,6 +69,28 @@ fn adaptive_artifact_hashes_pin_versions_six_through_eleven_on_native() {
         adaptive_branded_artifact_fixture::hashes(),
         adaptive_branded_artifact_fixture::SHA256
     );
+}
+
+#[test]
+fn adaptive_version_forty_artifacts_are_pinned_on_native() {
+    assert_eq!(
+        adaptive_v40_artifact_fixture::SHA256,
+        adaptive_v40_artifact_fixture::provenance_hashes()
+    );
+    assert_eq!(
+        adaptive_v40_artifact_fixture::hashes(),
+        adaptive_v40_artifact_fixture::SHA256
+    );
+}
+
+#[test]
+#[ignore = "explicitly emits golden hashes for reviewed fixture refreshes"]
+fn print_adaptive_v40_hashes_for_fixture_refresh() {
+    let payload = "a".repeat(adaptive_v40_artifact_fixture::PAYLOAD_LENGTH);
+    let [svg_sha256, png_sha256] = adaptive_v40_artifact_fixture::hashes();
+    println!("payload_sha256={}", sha256_hex(payload.as_bytes()));
+    println!("svg_sha256={svg_sha256}");
+    println!("png_sha256={png_sha256}");
 }
 
 #[test]
@@ -170,5 +194,14 @@ fn shape_attributes(root: roxmltree::Node<'_, '_>) -> Vec<(String, String, Strin
             )),
             _ => None,
         })
+        .collect()
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
         .collect()
 }

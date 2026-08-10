@@ -20,6 +20,7 @@ DOWNLOAD_TESTS = {
     "downloads fixed filenames and exact deterministic SVG and PNG bytes",
     "downloaded PNG independently decodes with the pinned reader",
     "downloads and decodes the deterministic Adaptive Version 10 artifacts",
+    "downloads and decodes deterministic Adaptive Version 40 artifacts",
 }
 GUIDANCE_TEST = "explains export, physical sizing, and placement validation before generation"
 CRITICAL_WORKFLOW_TESTS = {
@@ -33,6 +34,7 @@ CRITICAL_WORKFLOW_TESTS = {
     "fixed profiles recommend Adaptive when centered branding is unavailable",
     "Adaptive preserves and exports the long ONE URL at Version 10",
     "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
+    "Adaptive reaches the exact unbranded Version 40 boundary",
     "uses compact dots and standard square finders without a shape control",
 }
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]

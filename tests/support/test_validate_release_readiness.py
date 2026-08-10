@@ -245,6 +245,10 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
             CRITICAL_WORKFLOW_TESTS,
         )
+        self.assertIn(
+            "Adaptive reaches the exact unbranded Version 40 boundary",
+            CRITICAL_WORKFLOW_TESTS,
+        )
         self.assertNotIn(
             "uses square modules and standard square finders without a shape control",
             CRITICAL_WORKFLOW_TESTS,

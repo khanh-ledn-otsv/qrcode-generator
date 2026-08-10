@@ -217,6 +217,23 @@ fn invalid_profiles_return_specific_errors() {
         })
     );
 
+    let adaptive_base = PixelDimensions::square(180);
+    let adaptive_png = PixelDimensions::square(540);
+    assert_eq!(
+        OutputProfile::try_new(
+            ProfileId::Adaptive,
+            adaptive_base,
+            adaptive_png,
+            Version::try_from(40).unwrap(),
+        ),
+        Err(ProfileError::AdaptiveDimensionsDoNotMatchMaximum {
+            expected_base: PixelDimensions::square(370),
+            expected_png: PixelDimensions::square(1110),
+            base: adaptive_base,
+            png: adaptive_png,
+        })
+    );
+
     assert_eq!(
         OutputProfile::try_new(
             ProfileId::Inline,

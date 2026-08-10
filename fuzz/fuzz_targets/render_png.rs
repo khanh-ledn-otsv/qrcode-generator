@@ -16,7 +16,7 @@ fuzz_target!(|data: &[u8]| {
     let Ok(text) = std::str::from_utf8(payload) else {
         return;
     };
-    let profile = SUPPORTED_PROFILES[usize::from(control & 0b11)];
+    let profile = SUPPORTED_PROFILES[usize::from(control) % SUPPORTED_PROFILES.len()];
     let logo = control & 0b100 != 0;
     let ecc = if logo {
         ErrorCorrection::High
@@ -49,7 +49,9 @@ fuzz_target!(|data: &[u8]| {
     let Ok(mut reader) = png::Decoder::new(Cursor::new(&bytes)).read_info() else {
         panic!("successful PNG output must parse");
     };
-    let dimensions = profile.png_dimensions();
+    let Ok(dimensions) = profile.png_dimensions_for(encoded.version()) else {
+        panic!("encoded versions within a profile must have dimensions");
+    };
     assert_eq!(reader.info().width, dimensions.width().get());
     assert_eq!(reader.info().height, dimensions.height().get());
     let Some(buffer_size) = reader.output_buffer_size() else {

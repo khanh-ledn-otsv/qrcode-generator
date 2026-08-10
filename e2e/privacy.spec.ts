@@ -4,9 +4,6 @@ import { expect, test } from "@playwright/test";
 
 import { SAFE_PAYLOAD, enterPayload } from "./helpers";
 
-const LONG_ONE_URL =
-  "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-
 test("payload, logo, configuration, and downloads make no runtime request", async ({ page }) => {
   const consoleMessages: string[] = [];
   page.on("console", (message) => consoleMessages.push(message.text()));
@@ -58,15 +55,17 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
 
   await page.getByText("Opaque white", { exact: true }).click();
   await page.getByText("Adaptive", { exact: true }).click();
-  await page.getByText("ONE lettermark", { exact: true }).click();
-  await enterPayload(page, LONG_ONE_URL);
-  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();
+  await enterPayload(page, "a".repeat(2_331));
+  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [pngDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.getByTestId("download-png").click(),
   ]);
   expect(pngDownload.suggestedFilename()).toBe("qr-code.png");
+  const png = await readFile(await pngDownload.path());
+  expect(png.readUInt32BE(16)).toBe(1_110);
+  expect(png.readUInt32BE(20)).toBe(1_110);
   expect(requests).toEqual([]);
   expect(
     await page.evaluate(() => ({

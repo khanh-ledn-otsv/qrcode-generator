@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-adaptive-v40-m-unbranded-artifact",
+  "synthetic": true,
+  "payload_repeat": { "text": "a", "count": 2331 },
+  "payload_sha256": "c3fb448f99ae3c71f293e7e1c6a98d0cf3ac8570a703257f1a66fe1f66cdc7c8",
+  "encoding": "utf-8",
+  "profile": "Adaptive",
+  "version": 40,
+  "ecc": "M",
+  "logo": "none",
+  "svg_sha256": "4f07cbcb9e7730a227084017383c7d8546053bd15333c759d5fb717de8d3c8e8",
+  "png_sha256": "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
+  "generation": {
+    "tool": "qr-render native test fixture",
+    "command": "cargo test -p qr-render --test logo_asset print_adaptive_v40_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
+    "source": "crates/qr-render/tests/support/adaptive_v40_artifact_fixture.rs"
+  },
+  "local_verification": [
+    "Native and wasm32 tests render the same exact Version 40 SVG and PNG inputs and compare both SHA-256 digests",
+    "The approved-output release evidence independently decodes Adaptive Version 40 PNG and selected-version rasterized SVG artifacts with manifest-pinned ZXing-C++ 3.0.2",
+    "Desktop Chromium repeats both downloads, verifies the hashes, and independently decodes the PNG with manifest-pinned ZXing-C++ 3.0.2"
+  ],
+  "verification": {
+    "state": "accepted",
+    "reviewer": "ticket-30-native-wasm-browser-artifact-review",
+    "verified_at": "2026-08-10",
+    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary; decoder evidence separately establishes native PNG and rasterized-SVG readability."
+  }
+}

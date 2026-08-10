@@ -76,7 +76,7 @@ pnpm run release:evidence
 
 This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
 hashes under `target/release-evidence/`. The matrix has 436 generated scenario
-rows: 120 required-payload rows and 196 exact-version coverage rows spanning all
+rows: 120 required-payload rows and 316 exact-version coverage rows spanning all
 compiled profile, background, logo, payload, and enabled-version paths. Each row
 contains matched native-PNG and independently rasterized SVG evidence. The 254
 renderable rows record safety, deterministic artifact and decoder-input hashes,
@@ -99,8 +99,13 @@ class, transform, decoder, and outcome.
 Adaptive release evidence additionally covers selected-version dimensions
 through Version 40, the exact Version 40 ECC-M byte boundary, decode-approved
 branding through Version 11, and typed branded rejection from Version 12
-through Version 40. Recorded artifact ceilings are 1,070,097 SVG bytes, 52,889
-PNG bytes, and 4,928,400 bytes for the direct RGBA buffer.
+through Version 40. The Version 40 SVG/PNG hashes are shared by native and WASM
+tests. Chromium repeats both downloads and independently decodes the PNG; the
+all-version rasterized-SVG campaign supplies the SVG decode evidence. A
+separate request-interception workflow generates and downloads the Version 40
+PNG without a runtime network request. Recorded artifact ceilings are
+1,070,097 SVG bytes, 52,889 PNG bytes, and 4,928,400 bytes for the direct RGBA
+buffer.
 
 Approved matrix artifact and allocation ceilings live in
 `tests/baselines/resources.json` and are exercised in ordinary native tests.

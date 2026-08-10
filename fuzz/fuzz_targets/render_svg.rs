@@ -12,7 +12,7 @@ fuzz_target!(|data: &[u8]| {
         return;
     };
     let text = String::from_utf8_lossy(payload);
-    let profile = SUPPORTED_PROFILES[usize::from(control & 0b11)];
+    let profile = SUPPORTED_PROFILES[usize::from(control) % SUPPORTED_PROFILES.len()];
     let Ok(encoded) = encode(EncodeRequest::first_fit(&text, ErrorCorrection::Medium, profile.maximum_version())) else {
         return;
     };

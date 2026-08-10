@@ -257,6 +257,26 @@ test("Adaptive grows through Version 11 and gates unreviewed higher-version bran
   await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
+test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }) => {
+  await page.getByText("Adaptive", { exact: true }).click();
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await enterPayload(page, "a".repeat(2_331));
+
+  await expect.poll(() => diagnostic(page, "Version")).toBe("V40 / V40 max");
+  await expect.poll(() => diagnostic(page, "ECC")).toBe("M");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("370 px SVG · 1110 px PNG");
+  await expect
+    .poll(() => diagnostic(page, "PNG geometry"))
+    .toBe("6 px/module · 1110 px symbol · 0 px padding");
+
+  await page.getByLabel("Text to encode").fill("a".repeat(2_332));
+  await expect(page.getByRole("alert")).toContainText(
+    "The payload does not fit this profile's maximum QR version 40.",
+  );
+  await expect(page.getByTestId("download-svg")).toBeDisabled();
+  await expect(page.getByTestId("download-png")).toBeDisabled();
+});
+
 test("uses compact dots and standard square finders without a shape control", async ({ page }) => {
   await enterPayload(page, "approved styling workflow");
 

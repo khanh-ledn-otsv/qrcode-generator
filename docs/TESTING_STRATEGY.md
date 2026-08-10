@@ -410,12 +410,14 @@ Versions 12–40. The pinned decoder campaign independently decodes native PNG
 and rasterized SVG for every enabled row, including Version 11.
 
 The native/WASM artifact golden uses generated synthetic payloads through
-Version 11, including a 110-byte URL as required by the fixture policy.
-Separate native and WASM workflow tests verify
-repeatable SVG/PNG bytes for the exact reported ONE URL, while Chromium verifies
-repeatable downloads and pinned-reader decoding of that exact payload. This
-keeps external content out of golden fixtures without substituting the
-synthetic URL for the reported-payload behavior gate.
+Version 11, including a 110-byte URL as required by the fixture policy, plus an
+unbranded 2,331-byte Version 40 boundary fixture. Separate native and WASM
+workflow tests verify repeatable SVG/PNG bytes and the Version 40 one-byte-over
+failure. Chromium verifies repeatable downloads and pinned-reader decoding for
+both the exact reported ONE URL and the Version 40 boundary, while privacy
+interception covers Version 40 generation and download. This keeps external
+content out of golden fixtures without substituting the synthetic URL for the
+reported-payload behavior gate.
 
 Replay the focused experiment explicitly with:
 

@@ -43,6 +43,12 @@ fn every_geometry_and_profile_error_has_stable_context() {
             base: PixelDimensions::square(90),
             png: PixelDimensions::square(180),
         },
+        ProfileError::AdaptiveDimensionsDoNotMatchMaximum {
+            expected_base: PixelDimensions::square(370),
+            expected_png: PixelDimensions::square(1110),
+            base: PixelDimensions::square(180),
+            png: PixelDimensions::square(540),
+        },
         ProfileError::InvalidGeometry(GeometryError::NoPositiveEvenScale),
         ProfileError::MaximumVersionScaleBelowSix,
     ];
@@ -51,6 +57,7 @@ fn every_geometry_and_profile_error_has_stable_context() {
         "square",
         "overflowed",
         "exactly three times",
+        "adaptive dimensions must match",
         "invalid profile geometry",
         "at least six pixels",
     ]) {

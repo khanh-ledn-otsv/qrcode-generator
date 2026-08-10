@@ -120,3 +120,50 @@ test("downloads and decodes the deterministic Adaptive Version 10 artifacts", as
   expect(result.status, result.stderr).toBe(0);
   expect(result.stdout.trim()).toBe(LONG_ONE_URL);
 });
+
+test("downloads and decodes deterministic Adaptive Version 40 artifacts", async ({ page }) => {
+  const payload = "a".repeat(2_331);
+  await page.getByText("Adaptive", { exact: true }).click();
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await enterPayload(page, payload);
+
+  const [svgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-svg").click(),
+  ]);
+  const [pngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
+  const [repeatedSvgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-svg").click(),
+  ]);
+  const [repeatedPngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
+  const svg = await readFile(await svgDownload.path());
+  const png = await readFile(await pngDownload.path());
+  expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
+  expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
+  expect(svg.toString("utf8")).toContain('width="370"');
+  expect(png.readUInt32BE(16)).toBe(1_110);
+  expect(png.readUInt32BE(20)).toBe(1_110);
+  expect(await sha256(svg)).toBe(
+    "4f07cbcb9e7730a227084017383c7d8546053bd15333c759d5fb717de8d3c8e8",
+  );
+  expect(await sha256(png)).toBe(
+    "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
+  );
+
+  const source = resolve("tests/oracles/zxing-cpp");
+  const reader = resolve(source, "build/example/ZXingReader");
+  const result = spawnSync(
+    reader,
+    ["-formats", "QRCode", "-single", "-bytes", await pngDownload.path()],
+    { encoding: "utf8", maxBuffer: 16 * 1024 },
+  );
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stdout.trim()).toBe(payload);
+});

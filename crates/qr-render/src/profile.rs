@@ -3,13 +3,13 @@ use std::fmt;
 
 use qr_core::Version;
 
+use crate::geometry::QUIET_ZONE_MODULES_PER_SIDE;
 use crate::{CanvasGeometry, GeometryError, ModuleCount, PixelDimensions};
 
 const PNG_SCALE_FACTOR: u32 = 3;
 const MINIMUM_MAX_VERSION_MODULE_SCALE: u32 = 6;
 const ADAPTIVE_SVG_PIXELS_PER_MODULE: u32 = 2;
 const ADAPTIVE_PNG_PIXELS_PER_MODULE: u32 = ADAPTIVE_SVG_PIXELS_PER_MODULE * PNG_SCALE_FACTOR;
-const QUIET_ZONE_MODULES_TOTAL: u32 = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProfileId {
@@ -59,6 +59,21 @@ impl OutputProfile {
                 base: base_dimensions,
                 png: png_dimensions,
             });
+        }
+        if id == ProfileId::Adaptive {
+            let expected_base =
+                adaptive_dimensions(maximum_version, ADAPTIVE_SVG_PIXELS_PER_MODULE)
+                    .map_err(ProfileError::InvalidGeometry)?;
+            let expected_png = adaptive_dimensions(maximum_version, ADAPTIVE_PNG_PIXELS_PER_MODULE)
+                .map_err(ProfileError::InvalidGeometry)?;
+            if base_dimensions != expected_base || png_dimensions != expected_png {
+                return Err(ProfileError::AdaptiveDimensionsDoNotMatchMaximum {
+                    expected_base,
+                    expected_png,
+                    base: base_dimensions,
+                    png: png_dimensions,
+                });
+            }
         }
 
         let profile = Self {
@@ -150,13 +165,7 @@ impl OutputProfile {
         if self.id != ProfileId::Adaptive {
             return Ok(fixed_dimensions);
         }
-        let logical_extent = u32::from(version.symbol_size())
-            .checked_add(QUIET_ZONE_MODULES_TOTAL)
-            .ok_or(GeometryError::DimensionOverflow)?;
-        let side = logical_extent
-            .checked_mul(adaptive_scale)
-            .ok_or(GeometryError::DimensionOverflow)?;
-        Ok(PixelDimensions::square(side))
+        adaptive_dimensions(version, adaptive_scale)
     }
 
     pub fn geometry(self, version: Version) -> Result<CanvasGeometry, GeometryError> {
@@ -165,6 +174,19 @@ impl OutputProfile {
             ModuleCount::new(u32::from(version.symbol_size()))?,
         )
     }
+}
+
+fn adaptive_dimensions(version: Version, scale: u32) -> Result<PixelDimensions, GeometryError> {
+    let quiet_zone_total = QUIET_ZONE_MODULES_PER_SIDE
+        .checked_mul(2)
+        .ok_or(GeometryError::DimensionOverflow)?;
+    let logical_extent = u32::from(version.symbol_size())
+        .checked_add(quiet_zone_total)
+        .ok_or(GeometryError::DimensionOverflow)?;
+    let side = logical_extent
+        .checked_mul(scale)
+        .ok_or(GeometryError::DimensionOverflow)?;
+    Ok(PixelDimensions::square(side))
 }
 
 pub const SUPPORTED_PROFILES: [OutputProfile; 5] = [
@@ -184,6 +206,12 @@ pub enum ProfileError {
         base: PixelDimensions,
         png: PixelDimensions,
     },
+    AdaptiveDimensionsDoNotMatchMaximum {
+        expected_base: PixelDimensions,
+        expected_png: PixelDimensions,
+        base: PixelDimensions,
+        png: PixelDimensions,
+    },
     InvalidGeometry(GeometryError),
     MaximumVersionScaleBelowSix,
 }
@@ -200,6 +228,9 @@ impl fmt::Display for ProfileError {
             Self::DimensionOverflow => formatter.write_str("profile dimensions overflowed"),
             Self::PngDimensionsAreNotTriple { .. } => formatter
                 .write_str("PNG dimensions must be exactly three times the base dimensions"),
+            Self::AdaptiveDimensionsDoNotMatchMaximum { .. } => formatter.write_str(
+                "adaptive dimensions must match the dimensions derived for its maximum version",
+            ),
             Self::InvalidGeometry(error) => write!(formatter, "invalid profile geometry: {error}"),
             Self::MaximumVersionScaleBelowSix => formatter.write_str(
                 "the profile maximum version must retain at least six pixels per module",
