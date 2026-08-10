@@ -15,6 +15,7 @@
     "setup": "bash scripts/setup.sh",
     "test": "pnpm run test:rust && pnpm run test:python && pnpm run test:wasm && pnpm run test:e2e",
     "test:e2e": "playwright test --project=chromium",
+    "test:e2e:dist": "QR_E2E_USE_EXISTING_DIST=1 playwright test --project=chromium",
     "test:python": "uv run --project tests/oracles --locked python -m unittest discover -s tests/support -p 'test_*.py'",
     "test:rust": "cargo test",
     "test:wasm": "cargo test -p qr-render --target wasm32-unknown-unknown --test png_wasm && cargo test -p qr-web --target wasm32-unknown-unknown --lib && cargo test -p qr-web --target wasm32-unknown-unknown --test wasm_browser",
@@ -30,7 +31,10 @@
     "release:miri": "cargo +nightly miri test -p qr-core && cargo +nightly miri test -p qr-render --lib && cargo +nightly miri test -p qr-render --test profile_geometry --test render_model",
     "release:mutation": "bash scripts/verify-mutations.sh",
     "release:readiness": "bash scripts/release-readiness.sh",
-    "verify": "pnpm run check && pnpm run test"
+    "verify": "bash scripts/verify.sh",
+    "verify:core": "cargo fmt --check && cargo clippy -p qr-core --all-targets -- -D warnings && cargo test -p qr-core",
+    "verify:render": "cargo fmt --check && cargo clippy -p qr-render --all-targets -- -D warnings && cargo test -p qr-render && cargo test -p qr-render --target wasm32-unknown-unknown --test png_wasm",
+    "verify:web": "cargo fmt --check && pnpm run check:web && cargo clippy -p qr-web --all-targets -- -D warnings && cargo test -p qr-web --target wasm32-unknown-unknown --lib --test wasm_browser && NO_COLOR=true trunk build"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

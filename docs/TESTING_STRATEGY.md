@@ -580,6 +580,17 @@ Test defensive resource limits explicitly:
 - WASM check and optimized Trunk build;
 - browser smoke tests when web behavior changes.
 
+`pnpm run verify` preserves this complete routine gate while running independent
+Rust, web, and Python lanes concurrently. Cargo-heavy native/WASM commands stay
+in one serialized lane, the optimized Trunk artifact is built once, and
+Playwright serves that existing artifact. The orchestrator does not override
+`CARGO_TARGET_DIR`, so local incremental compilation and the hosted Rust cache
+retain the standard workspace target layout. When `CI=true`, the compiled,
+Python, and browser test lanes run serially to avoid resource-contention flakes
+on smaller hosted runners; they still reuse the one optimized build. The
+`verify:core`, `verify:render`, and `verify:web` commands provide focused local
+feedback but do not replace the complete gate before handoff or push.
+
 ### Extended local verification
 
 - full property case count and approved branding tuples;

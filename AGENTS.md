@@ -45,34 +45,73 @@ Treat those documents as authoritative. Update them when an implementation decis
 - Use the `.nvmrc`-declared Node.js v24 runtime and the
   `packageManager`-pinned pnpm version. Commit `pnpm-lock.yaml`; do not create an
   npm lockfile.
+- Before running `pnpm`, Playwright, Trunk, or another Node-backed command,
+  check `node --version`. A package-manager engine warning is not an acceptable
+  substitute for using Node.js v24. If the active shell is not on v24, activate
+  `.nvmrc` with the available version manager. In this workspace, the canonical
+  non-interactive fallback is:
+
+  ```sh
+  fnm exec --using=.nvmrc node --version
+  fnm exec --using=.nvmrc pnpm run verify
+  ```
+
+  The first command must report `v24.*`. When `fnm` is unavailable, use the
+  installed version manager's equivalent and verify the version before
+  continuing.
+- Prefer repository `pnpm` scripts over spelling out their tool commands. They
+  carry the pinned options and keep local and CI behavior aligned.
+- Set `NO_COLOR=true` on every direct agent-run Trunk command. Prefer
+  `pnpm run build` for the optimized release build and `pnpm run dev` for the
+  development server; those scripts already set `NO_COLOR=true`.
 - Use Oxlint for JavaScript/TypeScript linting and Oxfmt for formatting.
 - Use Ruff for Python linting and formatting, and ty for Python type checking.
   Run both through the locked `tests/oracles` uv project.
 
 ## Verification
 
-Run the checks relevant to the changed files before handoff:
+Use the smallest focused gate that covers the active edit loop:
 
 ```sh
-cargo fmt --check
-cargo check
-cargo test
-cargo clippy --all-targets --all-features -- -D warnings
+pnpm run verify:core    # qr-core-only changes
+pnpm run verify:render  # qr-render changes, including its WASM renderer test
+pnpm run verify:web     # qr-web, HTML, CSS, and ordinary web changes
 ```
 
-For changes to the web application, HTML, CSS, WASM boundary, build configuration, or dependencies, also run:
-
-```sh
-trunk build --release
-```
-
-For TypeScript, browser-test tooling, or Python support changes, also run:
+Before handoff, run the complete repository gate for cross-crate work and for
+changes to dependencies, build or test configuration, WASM boundaries, browser
+tooling, CI workflows, verification scripts, or release behavior:
 
 ```sh
 pnpm run verify
 ```
 
-If required tooling is unavailable, report the skipped check and reason.
+`pnpm run verify` is the authoritative routine gate. It already runs Rust
+formatting, native and WASM checks, warnings-as-errors Clippy, native/Python/WASM
+tests, the optimized release build, and Chromium tests. Do not rerun those same
+commands separately after a successful complete gate unless diagnosing a
+failure or satisfying a more specialized release check.
+
+When a direct Trunk build is genuinely needed, use the repository's colorless
+form:
+
+```sh
+NO_COLOR=true trunk build --release
+```
+
+Keep routine Cargo commands on the default workspace `target/` layout so local
+incremental compilation and the hosted Rust cache remain effective. Do not set
+`CARGO_TARGET_DIR`, run `cargo clean`, or delete cached build outputs before
+routine verification unless a documented release script deliberately requires
+an isolated target directory.
+
+Do not set `CI=true` for normal local verification: the optimized local gate
+parallelizes independent work. Set it only when intentionally reproducing the
+hosted CI execution mode, which serializes resource-heavy test lanes.
+
+If a gate fails, preserve the failure, diagnose it, and rerun the narrowest
+failing command while iterating. Run the required covering gate again after the
+fix. If required tooling is unavailable, report the skipped check and reason.
 
 ## Tests and Fixtures
 

@@ -12,7 +12,7 @@ export default defineConfig({
   },
   webServer: {
     command:
-      "NO_COLOR=true trunk build --release && python3 -m http.server 4173 --bind 127.0.0.1 --directory dist",
+      'if [ "${QR_E2E_USE_EXISTING_DIST:-0}" = "1" ]; then test -f dist/index.html || { echo "dist/index.html is missing; run pnpm run build first." >&2; exit 1; }; else NO_COLOR=true trunk build --release; fi; python3 -m http.server 4173 --bind 127.0.0.1 --directory dist',
     port: 4173,
     reuseExistingServer: false,
     timeout: 120_000,

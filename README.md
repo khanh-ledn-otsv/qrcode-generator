@@ -49,6 +49,24 @@ Run the complete repository gate with one command:
 pnpm run verify
 ```
 
+The complete gate runs independent Rust, web, and Python lanes concurrently,
+keeps Cargo-heavy commands serialized, and reuses its single release build for
+the Chromium tests. It uses the standard Cargo target directories, including
+in CI, so incremental and hosted Rust caches continue to apply. Hosted CI runs
+the compiled, Python, and browser test lanes serially to avoid resource
+contention on smaller runners while still reusing the single release build.
+
+For a faster edit loop, run the gate closest to the code being changed:
+
+```sh
+pnpm run verify:core
+pnpm run verify:render
+pnpm run verify:web
+```
+
+These focused gates are conveniences, not substitutes for `pnpm run verify`
+before handoff or push.
+
 Use `pnpm run check` for static checks and the release build, `pnpm run test`
 for all native, Python, WASM, and browser tests, and `pnpm run format` to apply
 Rust, TypeScript, and Python formatters.
