@@ -8,8 +8,8 @@ use crate::{CanvasGeometry, GeometryError, ModuleCount, PixelDimensions};
 
 const PNG_SCALE_FACTOR: u32 = 3;
 const MINIMUM_MAX_VERSION_MODULE_SCALE: u32 = 6;
-const ADAPTIVE_SVG_PIXELS_PER_MODULE: u32 = 2;
-const ADAPTIVE_PNG_PIXELS_PER_MODULE: u32 = ADAPTIVE_SVG_PIXELS_PER_MODULE * PNG_SCALE_FACTOR;
+const ADAPTIVE_SVG_PIXELS_PER_MODULE: u32 = 4;
+const ADAPTIVE_PNG_PIXELS_PER_MODULE: u32 = 6;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProfileId {
@@ -54,7 +54,9 @@ impl OutputProfile {
             .get()
             .checked_mul(PNG_SCALE_FACTOR)
             .ok_or(ProfileError::DimensionOverflow)?;
-        if png_dimensions != PixelDimensions::new(expected_png_width, expected_png_height) {
+        if id != ProfileId::Adaptive
+            && png_dimensions != PixelDimensions::new(expected_png_width, expected_png_height)
+        {
             return Err(ProfileError::PngDimensionsAreNotTriple {
                 base: base_dimensions,
                 png: png_dimensions,
@@ -194,7 +196,7 @@ pub const SUPPORTED_PROFILES: [OutputProfile; 5] = [
     OutputProfile::compiled(ProfileId::Content, 120, 360, 8),
     OutputProfile::compiled(ProfileId::Landing, 150, 450, 12),
     OutputProfile::compiled(ProfileId::Print, 160, 480, 13),
-    OutputProfile::compiled(ProfileId::Adaptive, 370, 1110, 40),
+    OutputProfile::compiled(ProfileId::Adaptive, 740, 1110, 40),
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

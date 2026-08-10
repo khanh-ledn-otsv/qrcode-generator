@@ -86,7 +86,7 @@ fn adaptive_long_url_selects_version_ten_and_exports_on_wasm() {
         .diagnostics();
     assert_eq!(diagnostics.selected_version().number(), 10);
     assert_eq!(diagnostics.maximum_version().number(), 40);
-    assert_eq!(diagnostics.svg_side_pixels(), 130);
+    assert_eq!(diagnostics.svg_side_pixels(), 260);
     assert_eq!(diagnostics.png_side_pixels(), 390);
     assert_eq!(diagnostics.module_scale(), 6);
     assert_eq!(diagnostics.rendered_symbol_side_pixels(), 390);
@@ -116,7 +116,7 @@ fn adaptive_version_forty_boundary_is_deterministic_on_wasm() {
         second.artifact(ArtifactKind::Png).bytes()
     );
     assert_eq!(first.diagnostics().selected_version().number(), 40);
-    assert_eq!(first.diagnostics().svg_side_pixels(), 370);
+    assert_eq!(first.diagnostics().svg_side_pixels(), 740);
     assert_eq!(first.diagnostics().png_side_pixels(), 1_110);
     assert_eq!(first.diagnostics().module_scale(), 6);
 

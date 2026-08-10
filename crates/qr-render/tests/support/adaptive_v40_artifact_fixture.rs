@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 
 pub const PAYLOAD_LENGTH: usize = 2_331;
 pub const SHA256: [&str; 2] = [
-    "4f07cbcb9e7730a227084017383c7d8546053bd15333c759d5fb717de8d3c8e8",
+    "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
     "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
 ];
 
@@ -61,7 +61,7 @@ pub fn provenance_hashes() -> [String; 2] {
     assert_eq!(manifest["local_verification"].as_array().unwrap().len(), 3);
     assert_eq!(
         manifest["verification"]["reviewer"],
-        "ticket-30-native-wasm-browser-artifact-review"
+        "adaptive-svg-browser-visibility-review"
     );
     assert_eq!(manifest["verification"]["verified_at"], "2026-08-10");
 

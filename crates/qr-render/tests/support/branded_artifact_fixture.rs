@@ -26,7 +26,7 @@ pub const SHA256: [[&str; 2]; 5] = [
         "49c6e5d60bd8c0b8ac14b6988cf91e510ef83723792059f1fddc38c8e2ddfc36",
     ],
     [
-        "df39a0385098d9fa87a964d4c8084bf9c097f8da5e582c803eac962b9c4e8fb6",
+        "fe0d91c9c4eb35eae447580eb1b7766c511d29fcbd62d5a1fd89eb584affe890",
         "04282f20f15befa604e80cd849b9ed80bd02fb819bd0c13c96445b96e6428fcf",
     ],
 ];

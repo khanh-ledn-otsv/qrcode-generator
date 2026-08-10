@@ -284,9 +284,10 @@ Exhaustively iterate every version permitted by each profile:
 
 - fixed-profile SVG `width` and `height` equal the compiled base dimensions;
 - Adaptive SVG and PNG dimensions equal the selected logical extent multiplied
-  by two and six respectively, through Version 40;
+  by four and six respectively, through Version 40;
 - SVG `viewBox` is exactly `0 0 N N`, where `N` is the matrix width plus eight modules for the four-module quiet zone on each side; it contains no fixed-canvas surplus padding;
-- PNG dimensions equal exactly 3× base dimensions;
+- fixed-profile PNG dimensions equal exactly 3× base dimensions; Adaptive PNG
+  dimensions follow its independent six-pixel-per-module policy;
 - complete symbol includes four quiet modules per side;
 - module scale is the largest positive even scale that fits;
 - rendered symbol dimensions and outer padding use checked integer arithmetic;
@@ -297,7 +298,7 @@ Exhaustively iterate every version permitted by each profile:
 - transparent surplus padding has zero alpha and opaque surplus padding exactly matches the configured background;
 - unsafe logo geometry is rejected before rendering.
 
-Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 370 px SVG, and 1110 px PNG.
+Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, 260 px SVG, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 740 px SVG, and 1110 px PNG. Chromium rasterizes the selected Adaptive SVG at its declared size and requires compact modules outside the finder/logo regions to remain visibly magenta.
 
 ### 6.2 SVG artifact tests
 
@@ -319,11 +320,12 @@ Parse every generated SVG and assert:
 
 Use `insta` only for normalized semantic snapshots. Exact fixture hashes remain the determinism gate.
 
-Rasterize SVG with pinned `resvg` at the selected output's 3× export density and feed
-the pixels to ZXing-C++. Structural tests independently enforce its base
-`width`/`height`; export-density rasterization keeps the Version 13 vector above
-the decoder's minimum pixel density. This tests the artifact, not an internal
-render model shortcut.
+Rasterize SVG with pinned `resvg` at the selected output's PNG dimensions and
+feed the pixels to ZXing-C++. This is 3× the SVG dimensions for fixed profiles
+and six pixels per logical module for Adaptive. Structural tests independently
+enforce the SVG's base `width`/`height`; export-density rasterization keeps the
+Version 13 vector above the decoder's minimum pixel density. This tests the
+artifact, not an internal render model shortcut.
 
 ### 6.3 PNG artifact tests
 

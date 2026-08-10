@@ -35,7 +35,7 @@ fn supported_profiles_match_the_approved_output_contract() {
         (ProfileId::Content, 120, 360, 8),
         (ProfileId::Landing, 150, 450, 12),
         (ProfileId::Print, 160, 480, 13),
-        (ProfileId::Adaptive, 370, 1110, 40),
+        (ProfileId::Adaptive, 740, 1110, 40),
     ];
 
     assert_eq!(SUPPORTED_PROFILES.len(), expected.len());
@@ -59,10 +59,10 @@ fn supported_profiles_match_the_approved_output_contract() {
 fn adaptive_dimensions_grow_with_the_selected_version() {
     let adaptive = SUPPORTED_PROFILES[4];
     let examples = [
-        (1, 58, 174),
-        (10, 130, 390),
-        (11, 138, 414),
-        (40, 370, 1110),
+        (1, 116, 174),
+        (10, 260, 390),
+        (11, 276, 414),
+        (40, 740, 1110),
     ];
 
     assert_eq!(adaptive.id(), ProfileId::Adaptive);
@@ -227,7 +227,7 @@ fn invalid_profiles_return_specific_errors() {
             Version::try_from(40).unwrap(),
         ),
         Err(ProfileError::AdaptiveDimensionsDoNotMatchMaximum {
-            expected_base: PixelDimensions::square(370),
+            expected_base: PixelDimensions::square(740),
             expected_png: PixelDimensions::square(1110),
             base: adaptive_base,
             png: adaptive_png,

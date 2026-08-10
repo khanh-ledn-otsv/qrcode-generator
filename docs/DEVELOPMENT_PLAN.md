@@ -79,10 +79,12 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
   inside the approved 0.45-module circular envelope contribute coverage. The
   complete image is never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
-- Fixed profiles retain their compiled dimensions. Adaptive uses the selected
-  matrix plus the four-module quiet zone to derive a two-pixel-per-logical-module
-  SVG side and a six-pixel-per-logical-module PNG side. The PNG is exactly 3×
-  the SVG, uses an integer six-pixel module scale, and needs no surplus padding.
+- Fixed profiles retain their compiled dimensions and 3× PNG relationship.
+  Adaptive uses the selected matrix plus the four-module quiet zone to derive a
+  four-pixel-per-logical-module SVG side and a six-pixel-per-logical-module PNG
+  side. This keeps 0.45-module compact dots visible when Chromium displays the
+  SVG at its declared size; the PNG retains an integer six-pixel module scale
+  and needs no surplus padding.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering and numeric formatting.
@@ -141,13 +143,13 @@ candidate evidence is committed in
   Versions 7–13 on those fixed profiles intentionally reject branding because
   exact centering intersects protected central alignment geometry.
 - Adaptive admits Versions 6–11 with dimensions derived from the selected
-  version. Version 10 uses a 130 px SVG / 390 px PNG canvas.
+  version. Version 10 uses a 260 px SVG / 390 px PNG canvas.
   Version 10 has a 57-module matrix, a 65-module logical extent including the
   quiet zone, a six-pixel PNG module scale, a 390 px rendered symbol, and no
   surplus padding. Its Version 10 placement keeps the
   13×4.875-module source horizontally centered and shifts it six modules upward
   to `(left 22, top 20.0625)`, with a function-safe `(21, 19, 15, 7)` knockout.
-  Version 11 uses 138/414 dimensions and the same source size shifted six
+  Version 11 uses 276/414 dimensions and the same source size shifted six
   modules upward at `(24, 22.0625)`, with knockout `(23, 21, 15, 7)`.
 - Adaptive placement tries the exact center first, then searches integer module
   offsets in increasing Euclidean distance with a stable center/above/below/

@@ -222,7 +222,7 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
         (ProfileId::Content, 8, 120, 360, false),
         (ProfileId::Landing, 12, 150, 450, false),
         (ProfileId::Print, 13, 160, 480, true),
-        (ProfileId::Adaptive, 40, 58, 174, false),
+        (ProfileId::Adaptive, 40, 116, 174, false),
     ];
 
     for (profile_id, maximum_version, svg_side, png_side, is_print) in cases {
@@ -269,7 +269,7 @@ fn adaptive_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     assert_eq!(diagnostics.selected_version().number(), 10);
     assert_eq!(diagnostics.maximum_version().number(), 40);
     assert!(!diagnostics.branding_increased_version());
-    assert_eq!(diagnostics.svg_side_pixels(), 130);
+    assert_eq!(diagnostics.svg_side_pixels(), 260);
     assert_eq!(diagnostics.png_side_pixels(), 390);
     assert_eq!(diagnostics.module_scale(), 6);
     assert_eq!(diagnostics.rendered_symbol_side_pixels(), 390);
@@ -298,7 +298,7 @@ fn adaptive_grows_past_version_ten_for_a_long_branded_url() {
     assert_eq!(diagnostics.ecc(), ErrorCorrection::High);
     assert_eq!(diagnostics.selected_version().number(), 11);
     assert_eq!(diagnostics.maximum_version().number(), 40);
-    assert_eq!(diagnostics.svg_side_pixels(), 138);
+    assert_eq!(diagnostics.svg_side_pixels(), 276);
     assert_eq!(diagnostics.png_side_pixels(), 414);
     assert_eq!(diagnostics.module_scale(), 6);
     assert!(diagnostics.logo_placement().is_some());
@@ -375,7 +375,7 @@ fn adaptive_supports_the_version_forty_byte_boundary_without_a_logo() {
     assert_eq!(diagnostics.ecc(), ErrorCorrection::Medium);
     assert_eq!(diagnostics.selected_version().number(), 40);
     assert_eq!(diagnostics.maximum_version().number(), 40);
-    assert_eq!(diagnostics.svg_side_pixels(), 370);
+    assert_eq!(diagnostics.svg_side_pixels(), 740);
     assert_eq!(diagnostics.png_side_pixels(), 1_110);
     assert_eq!(diagnostics.module_scale(), 6);
 

@@ -12,42 +12,42 @@
       "payload": "adaptive version 6",
       "payload_sha256": "262188d09116e5b4064054a68bb89323ae31f28c2c03887f3f52cca698671c2e",
       "version": 6,
-      "svg_sha256": "dfc18037980a1a848d02bccf6cae97ecabacf268fdb84bbe5c421032e2b00061",
+      "svg_sha256": "9d0e8347404fd61239801d7db7de43071ab46d2f3bad7e6e9580f63be29b296c",
       "png_sha256": "f7603652aa0f911b0cd641d3f3f8b40c611c7d116cff4fe885771d7cb3e71710"
     },
     {
       "payload": "adaptive version 7",
       "payload_sha256": "fc2e07bbd6051ad13d715f89bbc13df005119630eb67a5c366f4b3a2927e4bcc",
       "version": 7,
-      "svg_sha256": "7d5bcab343b6d275870fd485cb473a68f088d180b8d648691714c3ecc3cf3109",
+      "svg_sha256": "47290bcc76ce5d0b8c85a8d9a07cc148abe6fc252ddbcc8da6ad33dc6d3e5466",
       "png_sha256": "c21d9a95a01fecaa600bb38e11df41f5a7ff8d4fdae38fc7608874a33e7e0c46"
     },
     {
       "payload": "adaptive version 8",
       "payload_sha256": "830212b38402eae572941f38aa0f4167a5e46c926dbade314500628d4b42259a",
       "version": 8,
-      "svg_sha256": "caf225b9e4683d763cb12e463c852befb308156fc501d78e3fff1d47a1308d77",
+      "svg_sha256": "ba1ec2918aeb33b7a72d08252a27084aadac749274e2d3cc90ab7609c45c2fe6",
       "png_sha256": "70135597571215a404d67d81439f7e39642308c69da243b52c7aa710841331ba"
     },
     {
       "payload": "adaptive version 9",
       "payload_sha256": "32857879f26cf4971a7153a0655c5802c5d506ec8548d44cbfa80888e215ab5a",
       "version": 9,
-      "svg_sha256": "b55d3f15f1afe4c162af7ccad385390231ff7d1eb1c4ed4fd7f6a1c140c03dd1",
+      "svg_sha256": "7cfefc0002a220abfcd875a1d35fe092dd252765609c1701739a7b3261a28fea",
       "png_sha256": "82eb00d2b45d5832d8e410720ca76b23230f6a485d87256a9d5b7b0771775765"
     },
     {
       "payload": "https://example.test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "payload_sha256": "bbbf9a1e577d3becfb32e3f9afe61328591f358b3fbfb5ddc72ecbc17de46caf",
       "version": 10,
-      "svg_sha256": "5f1cc32a6d17e8fee82b688fdeda14c098ccd246427bd08af25e57131e4d3b7f",
+      "svg_sha256": "29aa76534949ce0b0e986ba70022892e776b45341050a3a6dafd51a83a17bcbb",
       "png_sha256": "d198c58ad515ac4928f1acf868919e0ee3420591b37a9633aae4975920d6d062"
     },
     {
       "payload": "adaptive version 11",
       "payload_sha256": "4d02e3477fcf921f7b4c878fd5c123b6cb981aaec112e8fd2e76f3580363f02a",
       "version": 11,
-      "svg_sha256": "96ae8bd6ae3d4820afa945dddb059caebf0bc0ce090cff368da3e5ebfc44d4d1",
+      "svg_sha256": "81b86b0c8158195fd07020afba292c72b041174d2517014af5dee5259144da3b",
       "png_sha256": "90bb858cff8c329277751457531c837d28cdf533bd931ce4df008c3a9f16ba46"
     }
   ],
@@ -62,8 +62,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-29-native-wasm-and-decoder-review",
+    "reviewer": "adaptive-svg-browser-visibility-review",
     "verified_at": "2026-08-10",
-    "notes": "All payloads are generated, synthetic, and non-sensitive. The Version 10 URL matches the reported URL's 110-byte length without copying external content. These goldens record deterministic cross-target equality, while pinned decoder evidence separately establishes readability."
+    "notes": "All payloads are generated, synthetic, and non-sensitive. The Version 10 URL matches the reported URL's 110-byte length without copying external content. SVG hashes were reviewed after raising Adaptive's declared SVG density to keep compact modules visible in Chromium; native/WASM equality and pinned decoder evidence establish determinism and readability."
   }
 }

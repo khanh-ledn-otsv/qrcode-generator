@@ -28,11 +28,13 @@ modes. The global binarizer also rejects the dense anti-aliased print SVG.
 Pinning fixed thresholding removes both image-dependent oracle preprocessing
 ambiguities while preserving detection and decode checks.
 
-Independent SVG decoding rasterizes the vector at the profile's 3× export
-density. Structural tests separately enforce the required base `width` and
-`height`. The dense Version 13 vector has only about two pixels per module when
-rasterized at its base CSS size and no ZXing binarizer decodes that low-density
-raster; at export density the same resolution-independent artifact decodes.
+Independent SVG decoding rasterizes the vector at the profile's PNG export
+dimensions. That is 3× the SVG dimensions for fixed profiles and six pixels per
+logical module for Adaptive. Structural tests separately enforce the required
+base `width` and `height`. The dense Version 13 vector has only about two pixels
+per module when rasterized at its base CSS size and no ZXing binarizer decodes
+that low-density raster; at export density the same resolution-independent
+artifact decodes.
 
 ## Routine and extended local gates
 

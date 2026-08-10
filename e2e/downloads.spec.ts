@@ -106,7 +106,7 @@ test("downloads and decodes the deterministic Adaptive Version 10 artifacts", as
   const png = await readFile(await pngDownload.path());
   expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
   expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
-  expect(svg.toString("utf8")).toContain('width="130"');
+  expect(svg.toString("utf8")).toContain('width="260"');
   expect(png.readUInt32BE(16)).toBe(390);
   expect(png.readUInt32BE(20)).toBe(390);
 
@@ -147,11 +147,11 @@ test("downloads and decodes deterministic Adaptive Version 40 artifacts", async 
   const png = await readFile(await pngDownload.path());
   expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
   expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
-  expect(svg.toString("utf8")).toContain('width="370"');
+  expect(svg.toString("utf8")).toContain('width="740"');
   expect(png.readUInt32BE(16)).toBe(1_110);
   expect(png.readUInt32BE(20)).toBe(1_110);
   expect(await sha256(svg)).toBe(
-    "4f07cbcb9e7730a227084017383c7d8546053bd15333c759d5fb717de8d3c8e8",
+    "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
   );
   expect(await sha256(png)).toBe(
     "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",

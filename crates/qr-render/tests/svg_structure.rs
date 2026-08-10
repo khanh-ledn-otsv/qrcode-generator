@@ -29,8 +29,8 @@ const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 5] = [
         "318dd2cd412fe2ab44dde0f12f2793f9f17bf44c86a523e055d121f5b8ff12d8",
     ]],
     [[
-        "e7b7d45f00a07adc2bbd219f139a67d0ed5e2e68d1b1a8c3f36b4ff9fc2ceb59",
-        "514167590bf18fff4b67ee55fdd89d88a6c1a0406c918e97afb7df6dd9caa8c4",
+        "8698d052998c2e7e81aff6c8595ca40246e718f7320dc925d9e2d70d8acb3fbe",
+        "7278f97579e8249df426fe8f9dd65ffa0b3da8d996329457d75a0fc7affafa93",
     ]],
 ];
 

@@ -88,7 +88,7 @@ committed evidence policy.
 
 Replaced the old fixed 180/540, Version 10-capped profile with Adaptive.
 Unbranded output now first-fits at ECC M through Version 40 and derives tight
-SVG dimensions at two pixels per logical module plus quiet zone and PNG
+SVG dimensions at four pixels per logical module plus quiet zone and PNG
 dimensions at six pixels per logical module plus quiet zone. The exact
 Version 40 byte boundary is covered at 2,331 ASCII bytes, with 2,332 bytes
 returning the typed capacity failure.

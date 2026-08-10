@@ -94,6 +94,54 @@ test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
+test("Adaptive preview keeps compact modules visible at its declared size", async ({ page }) => {
+  await page.getByText("Adaptive", { exact: true }).click();
+  await enterPayload(page, "adaptive preview visibility");
+
+  const preview = page
+    .getByTestId("qr-preview")
+    .locator('svg:visible:not([data-role="bundled-logo"])');
+  await expect(preview).toHaveAttribute("width", "196");
+  const visiblePixelsOutsideLargeArtwork = await preview.evaluate(async (svg) => {
+    const markup = new XMLSerializer().serializeToString(svg);
+    const image = new Image();
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+    await image.decode();
+    const width = Number(svg.getAttribute("width"));
+    const height = Number(svg.getAttribute("height"));
+    const extent = svg.viewBox.baseVal.width;
+    const pixelsPerModule = width / extent;
+    const canvas = new OffscreenCanvas(width, height);
+    const context = canvas.getContext("2d");
+    if (context === null) return 0;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    const pixels = context.getImageData(0, 0, width, height).data;
+    let visible = 0;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const moduleX = x / pixelsPerModule;
+        const moduleY = y / pixelsPerModule;
+        const inFinder =
+          (moduleX >= 4 && moduleX < 11 && moduleY >= 4 && moduleY < 11) ||
+          (moduleX >= 38 && moduleX < 45 && moduleY >= 4 && moduleY < 11) ||
+          (moduleX >= 4 && moduleX < 11 && moduleY >= 38 && moduleY < 45);
+        const inLogoArea = moduleX >= 16 && moduleX < 33 && moduleY >= 15 && moduleY < 34;
+        if (inFinder || inLogoArea) continue;
+        const offset = (y * width + x) * 4;
+        const red = pixels[offset] ?? 255;
+        const green = pixels[offset + 1] ?? 255;
+        const blue = pixels[offset + 2] ?? 255;
+        if (red > green + 20 && blue > green + 20 && green < 245) visible += 1;
+      }
+    }
+    return visible;
+  });
+
+  expect(visiblePixelsOutsideLargeArtwork).toBeGreaterThan(200);
+});
+
 test("uses only magenta and shows transparent placement cautions", async ({ page }) => {
   await enterPayload(page, "approved color workflow");
 
@@ -214,7 +262,7 @@ test("Adaptive preserves and exports the long ONE URL at Version 10", async ({ p
   await expect
     .poll(() => diagnostic(page, "PNG geometry"))
     .toBe("6 px/module · 390 px symbol · 0 px padding");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("130 px SVG · 390 px PNG");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("260 px SVG · 390 px PNG");
   await expect
     .poll(() => diagnostic(page, "Logo"))
     .toBe("ONE lettermark · 105 data · 0 remainder modules obscured");
@@ -240,7 +288,7 @@ test("Adaptive grows through Version 11 and gates unreviewed higher-version bran
   await enterPayload(page, versionElevenUrl);
 
   await expect.poll(() => diagnostic(page, "Version")).toBe("V11 / V40 max");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("138 px SVG · 414 px PNG");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("276 px SVG · 414 px PNG");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
 
@@ -264,7 +312,7 @@ test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }
 
   await expect.poll(() => diagnostic(page, "Version")).toBe("V40 / V40 max");
   await expect.poll(() => diagnostic(page, "ECC")).toBe("M");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("370 px SVG · 1110 px PNG");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("740 px SVG · 1110 px PNG");
   await expect
     .poll(() => diagnostic(page, "PNG geometry"))
     .toBe("6 px/module · 1110 px symbol · 0 px padding");
