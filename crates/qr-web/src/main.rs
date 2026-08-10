@@ -156,6 +156,58 @@ fn App() -> impl IntoView {
                         "Without-logo output uses ECC M; logo output uses ECC H. Fixed variants approve logo placement only at Version 6, while Adaptive approves it through Version 11. The difference is not a fixed character subtraction, and ECC H's nominal percentage is not an occlusion budget."
                     </p>
 
+                    <section class="mt-8" aria-labelledby="variant-guide-heading">
+                        <h3 id="variant-guide-heading" class="text-xl font-black text-slate-950">
+                            "Which output variant should I choose?"
+                        </h3>
+                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                            "Choose a fixed variant when your layout needs predictable file dimensions. Choose Adaptive when the link may outgrow those ceilings and the final pixel dimensions can change with the payload."
+                        </p>
+
+                        <div class="mt-4 grid gap-4 md:grid-cols-2">
+                            <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                                <h4 class="text-base font-bold text-slate-950">"Inline"</h4>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">
+                                    "Inline uses a fixed 100 px SVG and 300 px PNG, through Version 6. Choose it for compact interface placements and short links. Its logo stays exactly centered because branded fixed output is limited to Version 6."
+                                </p>
+                            </article>
+
+                            <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                                <h4 class="text-base font-bold text-slate-950">"Content"</h4>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">
+                                    "Content uses a fixed 120 px SVG and 360 px PNG, through Version 8 without the logo. Choose it for article, card, and standard website placements that need more room than Inline. Logo output remains at Version 6."
+                                </p>
+                            </article>
+
+                            <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                                <h4 class="text-base font-bold text-slate-950">"Landing"</h4>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">
+                                    "Landing uses a fixed 150 px SVG and 450 px PNG, through Version 12 without the logo. Choose it for prominent web or campaign placements and longer no-logo links. Logo output remains at Version 6."
+                                </p>
+                            </article>
+
+                            <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                                <h4 class="text-base font-bold text-slate-950">"Print"</h4>
+                                <p class="mt-2 text-sm leading-6 text-slate-600">
+                                    "Print uses a fixed 160 px SVG and 480 px PNG, through Version 13 without the logo. Choose it as the largest fixed starting artifact, then place it at 25–30 mm or larger and test the final material. Logo output remains at Version 6."
+                                </p>
+                            </article>
+
+                            <article class="rounded-2xl bg-fuchsia-50 p-5 ring-1 ring-inset ring-fuchsia-200 md:col-span-2">
+                                <h4 class="text-base font-bold text-slate-950">"Adaptive"</h4>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">
+                                    "Adaptive selects the smallest QR version that fits your exact text, then sizes the square output from that matrix and a four-module quiet zone on every side. SVG uses 4 pixels per logical module and PNG uses 6, with no surplus padding, so the downloaded dimensions grow with longer links."
+                                </p>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">
+                                    "With the logo enabled, the logo is exactly centered at Version 6. Versions 7–11 move it six modules above center, while keeping it horizontally centered, to avoid protected alignment modules. Version 12 or higher rejects the logo because a safe placement has not been approved; disable the logo to preserve the exact link and continue through Version 40."
+                                </p>
+                                <p class="mt-2 text-sm leading-6 text-slate-700">
+                                    "Choose Adaptive for variable or long links, or when a fixed variant reports a capacity or logo-placement limit. Choose a fixed variant instead when predictable dimensions or an exactly centered logo matter more than maximum capacity."
+                                </p>
+                            </article>
+                        </div>
+                    </section>
+
                     <div class="mt-6 grid gap-4 md:grid-cols-2">
                         <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
                             <h3 class="text-base font-bold text-slate-950">"Keep the link short"</h3>

@@ -390,4 +390,22 @@ test("guides long-link profile, logo, and PNG choices accurately", async ({ page
   await expect(guide).toContainText("The difference is not a fixed character subtraction");
   await expect(guide).toContainText("ECC H's nominal percentage is not an occlusion budget");
   await expect(guide).toContainText("The preview result for your exact text is authoritative");
+
+  await expect(
+    guide.getByRole("heading", { name: "Which output variant should I choose?" }),
+  ).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Inline", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Content", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Landing", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Print", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Adaptive", exact: true })).toBeVisible();
+  await expect(guide).toContainText("Inline uses a fixed 100 px SVG and 300 px PNG");
+  await expect(guide).toContainText("Content uses a fixed 120 px SVG and 360 px PNG");
+  await expect(guide).toContainText("Landing uses a fixed 150 px SVG and 450 px PNG");
+  await expect(guide).toContainText("Print uses a fixed 160 px SVG and 480 px PNG");
+  await expect(guide).toContainText("selects the smallest QR version that fits your exact text");
+  await expect(guide).toContainText("four-module quiet zone");
+  await expect(guide).toContainText("the logo is exactly centered at Version 6");
+  await expect(guide).toContainText("Versions 7–11 move it six modules above center");
+  await expect(guide).toContainText("Version 12 or higher rejects the logo");
 });

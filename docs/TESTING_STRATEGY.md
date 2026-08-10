@@ -500,6 +500,10 @@ Test through the user-visible UI:
   `106/58`, `152/58`, `287/58`, `331/58`, and `2,331/137` Byte-mode ASCII
   boundaries without/with the logo, including exact-fit and one-byte-over
   native workflow behavior;
+- the visible variant-choice guide states every fixed artifact dimension and
+  intended use, explains Adaptive's first-fit/dynamic-dimension behavior, and
+  discloses its centered Version 6, upward-shifted Versions 7–11, and rejected
+  Version 12-or-higher logo placement policy;
 - character count versus UTF-8 byte count;
 - all profile selections and displayed diagnostics;
 - version/ECC changes, including logo-triggered H;

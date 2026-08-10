@@ -223,6 +223,12 @@ These are implementation interpretations until merged back into the product spec
 6. **Input safety:** Plain text is allowed; URL syntax is not required. The UI may identify likely URLs, but it must not rewrite them. Empty input and over-limit input are invalid. Control characters receive a caution unless product policy later forbids them.
 7. **External network calls:** Production HTML must not request Google Fonts or other remote UI assets. Bundle approved assets or use the system font stack.
 8. **Print guidance:** The 160 px value is a design canvas, not a physical-size guarantee. Export remains SVG-first and the UI displays “place at 25–30 mm or larger; validate for the actual environment.”
+9. **Variant-choice guidance:** The practical guide distinguishes the four
+   predictable fixed-dimension contracts from Adaptive's payload-derived
+   dimensions. It explains each fixed profile's intended placement and ceiling,
+   Adaptive's first-fit version and four-module-quiet-zone sizing, and the logo
+   placement tradeoff: centered at Version 6, shifted six modules upward for
+   Adaptive Versions 7–11, and rejected at Version 12 or higher until approved.
 
 ## 4. Target architecture
 

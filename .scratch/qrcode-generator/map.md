@@ -111,7 +111,8 @@
   Compact dots now use the same exact opaque ONE magenta as square finders and
   the bundled logo in SVG and PNG; the practical guide publishes workflow-owned,
   boundary-tested ASCII Byte-mode limits for every profile with and without the
-  logo, backed by refreshed deterministic and independent-decode evidence.
+  logo plus variant-selection and Adaptive sizing/logo-placement tradeoffs,
+  backed by refreshed deterministic and independent-decode evidence.
 
 ## Notes
 

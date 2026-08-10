@@ -96,6 +96,12 @@ regenerate golden evidence to accept the new output.
 
 ## Comments
 
+- Follow-up: expanded the practical guide so users can compare the intended
+  placement, fixed dimensions, and ceiling of every variant. Adaptive now
+  explains first-fit sizing, its variable artifact dimensions, its centered
+  Version 6 logo, the upward-shifted Versions 7–11 placement, and the typed
+  logo rejection at Version 12 or higher.
+
 ## Answer
 
 Compact non-finder modules now use the exact opaque ONE magenta in both SVG
@@ -110,6 +116,9 @@ The values are exposed by the workflow layer and exhaustively checked at exact
 fit and one byte over against production encoding and logo-geometry policy.
 The guide explains ECC and reviewed-version differences, ASCII Byte-mode and
 UTF-8/ECI qualifications, and makes the live preview authoritative.
+It also recommends when to choose each fixed variant versus Adaptive and makes
+Adaptive's payload-derived dimensions and non-centered higher-version logo
+placement explicit.
 
 Deterministic fixture hashes and resource baselines were refreshed explicitly.
 Pinned independent PNG and rasterized-SVG decoding passed the complete output
