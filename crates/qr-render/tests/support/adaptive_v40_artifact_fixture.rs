@@ -61,7 +61,7 @@ pub fn provenance_hashes() -> [String; 2] {
     assert_eq!(manifest["local_verification"].as_array().unwrap().len(), 3);
     assert_eq!(
         manifest["verification"]["reviewer"],
-        "adaptive-svg-browser-visibility-review"
+        "ticket-31-solid-brand-dot-review"
     );
     assert_eq!(manifest["verification"]["verified_at"], "2026-08-10");
 

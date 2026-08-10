@@ -23,7 +23,7 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "adaptive-svg-browser-visibility-review",
+    "reviewer": "ticket-31-solid-brand-dot-review",
     "verified_at": "2026-08-10",
     "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG and PNG hashes were reviewed after compact dots changed to solid ONE magenta with binary contour coverage; decoder evidence separately establishes native PNG and rasterized-SVG readability."
   }
