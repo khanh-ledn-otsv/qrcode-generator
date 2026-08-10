@@ -64,23 +64,21 @@ jobs:
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          cache-dependency-glob: tests/oracles/uv.lock
-      - name: Cache Rust inputs and outputs
-        uses: actions/cache@v5
+          cache-dependency-glob: |
+            tests/oracles/pyproject.toml
+            tests/oracles/uv.lock
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            target
-          key: rust-${{ runner.os }}-${{ runner.arch }}-1.97.1-${{ hashFiles('Cargo.lock', 'rust-toolchain.toml') }}
-          restore-keys: rust-${{ runner.os }}-${{ runner.arch }}-1.97.1-
+          cache-bin: false
       - name: Cache pinned tools
         uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/trunk
+            ~/.cargo/bin/wasm-bindgen
             ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
           key: tools-${{ runner.os }}-${{ runner.arch }}-trunk-${{ env.TRUNK_VERSION }}-wasm-bindgen-${{ env.WASM_BINDGEN_CLI_VERSION }}
       - name: Cache verified decoder build inputs
         uses: actions/cache@v5
@@ -88,7 +86,7 @@ jobs:
           path: |
             tests/oracles/zxing-cpp
             tests/oracles/quirc
-          key: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-${{ hashFiles('tests/fixtures/manifest.json', 'tests/oracles/quirc-reader.c', 'tests/oracles/uv.lock') }}
+          key: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-${{ hashFiles('scripts/setup.sh', 'tests/oracles/quirc-reader.c', 'tests/oracles/uv.lock') }}
       - name: Install dependencies and verify pinned decoder builds
         run: |
           ./scripts/setup.sh
@@ -104,21 +102,48 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - uses: dtolnay/rust-toolchain@1.97.1
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: astral-sh/setup-uv@v7
       - name: Enable pinned pnpm
         run: |
           corepack enable
           corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
+      - name: Resolve pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package.json', 'pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
+      - uses: dtolnay/rust-toolchain@1.97.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            tests/oracles/pyproject.toml
+            tests/oracles/uv.lock
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-bin: false
+      - name: Cache pinned tools
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/trunk
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
+          key: tools-${{ runner.os }}-${{ runner.arch }}-trunk-${{ env.TRUNK_VERSION }}-wasm-bindgen-${{ env.WASM_BINDGEN_CLI_VERSION }}
       - name: Cache verified decoder build inputs
         uses: actions/cache@v5
         with:
           path: |
             tests/oracles/zxing-cpp
             tests/oracles/quirc
-          key: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-${{ hashFiles('tests/fixtures/manifest.json', 'tests/oracles/quirc-reader.c', 'tests/oracles/uv.lock') }}
+          key: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-${{ hashFiles('scripts/setup.sh', 'tests/oracles/quirc-reader.c', 'tests/oracles/uv.lock') }}
       - name: Install dependencies and verify pinned decoder builds
         run: ./scripts/setup.sh
       - name: Run extended decoder campaigns without retries
