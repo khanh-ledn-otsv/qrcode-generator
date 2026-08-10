@@ -50,9 +50,9 @@
 - [Ticket 17](issues/17-add-approved-color-and-transparency.md): The contrast and
   transparency infrastructure validates compiled appearance choices, placement
   cautions, and generated structural/deterministic/pinned-decode coverage.
-- [Ticket 18](issues/18-add-approved-module-and-finder-styling.md): The original
-  rounded-module option was subsequently removed; release output now uses only
-  square data/function modules and standard square finders.
+- [Ticket 18](issues/18-add-approved-module-and-finder-styling.md): Release
+  output now uses one unconditional Rounded ONE treatment for data and function
+  modules with standard square finders; there is no shape control.
 - [Ticket 19](issues/19-integrate-bundled-logo-safely.md): Magenta is the sole QR
   foreground; the sanitized ONE lettermark is compile-time embedded behind an
   opaque-white, function-safe knockout selected by deterministic H-level module
@@ -113,6 +113,11 @@
   boundary-tested ASCII Byte-mode limits for every profile with and without the
   logo plus variant-selection and Adaptive sizing/logo-placement tradeoffs,
   backed by refreshed deterministic and independent-decode evidence.
+- [Ticket 32](issues/32-simplify-output-and-automate-correctness.md): Output is
+  opaque white with unconditional Rounded ONE modules and a default-on,
+  removable bundled logo. Transparent and phantom appearance dimensions are
+  gone; routine and extended hosted gates use pinned, verified caches and run
+  ZXing, quirc, adverse, browser, WASM, and reproducibility evidence.
 
 ## Notes
 
@@ -120,12 +125,6 @@
 
 ## Fog
 
-- [Ticket 32](issues/32-simplify-output-and-automate-correctness.md): Fix the CI
-  caches and pinned tools, add routine and extended hosted correctness gates,
-  add the documented quirc decoder, remove transparent output, and make the
-  ordinary opaque output path use unconditional Rounded ONE modules with the
-  bundled logo enabled by default and removable. The licensed ISO audit and
-  physical-device validation remain owner-dependent work outside the ticket.
 - [Ticket 10 penalty-oracle disagreement](penalty-oracle-disagreement.md):
   Nayuki 1.8.0 and python-qrcode 8.2 agree on completed matrices but disagree
   on exposed Rule 3 penalty totals, blocking fixture acceptance under the
