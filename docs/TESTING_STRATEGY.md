@@ -338,9 +338,9 @@ Decode the emitted PNG as a file and inspect:
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
 - full-cell square finder rectangles have no intermediate colors; centered dot
-  coverage uses the deterministic 8×8 half-coverage threshold inside the
-  approved 0.45-module circle envelope, and every painted dot pixel is exact
-  brand RGBA with no intermediate opaque color or partial alpha;
+  coverage uses deterministic 8×8 sampling inside the approved 0.45-module
+  circle envelope, retains an exact brand core, and has a symmetric
+  antialiased contour (brand RGB beneath partial alpha for transparent output);
 - approved edge coverage only for the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
 - byte-for-byte equality for repeated requests on native and WASM where encoder output is specified to be cross-target identical.
 

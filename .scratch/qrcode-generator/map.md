@@ -108,8 +108,8 @@
   independently decode- and adverse-approved through Version 11, with typed
   rejection above that boundary and all four fixed profiles preserved.
 - [Ticket 31](issues/31-increase-dot-contrast-and-document-link-capacity.md):
-  Compact dots now use the same exact opaque ONE magenta as square finders and
-  the bundled logo in SVG and PNG; the practical guide publishes workflow-owned,
+  Compact dots now use a solid ONE-magenta core plus a circular antialiased
+  contour in SVG and PNG; the practical guide publishes workflow-owned,
   boundary-tested ASCII Byte-mode limits for every profile with and without the
   logo plus variant-selection and Adaptive sizing/logo-placement tradeoffs,
   backed by refreshed deterministic and independent-decode evidence.

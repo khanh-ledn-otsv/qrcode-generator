@@ -38,7 +38,7 @@ CRITICAL_WORKFLOW_TESTS = {
     "Adaptive preserves and exports the long ONE URL at Version 10",
     "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
     "Adaptive reaches the exact unbranded Version 40 boundary",
-    "uses compact dots and standard square finders without a shape control",
+    "uses round compact dots and standard square finders without a shape control",
 }
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
 MATRIX_POLICY_PATH = WORKSPACE_ROOT / "tests/approved-output-matrix-policy.json"

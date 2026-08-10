@@ -15,24 +15,24 @@ use qr_render::{
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const APPROVED_PNG_SHA256: [[[&str; 2]; 1]; 5] = [
     [[
-        "898a7eae023553887393f30539b59dc6a025cb842b77b5b6d57e385b5da3d4a8",
-        "88b722977fc329247ff5a738ebd871ce542fed5a9f9689eb626076c6f5d839b5",
+        "46f262231af36abfccfd1534267feb9ce5156424036dbf01fa048af0180d807a",
+        "3ca9a91bc3b27e8dcb55dfefb10e62c9eb888b9066923e7cd9b28cdfae13aa7d",
     ]],
     [[
-        "32d6857c9d624602d5ac4d8413d898566759b78ba3d0ba35987f45b00219344d",
-        "586fb55c12a1c25ba0668b0cfb77b3e5d5174dff7e68a87f2459a9d5645e738a",
+        "c49d0359bae6f0c3c209e1d27124bdf1413f71468db98d382ae86385c6fde703",
+        "184a95ff139de35bc853138d8a7a772d1e25a25d263724ab00846c87884222c8",
     ]],
     [[
-        "b4cf6ad94cc8bc585271e20c9683e44455b21471cd02be49dcab8c55e6ae3ed5",
-        "dc21b00bb1c98612e30b8fdf87bccb629c6bd142540ff8a3c49fc4c4ad7f523d",
+        "e464d40e46ef154fa20a830dffae00980454b14525eeb9bf4176c853e899410c",
+        "0f984f28462febe76332c4df24f15a19155858b207241704597ddbc093b65f6a",
     ]],
     [[
-        "b97ddce559f197aa9ceb0aa4a0a99547e8f225cffe13b99be72156634365be40",
-        "6b538e23ef5b4f6fd1af6f360a79dfef5d0765c2b1bc24b003601e5f8cad4fab",
+        "497bb7bfd94d7c4719eeae748ecdfcc78b769fcf216b5f9208b686c3b720647c",
+        "596449c63573908606467378aa3d82b40fa472768365cb3f1c971fbbc3b022bc",
     ]],
     [[
-        "b54bae7070c6e05fb9af9fbcdb90bc6347588d04ead21addf6e3adc52ac8eef1",
-        "fab5acab80ca27ba0ee189262557c904be000a039ed6c1f9b132a1877dbfdcd0",
+        "67360695a3438cbbdf942f942f52546ff7d3be3a39b5755af2ef67c9db80e87b",
+        "162046ba7a39de4b60c14e11d67cfd2c4223441761a27eb8a951bbe70a5d4ff2",
     ]],
 ];
 
@@ -98,7 +98,7 @@ fn safe_png_has_fixed_structure_and_deterministic_bytes() {
 }
 
 #[test]
-fn compact_dot_pixels_use_the_same_solid_brand_color_as_finders() {
+fn compact_dot_pixels_keep_a_solid_brand_core_and_round_contour() {
     let encoded = encoded_qr_at_version(1);
     let profile = SUPPORTED_PROFILES[1];
 
@@ -118,13 +118,36 @@ fn compact_dot_pixels_use_the_same_solid_brand_color_as_finders() {
         let scale = placement.module_scale().get();
         let left = placement.matrix_origin().x().get() + u32::from(dot.x()) * scale;
         let top = placement.matrix_origin().y().get() + u32::from(dot.y()) * scale;
-        let allowed = [background_pixel(background), Rgba::BRAND.channels()];
+        let background_pixel = background_pixel(background);
+        let brand = Rgba::BRAND.channels();
+        let mut contour_pixels = 0;
 
         for y in 0..scale {
             for x in 0..scale {
-                assert!(
-                    allowed.contains(&pixel(&pixels, width, left + x, top + y)),
-                    "compact dots must not introduce a lighter foreground color"
+                let actual = pixel(&pixels, width, left + x, top + y);
+                if actual != background_pixel && actual != brand {
+                    contour_pixels += 1;
+                }
+                assert_eq!(
+                    actual,
+                    pixel(&pixels, width, left + (scale - 1 - x), top + y),
+                    "compact-dot coverage must remain horizontally symmetric"
+                );
+                assert_eq!(
+                    actual,
+                    pixel(&pixels, width, left + x, top + (scale - 1 - y)),
+                    "compact-dot coverage must remain vertically symmetric"
+                );
+            }
+        }
+        assert!(contour_pixels > 0, "round dots need an antialiased contour");
+        assert_eq!(pixel(&pixels, width, left, top), background_pixel);
+        for y in scale / 2 - 1..=scale / 2 {
+            for x in scale / 2 - 1..=scale / 2 {
+                assert_eq!(
+                    pixel(&pixels, width, left + x, top + y),
+                    brand,
+                    "the dot interior must use the exact finder/logo brand color"
                 );
             }
         }
@@ -283,10 +306,34 @@ fn reference_dot_pixel(scale: u32, x: u32, y: u32, background: Background) -> [u
             }
         }
     }
-    if covered < SAMPLE_COUNT / 2 {
+    if covered == 0 {
         return background_pixel(background);
     }
-    Rgba::BRAND.channels()
+
+    let foreground = Rgba::BRAND.channels();
+    match background {
+        Background::Transparent => [
+            foreground[0],
+            foreground[1],
+            foreground[2],
+            reference_blend(u8::MAX, 0, covered, SAMPLE_COUNT),
+        ],
+        Background::Opaque(background) => {
+            let background = background.channels();
+            [
+                reference_blend(foreground[0], background[0], covered, SAMPLE_COUNT),
+                reference_blend(foreground[1], background[1], covered, SAMPLE_COUNT),
+                reference_blend(foreground[2], background[2], covered, SAMPLE_COUNT),
+                u8::MAX,
+            ]
+        }
+    }
+}
+
+fn reference_blend(foreground: u8, background: u8, covered: u32, samples: u32) -> u8 {
+    let blended =
+        u32::from(foreground) * covered + u32::from(background) * (samples - covered) + samples / 2;
+    u8::try_from(blended / samples).unwrap()
 }
 
 fn background_pixel(background: Background) -> [u8; 4] {

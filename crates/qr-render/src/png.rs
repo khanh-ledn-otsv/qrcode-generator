@@ -58,6 +58,7 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
                     y,
                     scale,
                     model.options().foreground(),
+                    model.options().background(),
                 )?;
             }
         }
@@ -256,6 +257,7 @@ fn fill_dot(
     y: u32,
     side: u32,
     foreground: Rgba,
+    background: Background,
 ) -> Result<(), RenderError> {
     let x_end = x.checked_add(side).ok_or(RenderError::DimensionOverflow)?;
     let y_end = y.checked_add(side).ok_or(RenderError::DimensionOverflow)?;
@@ -264,7 +266,6 @@ fn fill_dot(
     }
 
     let samples_per_axis = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
-    let sample_count = samples_per_axis * samples_per_axis;
     let center = u64::from(side)
         .checked_mul(u64::from(samples_per_axis))
         .ok_or(RenderError::DimensionOverflow)?;
@@ -299,22 +300,30 @@ fn fill_dot(
                     }
                 }
             }
-            // Classify the contour at half coverage so every painted dot pixel
-            // carries the same exact foreground RGBA as finders and branding.
-            if covered_samples >= sample_count / 2 {
-                paint_dot_pixel(pixels, dimensions, x + offset_x, y + offset_y, foreground)?;
+            if covered_samples > 0 {
+                blend_dot_pixel(
+                    pixels,
+                    dimensions,
+                    x + offset_x,
+                    y + offset_y,
+                    foreground,
+                    background,
+                    covered_samples,
+                )?;
             }
         }
     }
     Ok(())
 }
 
-fn paint_dot_pixel(
+fn blend_dot_pixel(
     pixels: &mut [u8],
     dimensions: PixelDimensions,
     x: u32,
     y: u32,
     foreground: Rgba,
+    background: Background,
+    covered_samples: u32,
 ) -> Result<(), RenderError> {
     let width = u64::from(dimensions.width().get());
     let offset = u64::from(y)
@@ -326,8 +335,36 @@ fn paint_dot_pixel(
     let pixel = pixels
         .get_mut(offset..offset + 4)
         .ok_or(RenderError::RenderFailure)?;
-    pixel.copy_from_slice(&foreground.channels());
+    let foreground = foreground.channels();
+    match background {
+        Background::Transparent => {
+            pixel[..3].copy_from_slice(&foreground[..3]);
+            pixel[3] = blend_dot_channel(u8::MAX, 0, covered_samples)?;
+        }
+        Background::Opaque(background) => {
+            let background = background.channels();
+            for channel in 0..3 {
+                pixel[channel] =
+                    blend_dot_channel(foreground[channel], background[channel], covered_samples)?;
+            }
+            pixel[3] = u8::MAX;
+        }
+    }
     Ok(())
+}
+
+fn blend_dot_channel(
+    foreground: u8,
+    background: u8,
+    covered_samples: u32,
+) -> Result<u8, RenderError> {
+    let samples_per_axis = u32::from(COMPACT_DOT_GEOMETRY.samples_per_axis());
+    let sample_count = samples_per_axis * samples_per_axis;
+    let uncovered_samples = sample_count - covered_samples;
+    let blended =
+        u32::from(foreground) * covered_samples + u32::from(background) * uncovered_samples;
+    u8::try_from((blended + sample_count / 2) / sample_count)
+        .map_err(|_| RenderError::RenderFailure)
 }
 
 fn serialize_png(dimensions: PixelDimensions, pixels: &[u8]) -> Result<Vec<u8>, RenderError> {

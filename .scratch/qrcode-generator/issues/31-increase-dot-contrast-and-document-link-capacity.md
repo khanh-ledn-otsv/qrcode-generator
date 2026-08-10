@@ -101,14 +101,18 @@ regenerate golden evidence to accept the new output.
   explains first-fit sizing, its variable artifact dimensions, its centered
   Version 6 logo, the upward-shifted Versions 7–11 placement, and the typed
   logo rejection at Version 12 or higher.
+- Regression fix: removed forced crisp-edge SVG rendering and restored
+  deterministic PNG contour coverage after those treatments made the compact
+  circles display as diamonds/squares. Both formats retain an exact solid brand
+  core with antialiasing confined to the mathematical circular contour.
 
 ## Answer
 
-Compact non-finder modules now use the exact opaque ONE magenta in both SVG
-and PNG. SVG declares crisp-edge path rendering; PNG keeps the approved
-centered 0.45-module circle and converts deterministic 8-by-8 sample coverage
-to a binary brand-or-background pixel. Finder geometry, quiet zones, knockout,
-encoding, version selection, masks, and ECC policy are unchanged.
+Compact non-finder modules now use the exact ONE-magenta fill in both SVG and
+PNG while retaining their round appearance. SVG uses its true circular arcs
+with normal antialiasing; PNG keeps an exact solid brand core and deterministic
+8-by-8 contour coverage. Finder geometry, quiet zones, knockout, encoding,
+version selection, masks, and ECC policy are unchanged.
 
 The practical guide now contains a semantic five-row table for Inline,
 Content, Landing, Print, and Adaptive, with separate no-logo and logo limits.

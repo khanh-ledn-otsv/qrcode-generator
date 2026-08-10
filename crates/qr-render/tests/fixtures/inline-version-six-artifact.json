@@ -9,8 +9,8 @@
   "version": 6,
   "ecc": "M",
   "logo": "none",
-  "svg_sha256": "a5f2060b7f03f98a8e9e7278abc30b69831d1162568f57cf19d40d3f3791b425",
-  "png_sha256": "4ee3f0e06fb0f77ac70b59678df99a83a0643ebec9f836dcbc8f5b1713788750",
+  "svg_sha256": "4dfcdbac53bad49e5757dd67c0142725f8172d056afd7552439320296e833ab7",
+  "png_sha256": "6e06b6694c8269e7651f16fa89b2a47b7fe4a85971e3c9da02c7c561ca402461",
   "generation": {
     "tool": "qr-render native test fixture",
     "command": "cargo test -p qr-render --test profile_geometry print_unbranded_inline_version_six_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
@@ -22,8 +22,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-31-solid-brand-dot-review",
+    "reviewer": "ticket-31-round-dot-regression-review",
     "verified_at": "2026-08-10",
-    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target artifact equality after compact dots changed to solid ONE magenta with binary contour coverage, while pinned decoder evidence separately establishes readability."
+    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target artifact equality after restoring circular antialiased contours while retaining an exact solid ONE-magenta core, while pinned decoder evidence separately establishes readability."
   }
 }

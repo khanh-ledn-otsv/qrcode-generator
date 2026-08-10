@@ -325,7 +325,9 @@ test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }
   await expect(page.getByTestId("download-png")).toBeDisabled();
 });
 
-test("uses compact dots and standard square finders without a shape control", async ({ page }) => {
+test("uses round compact dots and standard square finders without a shape control", async ({
+  page,
+}) => {
   await enterPayload(page, "approved styling workflow");
 
   await expect(page.getByRole("group", { name: "Data module shape" })).toHaveCount(0);
@@ -334,7 +336,7 @@ test("uses compact dots and standard square finders without a shape control", as
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const modulePath = page.getByTestId("qr-preview").locator("path").first();
-  await expect(modulePath).toHaveAttribute("shape-rendering", "crispEdges");
+  await expect(modulePath).not.toHaveAttribute("shape-rendering", "crispEdges");
   await expect(modulePath).toHaveAttribute("d", /M\d+\.275 \d+\.500a0\.225 0\.225 0 1 0 0\.450 0/);
   await expect(modulePath).toHaveAttribute("d", /M4 4h1v1h-1z/);
 });

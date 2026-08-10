@@ -13,24 +13,24 @@ use sha2::{Digest, Sha256};
 
 const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 5] = [
     [[
-        "407c6be87cf2d5f7076f52e1defe7d5ec61bc6c5d94d8dc8ee318052bfceff91",
-        "51ae4f353f7d19205ed8ae77d2bfb55883f7178027910576c1c74287fabcd193",
+        "f8a646a085a1210cbf6ad8301ad1839c36a3d80e37cba83b1e19581d2e4a7de7",
+        "3164ec58af57186d0ce11cf79b24f87314781f0cdc6b0ba8999bb6218d66d243",
     ]],
     [[
-        "e33ed38e6b67581c31d0fb8caa965493b0235292969d9d1b694fcceef34fdfb3",
-        "b974038c3b010f0663de808c4191ca7ea7742a3f4ae86f7e76b45f0e3af0807d",
+        "c16df2711bb5e1a9758a6dcbcadfe92d64350adaf85a9aa7c3bad81aec576748",
+        "89f848a1ddcf1c51160c2cc21c78289d169199c2ff50a357378a161132fc1af9",
     ]],
     [[
-        "06bdaff6013d2d62414b1d43b44645658b06bcb5437dbe15ced087deab20fb98",
-        "06f94904a05951b95fa387d689a5b105c7a8f090559043e8075c558422187f38",
+        "15ffb1de6ba46ada33e04af3f4c97339b20a1c9159538e501b1c8c6844a59d49",
+        "09675b8a6f8065f1754e4d32a5bd0f7b3366371fab02855e575f1cb8bd27a70c",
     ]],
     [[
-        "b04dbd6103fdba8e39315d46d61a5a40185d6ad5eb1a4a4cf1861f6ef43fe2f1",
-        "a6988513ad57ece85122d58ac6524d5e3b45a08ccaf0a457e816063f3cc18bb6",
+        "32edc0766a613b8088218533f80c80b01f12a33966da5cd8c968a023265443b1",
+        "318dd2cd412fe2ab44dde0f12f2793f9f17bf44c86a523e055d121f5b8ff12d8",
     ]],
     [[
-        "e2e88b1131e07558f725f639187b8e4265d8bd15512a0afd1102dace15a2aa47",
-        "686a6779e3bbe233bc0ba9750bd7ab52ff353e6015e4789813edb9d6b6f3a4da",
+        "8698d052998c2e7e81aff6c8595ca40246e718f7320dc925d9e2d70d8acb3fbe",
+        "7278f97579e8249df426fe8f9dd65ffa0b3da8d996329457d75a0fc7affafa93",
     ]],
 ];
 
@@ -82,7 +82,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(first.as_bytes(), second.as_bytes());
     assert_eq!(
         sha256_hex(first.as_bytes()),
-        "97ef83dbdf211f90f1080695ce36bd71feeaedd39aa50bb49c47ce399bfbbd81"
+        "b137c91a4c08ada49d2230010df90580b3681dabcc5c906475abdc150cb38d8d"
     );
     assert!(!first.contains(payload));
 
@@ -112,7 +112,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(elements[0].attribute("fill"), Some("#ffffff"));
     assert_eq!(elements[1].tag_name().name(), "path");
     assert_eq!(elements[1].attribute("fill"), Some("#bd0f72"));
-    assert_eq!(elements[1].attribute("shape-rendering"), Some("crispEdges"));
+    assert_eq!(elements[1].attribute("shape-rendering"), None);
     assert!(
         elements[1]
             .attribute("d")
@@ -176,7 +176,7 @@ fn approved_svg_color_background_profile_tuples_are_structural_and_deterministic
                     .unwrap();
                 assert_eq!(path.attribute("d"), Some(safe_path));
                 assert_eq!(path.attribute("fill"), Some("#bd0f72"));
-                assert_eq!(path.attribute("shape-rendering"), Some("crispEdges"));
+                assert_eq!(path.attribute("shape-rendering"), None);
             }
         }
     }
@@ -247,11 +247,14 @@ fn independent_rasterization_preserves_background_quiet_zone_and_square_modules(
         (189, 15, 114, 255)
     );
 
-    assert!(pixmap.pixels().iter().all(|pixel| {
-        matches!(
-            (pixel.red(), pixel.green(), pixel.blue(), pixel.alpha()),
-            (255, 255, 255, 255) | (189, 15, 114, 255)
-        )
+    assert!(pixmap.pixels().iter().any(|pixel| {
+        pixel.alpha() == 255
+            && pixel.red() > 189
+            && pixel.red() < 255
+            && pixel.green() > 15
+            && pixel.green() < 255
+            && pixel.blue() > 114
+            && pixel.blue() < 255
     }));
 }
 

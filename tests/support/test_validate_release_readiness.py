@@ -230,7 +230,7 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
 
     def test_critical_workflow_gate_names_the_final_branded_browser_behaviors(self) -> None:
         self.assertIn(
-            "uses compact dots and standard square finders without a shape control",
+            "uses round compact dots and standard square finders without a shape control",
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(

@@ -42,10 +42,10 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.readUInt32BE(20)).toBe(300);
   // These hashes pin the Inline-profile V6 branded artifacts.
   expect(await sha256(svg)).toBe(
-    "f89917a017feaa36f0e5af8df5a0044688e230a6d995788c6a0ae911102070b0",
+    "7fad56cf665cab5d92b892bfdda5e02008df7ca7f49dd2a9a7fca106fcae521e",
   );
   expect(await sha256(png)).toBe(
-    "1476e4c8657cf9a1ea7129ad5319ed69d3d4bc3b973f8ac88e5ea32dcaff73aa",
+    "223312fd10b53d8f26500bc4c679d3d9b11105f4f12233fadb1168ab86e33fb9",
   );
 });
 
@@ -151,10 +151,10 @@ test("downloads and decodes deterministic Adaptive Version 40 artifacts", async 
   expect(png.readUInt32BE(16)).toBe(1_110);
   expect(png.readUInt32BE(20)).toBe(1_110);
   expect(await sha256(svg)).toBe(
-    "1e715d8cb8a2e8e59173450babdd40a861b2c4edc072670b4e7a426860895656",
+    "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
   );
   expect(await sha256(png)).toBe(
-    "bc8275c8028ca3b0a400678499c87d1b5f69c0bc307ce9c64522fe47ded27a73",
+    "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
   );
 
   const source = resolve("tests/oracles/zxing-cpp");

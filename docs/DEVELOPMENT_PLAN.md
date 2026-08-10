@@ -83,12 +83,12 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 - Finder cells and logo-knockout cells are filled by exact integer pixel
   rectangles. Every other visible module uses the approved centered circular
   glyph described below.
-- PNG dots use deterministic 8×8 final-pixel subpixel classification. A final
-  pixel is painted exact `#BD0F72` when at least half of its samples fall
-  inside the approved 0.45-module circular envelope; otherwise it retains the
-  exact opaque or transparent background. Compact dots therefore introduce no
-  lighter RGB or partial-alpha foreground pixels. The complete image is never
-  resized.
+- PNG dots use deterministic 8×8 final-pixel coverage inside the approved
+  0.45-module circular envelope. Fully covered pixels use exact `#BD0F72`;
+  contour pixels blend with an opaque background or retain brand RGB beneath
+  partial alpha on a transparent background. This preserves a solid brand core
+  and a visibly round edge without introducing a second foreground token. The
+  complete image is never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
 - Fixed profiles retain their compiled dimensions and 3× PNG relationship.
   Adaptive uses the selected matrix plus the four-module quiet zone to derive a
@@ -99,9 +99,9 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering
-  and numeric formatting. The shared module path requests crisp-edge shape
-  rendering so displayed/rasterized compact dots use the same exact magenta as
-  the square finders and bundled logo rather than antialiased lighter pixels.
+  and numeric formatting. Compact modules remain true circular arc paths with
+  the exact brand fill and normal edge antialiasing; forcing crisp-edge shape
+  rendering is prohibited because it rasterizes small circles as diamonds.
 
 This keeps the pixel geometry testable on native Rust and WASM and avoids browser-dependent rasterization.
 
