@@ -102,6 +102,59 @@ fn App() -> impl IntoView {
                     </p>
                 </header>
 
+                <section
+                    class="mb-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
+                    aria-labelledby="link-guide-heading"
+                    data-testid="link-guide"
+                >
+                    <div class="max-w-3xl">
+                        <p class="text-brand text-sm font-bold uppercase tracking-[0.18em]">"Practical guide"</p>
+                        <h2 id="link-guide-heading" class="mt-2 text-2xl font-black tracking-tight text-slate-950">
+                            "For links that scan easily"
+                        </h2>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            "Longer links need more QR modules. These choices help keep the code simpler and preserve room for branding."
+                        </p>
+                    </div>
+
+                    <div class="mt-6 grid gap-4 md:grid-cols-2">
+                        <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                            <h3 class="text-base font-bold text-slate-950">"Keep the link short"</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                "A shorter URL usually produces a smaller, less dense QR code. If the destination URL is long, shorten it when you have a trustworthy short link."
+                            </p>
+                        </article>
+
+                        <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                            <h3 class="text-base font-bold text-slate-950">"For a long link, try no logo"</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                "Turning off the logo uses standard ECC M and avoids covering QR modules, giving the fixed-size profiles more room for the link."
+                            </p>
+                        </article>
+
+                        <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                            <h3 class="text-base font-bold text-slate-950">"Need the logo? Choose Adaptive"</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                "Adaptive sizes the output for the QR version and uses reviewed, version-aware logo placement through Version 11. If the link needs Version 12 or higher, disable the logo."
+                            </p>
+                        </article>
+
+                        <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
+                            <h3 class="text-base font-bold text-slate-950">"PNG resolution"</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                "Fixed-size profiles download PNGs at 3× their listed SVG width. Adaptive PNGs use 6 pixels per module versus 4 for SVG, so their width is 1.5×."
+                            </p>
+                        </article>
+
+                        <article class="rounded-2xl bg-emerald-50 p-5 ring-1 ring-inset ring-emerald-200 md:col-span-2">
+                            <h3 class="text-base font-bold text-slate-950">"Scan before you use it"</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-700">
+                                "Always scan the final QR code before publishing or printing it. Test the downloaded file with a real phone or scanner in the same size, material, screen, and placement where people will use it."
+                            </p>
+                        </article>
+                    </div>
+                </section>
+
                 <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(22rem,0.92fr)]">
                     <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8" aria-labelledby="payload-heading">
                         <div>
@@ -391,6 +444,7 @@ fn App() -> impl IntoView {
                         </section>
                     </div>
                 </div>
+
             </div>
         </main>
     }

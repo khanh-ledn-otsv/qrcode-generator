@@ -29,6 +29,18 @@ The root `Trunk.toml` targets `crates/qr-web/index.html`, so Trunk commands run
 from the workspace root while the Leptos HTML and styles remain inside `qr-web`.
 Trunk builds the Rust application to WebAssembly and compiles Tailwind CSS automatically.
 
+## Deploy to GitHub Pages
+
+The `Deploy GitHub Pages` workflow builds and publishes the static site after
+every push to `main`, and it can also be started manually. Before the first
+deployment, open the repository's **Settings → Pages** and select **GitHub
+Actions** as the source.
+
+The workflow uses the base path reported by GitHub Pages, so it supports
+project sites such as `https://owner.github.io/repository/`, user or
+organization sites at the domain root, and configured custom domains without a
+repository-name edit.
+
 ## Verify
 
 Run the complete repository gate with one command:

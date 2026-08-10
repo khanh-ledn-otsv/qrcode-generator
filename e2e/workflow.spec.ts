@@ -349,3 +349,20 @@ test("explains export, physical sizing, and placement validation before generati
   await expect(guidance).toContainText("Transparent output and logo output need extra validation");
   await expect(guidance).toContainText("actual camera, scanner, screen, print material");
 });
+
+test("guides long-link profile, logo, and PNG choices accurately", async ({ page }) => {
+  const guide = page.getByTestId("link-guide");
+
+  await expect(guide).toContainText("A shorter URL usually produces a smaller, less dense QR code");
+  await expect(guide).toContainText("For a long link, try no logo");
+  await expect(guide).toContainText("standard ECC M and avoids covering QR modules");
+  await expect(guide).toContainText("version-aware logo placement through Version 11");
+  await expect(guide).toContainText("If the link needs Version 12 or higher, disable the logo");
+  await expect(guide).toContainText("Fixed-size profiles download PNGs at 3×");
+  await expect(guide).toContainText("their width is 1.5×");
+  await expect(guide).toContainText("Scan before you use it");
+  await expect(guide).toContainText(
+    "Always scan the final QR code before publishing or printing it",
+  );
+  await expect(guide).toContainText("same size, material, screen, and placement");
+});
