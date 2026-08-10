@@ -26,6 +26,26 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Cache Rust build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml', 'Cargo.lock') }}
+          restore-keys: |
+            rust-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Cache pinned Trunk
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/bin/trunk
+          key: trunk-${{ runner.os }}-${{ runner.arch }}-0.21.14
 
       - name: Install JavaScript dependencies
         run: |
@@ -33,7 +53,10 @@ jobs:
           corepack pnpm install --frozen-lockfile
 
       - name: Install pinned Trunk
-        run: cargo install --locked trunk --version 0.21.14
+        run: |
+          if ! command -v trunk >/dev/null 2>&1; then
+            cargo install --locked trunk --version 0.21.14
+          fi
 
       - name: Configure GitHub Pages
         id: pages
