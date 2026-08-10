@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { diagnostic, enterPayload } from "./helpers";
+import { diagnostic, enterPayload, selectProfile } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -72,7 +72,7 @@ test("profile controls work by keyboard", async ({ page }) => {
 
 test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await enterPayload(page, "real-size preview");
-  await page.getByText("Inline", { exact: true }).click();
+  await selectProfile(page, "Inline");
 
   const preview = page
     .getByTestId("qr-preview")
@@ -95,7 +95,7 @@ test("shows the opaque preview at its real SVG size", async ({ page }) => {
 });
 
 test("Adaptive preview keeps compact modules visible at its declared size", async ({ page }) => {
-  await page.getByText("Adaptive", { exact: true }).click();
+  await selectProfile(page, "Adaptive");
   await enterPayload(page, "adaptive preview visibility");
 
   const preview = page
@@ -236,7 +236,7 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
 test("fixed profiles recommend Adaptive when centered branding is unavailable", async ({
   page,
 }) => {
-  await page.getByText("Print", { exact: true }).click();
+  await selectProfile(page, "Print");
   await page.getByLabel("Text to encode").fill("a".repeat(59));
 
   await expect(page.getByRole("alert")).toContainText(
@@ -249,7 +249,7 @@ test("fixed profiles recommend Adaptive when centered branding is unavailable", 
 test("Adaptive preserves and exports the long ONE URL at Version 10", async ({ page }) => {
   const payload =
     "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-  await page.getByText("Adaptive", { exact: true }).click();
+  await selectProfile(page, "Adaptive");
   await enterPayload(page, payload);
 
   await expect(page.getByRole("radio", { name: /Adaptive/ })).toBeChecked();
@@ -283,7 +283,7 @@ test("Adaptive preserves and exports the long ONE URL at Version 10", async ({ p
 test("Adaptive grows through Version 11 and gates unreviewed higher-version branding", async ({
   page,
 }) => {
-  await page.getByText("Adaptive", { exact: true }).click();
+  await selectProfile(page, "Adaptive");
   const versionElevenUrl = `https://example.test/${"a".repeat(105)}`;
   await enterPayload(page, versionElevenUrl);
 
@@ -306,7 +306,7 @@ test("Adaptive grows through Version 11 and gates unreviewed higher-version bran
 });
 
 test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }) => {
-  await page.getByText("Adaptive", { exact: true }).click();
+  await selectProfile(page, "Adaptive");
   await page.getByText("ONE lettermark", { exact: true }).click();
   await enterPayload(page, "a".repeat(2_331));
 
@@ -334,6 +334,7 @@ test("uses compact dots and standard square finders without a shape control", as
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const modulePath = page.getByTestId("qr-preview").locator("path").first();
+  await expect(modulePath).toHaveAttribute("shape-rendering", "crispEdges");
   await expect(modulePath).toHaveAttribute("d", /M\d+\.275 \d+\.500a0\.225 0\.225 0 1 0 0\.450 0/);
   await expect(modulePath).toHaveAttribute("d", /M4 4h1v1h-1z/);
 });
@@ -353,6 +354,23 @@ test("explains export, physical sizing, and placement validation before generati
 test("guides long-link profile, logo, and PNG choices accurately", async ({ page }) => {
   const guide = page.getByTestId("link-guide");
 
+  const capacityTable = page.getByRole("table", {
+    name: "Maximum typical ASCII link length by output variant",
+  });
+  await expect(capacityTable.getByRole("columnheader")).toHaveText([
+    "Output variant",
+    "Without logo",
+    "With logo",
+  ]);
+  await expect(capacityTable.getByRole("row")).toHaveText([
+    "Output variantWithout logoWith logo",
+    "Inline106 characters / bytes58 characters / bytes",
+    "Content152 characters / bytes58 characters / bytes",
+    "Landing287 characters / bytes58 characters / bytes",
+    "Print331 characters / bytes58 characters / bytes",
+    "Adaptive2,331 characters / bytes137 characters / bytes",
+  ]);
+
   await expect(guide).toContainText("A shorter URL usually produces a smaller, less dense QR code");
   await expect(guide).toContainText("For a long link, try no logo");
   await expect(guide).toContainText("standard ECC M and avoids covering QR modules");
@@ -365,4 +383,11 @@ test("guides long-link profile, logo, and PNG choices accurately", async ({ page
     "Always scan the final QR code before publishing or printing it",
   );
   await expect(guide).toContainText("same size, material, screen, and placement");
+  await expect(guide).toContainText("ASCII links that use QR Byte mode");
+  await expect(guide).toContainText("scheme, host, path, query, and fragment");
+  await expect(guide).toContainText("Non-ASCII characters can use multiple UTF-8 bytes");
+  await expect(guide).toContainText("Fixed variants approve logo placement only at Version 6");
+  await expect(guide).toContainText("The difference is not a fixed character subtraction");
+  await expect(guide).toContainText("ECC H's nominal percentage is not an occlusion budget");
+  await expect(guide).toContainText("The preview result for your exact text is authoritative");
 });

@@ -9,8 +9,8 @@
   "version": 40,
   "ecc": "M",
   "logo": "none",
-  "svg_sha256": "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
-  "png_sha256": "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
+  "svg_sha256": "1e715d8cb8a2e8e59173450babdd40a861b2c4edc072670b4e7a426860895656",
+  "png_sha256": "bc8275c8028ca3b0a400678499c87d1b5f69c0bc307ce9c64522fe47ded27a73",
   "generation": {
     "tool": "qr-render native test fixture",
     "command": "cargo test -p qr-render --test logo_asset print_adaptive_v40_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
@@ -25,6 +25,6 @@
     "state": "accepted",
     "reviewer": "adaptive-svg-browser-visibility-review",
     "verified_at": "2026-08-10",
-    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG hash was reviewed after raising Adaptive's declared SVG density to keep compact modules visible in Chromium; decoder evidence separately establishes native PNG and rasterized-SVG readability."
+    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG and PNG hashes were reviewed after compact dots changed to solid ONE magenta with binary contour coverage; decoder evidence separately establishes native PNG and rasterized-SVG readability."
   }
 }

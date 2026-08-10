@@ -8,7 +8,7 @@ from typing import Any
 from collect_release_readiness import (
     CRITICAL_WORKFLOW_TESTS,
     DOWNLOAD_TESTS,
-    GUIDANCE_TEST,
+    GUIDANCE_TESTS,
     PRIVACY_TEST,
     REQUIRED_PROJECTS,
     BuildMismatchError,
@@ -257,7 +257,7 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
     def test_result_evidence_is_derived_from_chromium_and_required_files(self) -> None:
         with TemporaryDirectory() as temporary:
             root = Path(temporary)
-            titles = {PRIVACY_TEST, GUIDANCE_TEST, *DOWNLOAD_TESTS, *CRITICAL_WORKFLOW_TESTS}
+            titles = {PRIVACY_TEST, *GUIDANCE_TESTS, *DOWNLOAD_TESTS, *CRITICAL_WORKFLOW_TESTS}
             report = {
                 "suites": [
                     {

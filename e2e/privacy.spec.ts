@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "@playwright/test";
 
-import { SAFE_PAYLOAD, enterPayload } from "./helpers";
+import { SAFE_PAYLOAD, enterPayload, selectProfile } from "./helpers";
 
 test("payload, logo, configuration, and downloads make no runtime request", async ({ page }) => {
   const consoleMessages: string[] = [];
@@ -29,7 +29,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   await enterPayload(page, SAFE_PAYLOAD);
   await page.getByText("ONE lettermark", { exact: true }).click();
   await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();
-  await page.getByText("Print", { exact: true }).click();
+  await selectProfile(page, "Print");
   await page.getByText("Transparent", { exact: true }).click();
   await expect(page.getByRole("radio", { name: /Print/ })).toBeChecked();
   await expect(page.getByRole("radio", { name: /Transparent/ })).toBeChecked();
@@ -54,7 +54,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
 
   await page.getByText("Opaque white", { exact: true }).click();
-  await page.getByText("Adaptive", { exact: true }).click();
+  await selectProfile(page, "Adaptive");
   await enterPayload(page, "a".repeat(2_331));
   await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();
   await expect(page.getByTestId("download-png")).toBeEnabled();

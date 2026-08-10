@@ -79,6 +79,61 @@ pub const fn profile_presentation(profile_id: ProfileId) -> ProfilePresentation 
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LinkCapacityGuideRow {
+    profile_id: ProfileId,
+    without_logo_ascii_bytes: usize,
+    with_logo_ascii_bytes: usize,
+}
+
+impl LinkCapacityGuideRow {
+    #[must_use]
+    pub const fn profile_id(self) -> ProfileId {
+        self.profile_id
+    }
+
+    #[must_use]
+    pub const fn without_logo_ascii_bytes(self) -> usize {
+        self.without_logo_ascii_bytes
+    }
+
+    #[must_use]
+    pub const fn with_logo_ascii_bytes(self) -> usize {
+        self.with_logo_ascii_bytes
+    }
+}
+
+#[must_use]
+pub const fn link_capacity_guide() -> [LinkCapacityGuideRow; 5] {
+    [
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::Inline,
+            without_logo_ascii_bytes: 106,
+            with_logo_ascii_bytes: 58,
+        },
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::Content,
+            without_logo_ascii_bytes: 152,
+            with_logo_ascii_bytes: 58,
+        },
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::Landing,
+            without_logo_ascii_bytes: 287,
+            with_logo_ascii_bytes: 58,
+        },
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::Print,
+            without_logo_ascii_bytes: 331,
+            with_logo_ascii_bytes: 58,
+        },
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::Adaptive,
+            without_logo_ascii_bytes: 2_331,
+            with_logo_ascii_bytes: 137,
+        },
+    ]
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Revision(u64);
 
 #[derive(Clone, Debug, Eq, PartialEq)]

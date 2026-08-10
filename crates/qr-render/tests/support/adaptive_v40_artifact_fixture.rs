@@ -7,8 +7,8 @@ use sha2::{Digest, Sha256};
 
 pub const PAYLOAD_LENGTH: usize = 2_331;
 pub const SHA256: [&str; 2] = [
-    "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
-    "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
+    "1e715d8cb8a2e8e59173450babdd40a861b2c4edc072670b4e7a426860895656",
+    "bc8275c8028ca3b0a400678499c87d1b5f69c0bc307ce9c64522fe47ded27a73",
 ];
 
 pub fn artifacts() -> (Vec<u8>, Vec<u8>) {

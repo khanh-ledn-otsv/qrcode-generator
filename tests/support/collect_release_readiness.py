@@ -22,7 +22,10 @@ DOWNLOAD_TESTS = {
     "downloads and decodes the deterministic Adaptive Version 10 artifacts",
     "downloads and decodes deterministic Adaptive Version 40 artifacts",
 }
-GUIDANCE_TEST = "explains export, physical sizing, and placement validation before generation"
+GUIDANCE_TESTS = {
+    "explains export, physical sizing, and placement validation before generation",
+    "guides long-link profile, logo, and PNG choices accurately",
+}
 CRITICAL_WORKFLOW_TESTS = {
     "reports representative modes, UTF-8 counts, and latest debounced input",
     "distinguishes the input-limit boundary and keeps exports disabled",
@@ -367,7 +370,7 @@ def collect_result_evidence(playwright_report: Path, release_evidence: Path) -> 
                     raise ResultEvidenceError(f"duplicate Playwright result: {project} / {title}")
                 by_project[project][title] = test.get("results", [])
 
-    required = {PRIVACY_TEST, GUIDANCE_TEST, *DOWNLOAD_TESTS, *CRITICAL_WORKFLOW_TESTS}
+    required = {PRIVACY_TEST, *GUIDANCE_TESTS, *DOWNLOAD_TESTS, *CRITICAL_WORKFLOW_TESTS}
     browsers: dict[str, dict[str, Any]] = {}
     for project, tests in by_project.items():
         missing = required - tests.keys()
@@ -391,7 +394,7 @@ def collect_result_evidence(playwright_report: Path, release_evidence: Path) -> 
         "browsers": browsers,
         "network_inspection": {"passed": True, "external_requests": 0, "source_test": PRIVACY_TEST},
         "downloads": {"passed": True, "source_tests": sorted(DOWNLOAD_TESTS)},
-        "guidance": {"passed": True, "source_test": GUIDANCE_TEST},
+        "guidance": {"passed": True, "source_tests": sorted(GUIDANCE_TESTS)},
         "artifact_evidence": {
             "passed": True,
             "matrix_rows": matrix_rows,

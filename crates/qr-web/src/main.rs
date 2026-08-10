@@ -11,7 +11,8 @@ use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
 use qr_web::workflow::{
     ArtifactKind, PreviewRequest, WorkflowFailure, WorkflowState, ecc_label, evaluate_preview,
-    mode_label, profile_presentation, textarea_display_utf16_length, version_label,
+    link_capacity_guide, mode_label, profile_presentation, textarea_display_utf16_length,
+    version_label,
 };
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
@@ -89,6 +90,22 @@ fn App() -> impl IntoView {
                 </label>
             }
         });
+    let link_capacity_rows = link_capacity_guide().map(|row| {
+        let profile = profile_presentation(row.profile_id());
+        view! {
+            <tr class="border-t border-slate-200">
+                <th scope="row" class="px-4 py-3 text-left font-semibold text-slate-950">
+                    {profile.name()}
+                </th>
+                <td class="px-4 py-3 text-right text-slate-700">
+                    {format_capacity(row.without_logo_ascii_bytes())}
+                </td>
+                <td class="px-4 py-3 text-right text-slate-700">
+                    {format_capacity(row.with_logo_ascii_bytes())}
+                </td>
+            </tr>
+        }
+    });
     view! {
         <main class="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-8 lg:py-12">
             <div class="mx-auto max-w-7xl">
@@ -116,6 +133,28 @@ fn App() -> impl IntoView {
                             "Longer links need more QR modules. These choices help keep the code simpler and preserve room for branding."
                         </p>
                     </div>
+
+                    <div class="mt-6 overflow-x-auto rounded-2xl ring-1 ring-inset ring-slate-200">
+                        <table class="w-full min-w-[34rem] border-collapse text-sm">
+                            <caption class="px-4 pb-3 pt-4 text-left font-bold text-slate-950">
+                                "Maximum typical ASCII link length by output variant"
+                            </caption>
+                            <thead class="bg-slate-100 text-slate-700">
+                                <tr>
+                                    <th scope="col" class="px-4 py-3 text-left font-semibold">"Output variant"</th>
+                                    <th scope="col" class="px-4 py-3 text-right font-semibold">"Without logo"</th>
+                                    <th scope="col" class="px-4 py-3 text-right font-semibold">"With logo"</th>
+                                </tr>
+                            </thead>
+                            <tbody>{link_capacity_rows}</tbody>
+                        </table>
+                    </div>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        "These totals cover ASCII links that use QR Byte mode, including the scheme, host, path, query, and fragment. Each ASCII character is one byte. Non-ASCII characters can use multiple UTF-8 bytes plus encoding overhead, while links limited to the QR alphanumeric set can sometimes fit more. The preview result for your exact text is authoritative."
+                    </p>
+                    <p class="mt-3 text-sm leading-6 text-slate-600">
+                        "Without-logo output uses ECC M; logo output uses ECC H. Fixed variants approve logo placement only at Version 6, while Adaptive approves it through Version 11. The difference is not a fixed character subtraction, and ECC H's nominal percentage is not an occlusion budget."
+                    </p>
 
                     <div class="mt-6 grid gap-4 md:grid-cols-2">
                         <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
@@ -569,6 +608,15 @@ fn foreground_color(foreground: Foreground) -> &'static str {
     match foreground {
         Foreground::Brand => "#BD0F72",
     }
+}
+
+fn format_capacity(bytes: usize) -> String {
+    let amount = if bytes >= 1_000 {
+        format!("{},{:03}", bytes / 1_000, bytes % 1_000)
+    } else {
+        bytes.to_string()
+    };
+    format!("{amount} characters / bytes")
 }
 
 fn background_presentation(background: Background) -> BackgroundPresentation {

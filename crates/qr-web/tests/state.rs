@@ -1,6 +1,8 @@
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_render::{Background, ContrastRatio, Foreground, OutputSafety, ProfileId, Rgba};
-use qr_web::workflow::{ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview};
+use qr_web::workflow::{
+    ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview, link_capacity_guide,
+};
 
 fn state_without_logo(profile_id: ProfileId) -> WorkflowState {
     let mut state = WorkflowState::new(profile_id);
@@ -242,6 +244,70 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
             is_print,
         );
     }
+}
+
+#[test]
+fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
+    let guide = link_capacity_guide();
+    assert_eq!(
+        guide.map(|row| (
+            row.profile_id(),
+            row.without_logo_ascii_bytes(),
+            row.with_logo_ascii_bytes(),
+        )),
+        [
+            (ProfileId::Inline, 106, 58),
+            (ProfileId::Content, 152, 58),
+            (ProfileId::Landing, 287, 58),
+            (ProfileId::Print, 331, 58),
+            (ProfileId::Adaptive, 2_331, 137),
+        ]
+    );
+
+    for row in guide {
+        let mut unbranded = WorkflowState::new(row.profile_id());
+        unbranded
+            .set_logo_enabled(false)
+            .expect("disabling the logo produces a request");
+        let exact = unbranded
+            .set_payload(synthetic_ascii_url(row.without_logo_ascii_bytes()))
+            .expect("exact unbranded boundary produces a request");
+        assert!(evaluate_preview(&exact).is_ok());
+        let one_over = unbranded
+            .set_payload(synthetic_ascii_url(row.without_logo_ascii_bytes() + 1))
+            .expect("one-over unbranded boundary produces a request");
+        assert!(matches!(
+            evaluate_preview(&one_over),
+            Err(WorkflowFailure::OverCapacity { .. })
+        ));
+
+        let mut branded = WorkflowState::new(row.profile_id());
+        let exact = branded
+            .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes()))
+            .expect("exact branded boundary produces a request");
+        assert!(evaluate_preview(&exact).is_ok());
+        let one_over = branded
+            .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes() + 1))
+            .expect("one-over branded boundary produces a request");
+        let one_over = evaluate_preview(&one_over);
+        if row.profile_id() == ProfileId::Inline {
+            assert!(matches!(
+                one_over,
+                Err(WorkflowFailure::OverCapacity { .. })
+            ));
+        } else {
+            assert!(matches!(
+                one_over,
+                Err(WorkflowFailure::UnsafeLogoGeometry { .. })
+            ));
+        }
+    }
+}
+
+fn synthetic_ascii_url(length: usize) -> String {
+    const PREFIX: &str = "https://example.test/";
+    assert!(length >= PREFIX.len());
+    format!("{PREFIX}{}", "a".repeat(length - PREFIX.len()))
 }
 
 #[test]

@@ -44,7 +44,12 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
         )
         .map_err(|_| RenderError::RenderFailure)?;
     }
-    write!(svg, "<path fill=\"{}\" d=\"", foreground).map_err(|_| RenderError::RenderFailure)?;
+    write!(
+        svg,
+        "<path fill=\"{}\" shape-rendering=\"crispEdges\" d=\"",
+        foreground
+    )
+    .map_err(|_| RenderError::RenderFailure)?;
 
     for glyph in model.glyphs() {
         let x = u32::from(glyph.x())

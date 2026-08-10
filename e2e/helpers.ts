@@ -8,6 +8,12 @@ export async function enterPayload(page: Page, payload: string): Promise<void> {
   await expect(page.getByTestId("download-svg")).toBeEnabled();
 }
 
+export async function selectProfile(page: Page, name: string): Promise<void> {
+  const profile = page.getByRole("radio", { name: new RegExp(`^${name}\\b`) });
+  await profile.locator("xpath=ancestor::label").click();
+  await expect(profile).toBeChecked();
+}
+
 export async function diagnostic(page: Page, label: string): Promise<string> {
   const term = page.locator("dt", { hasText: new RegExp(`^${label}$`) });
   return term.locator("xpath=following-sibling::dd").innerText();

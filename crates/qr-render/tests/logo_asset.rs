@@ -60,6 +60,18 @@ fn branded_artifact_hashes_pin_every_enabled_profile_on_native() {
 }
 
 #[test]
+#[ignore = "explicitly emits golden hashes for reviewed fixture refreshes"]
+fn print_branded_profile_hashes_for_fixture_refresh() {
+    for (profile_index, [svg_sha256, png_sha256]) in
+        branded_artifact_fixture::hashes().into_iter().enumerate()
+    {
+        println!("profile_index={profile_index}");
+        println!("svg_sha256={svg_sha256}");
+        println!("png_sha256={png_sha256}");
+    }
+}
+
+#[test]
 fn adaptive_artifact_hashes_pin_versions_six_through_eleven_on_native() {
     assert_eq!(
         adaptive_branded_artifact_fixture::SHA256,

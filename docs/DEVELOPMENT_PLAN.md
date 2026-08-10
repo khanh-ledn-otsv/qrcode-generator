@@ -64,6 +64,16 @@ Adaptive profile through Version 40. Adaptive does not replace or silently
 select any fixed profile; without the logo it follows the same ordinary ECC-M
 first-fit rule and derives dimensions only after selecting the version.
 
+The in-product practical guide records the exact maximum for typical ASCII
+links that select whole-payload Byte mode. Total length includes scheme, host,
+path, query, and fragment. The verified `(without logo / with logo)` limits are
+Inline `106 / 58`, Content `152 / 58`, Landing `287 / 58`, Print `331 / 58`,
+and Adaptive `2,331 / 137` bytes. Fixed branded limits reflect the approved
+Version 6-only geometry; Adaptive branding reflects approval through Version
+11. The guide explains that non-ASCII characters may occupy multiple UTF-8
+bytes plus ECI overhead, QR-alphanumeric-only input can sometimes fit more,
+and the exact preview result remains authoritative.
+
 Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
 ### 2.5 PNG renderer
@@ -73,11 +83,12 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 - Finder cells and logo-knockout cells are filled by exact integer pixel
   rectangles. Every other visible module uses the approved centered circular
   glyph described below.
-- PNG dots use deterministic 8×8 final-pixel subpixel coverage. Opaque edge
-  pixels blend only the approved foreground and background; transparent edge
-  pixels retain the foreground RGB with coverage alpha. Only subpixel samples
-  inside the approved 0.45-module circular envelope contribute coverage. The
-  complete image is never resized.
+- PNG dots use deterministic 8×8 final-pixel subpixel classification. A final
+  pixel is painted exact `#BD0F72` when at least half of its samples fall
+  inside the approved 0.45-module circular envelope; otherwise it retains the
+  exact opaque or transparent background. Compact dots therefore introduce no
+  lighter RGB or partial-alpha foreground pixels. The complete image is never
+  resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
 - Fixed profiles retain their compiled dimensions and 3× PNG relationship.
   Adaptive uses the selected matrix plus the four-module quiet zone to derive a
@@ -87,7 +98,10 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
   and needs no surplus padding.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
-- SVG is generated directly from the render model with stable path ordering and numeric formatting.
+- SVG is generated directly from the render model with stable path ordering
+  and numeric formatting. The shared module path requests crisp-edge shape
+  rendering so displayed/rasterized compact dots use the same exact magenta as
+  the square finders and bundled logo rather than antialiased lighter pixels.
 
 This keeps the pixel geometry testable on native Rust and WASM and avoids browser-dependent rasterization.
 

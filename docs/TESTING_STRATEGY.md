@@ -338,8 +338,9 @@ Decode the emitted PNG as a file and inspect:
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
 - full-cell square finder rectangles have no intermediate colors; centered dot
-  coverage stays inside the approved 0.45-module circle envelope, with
-  intermediate opaque colors or alpha confined to its antialiased edge;
+  coverage uses the deterministic 8×8 half-coverage threshold inside the
+  approved 0.45-module circle envelope, and every painted dot pixel is exact
+  brand RGBA with no intermediate opaque color or partial alpha;
 - approved edge coverage only for the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
 - byte-for-byte equality for repeated requests on native and WASM where encoder output is specified to be cross-target identical.
 
@@ -495,6 +496,10 @@ Run these locally in headless desktop Chromium.
 Test through the user-visible UI:
 
 - entering Numeric, Alphanumeric, URL, ASCII Byte, and UTF-8 payloads;
+- a semantic capacity table covers every output profile and the exact
+  `106/58`, `152/58`, `287/58`, `331/58`, and `2,331/137` Byte-mode ASCII
+  boundaries without/with the logo, including exact-fit and one-byte-over
+  native workflow behavior;
 - character count versus UTF-8 byte count;
 - all profile selections and displayed diagnostics;
 - version/ECC changes, including logo-triggered H;
