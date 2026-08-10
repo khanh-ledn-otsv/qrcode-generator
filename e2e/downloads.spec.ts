@@ -82,10 +82,8 @@ test("downloaded PNG independently decodes with the pinned reader", async ({ pag
   expect(result.stdout.trim()).toBe(decodePayload);
 });
 
-test("downloads and decodes the deterministic Adaptive Branded Version 10 artifacts", async ({
-  page,
-}) => {
-  await page.getByText("Adaptive Branded", { exact: true }).click();
+test("downloads and decodes the deterministic Adaptive Version 10 artifacts", async ({ page }) => {
+  await page.getByText("Adaptive", { exact: true }).click();
   await enterPayload(page, LONG_ONE_URL);
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   const [svgDownload] = await Promise.all([
@@ -108,9 +106,9 @@ test("downloads and decodes the deterministic Adaptive Branded Version 10 artifa
   const png = await readFile(await pngDownload.path());
   expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
   expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
-  expect(svg.toString("utf8")).toContain('width="180"');
-  expect(png.readUInt32BE(16)).toBe(540);
-  expect(png.readUInt32BE(20)).toBe(540);
+  expect(svg.toString("utf8")).toContain('width="130"');
+  expect(png.readUInt32BE(16)).toBe(390);
+  expect(png.readUInt32BE(20)).toBe(390);
 
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");

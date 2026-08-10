@@ -58,7 +58,7 @@ fn branded_artifact_hashes_pin_every_enabled_profile_on_native() {
 }
 
 #[test]
-fn adaptive_branded_artifact_hashes_pin_versions_six_through_ten_on_native() {
+fn adaptive_artifact_hashes_pin_versions_six_through_eleven_on_native() {
     assert_eq!(
         adaptive_branded_artifact_fixture::SHA256,
         adaptive_branded_artifact_fixture::provenance_hashes()

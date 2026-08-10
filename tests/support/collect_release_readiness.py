@@ -19,7 +19,7 @@ PRIVACY_TEST = "payload, logo, configuration, and downloads make no runtime requ
 DOWNLOAD_TESTS = {
     "downloads fixed filenames and exact deterministic SVG and PNG bytes",
     "downloaded PNG independently decodes with the pinned reader",
-    "downloads and decodes the deterministic Adaptive Branded Version 10 artifacts",
+    "downloads and decodes the deterministic Adaptive Version 10 artifacts",
 }
 GUIDANCE_TEST = "explains export, physical sizing, and placement validation before generation"
 CRITICAL_WORKFLOW_TESTS = {
@@ -30,8 +30,9 @@ CRITICAL_WORKFLOW_TESTS = {
     "shows the opaque preview at its real SVG size",
     "uses only magenta and shows transparent placement cautions",
     "logo mode is selected by default, uses ECC H, and requires opaque white",
-    "fixed profiles recommend Adaptive Branded when centered branding is unavailable",
-    "Adaptive Branded preserves and exports the long ONE URL at Version 10",
+    "fixed profiles recommend Adaptive when centered branding is unavailable",
+    "Adaptive preserves and exports the long ONE URL at Version 10",
+    "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
     "uses compact dots and standard square finders without a shape control",
 }
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]

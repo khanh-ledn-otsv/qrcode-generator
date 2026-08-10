@@ -53,12 +53,16 @@ fn App() -> impl IntoView {
                 />
                 <span class="block text-sm font-bold text-slate-950">{presentation.name()}</span>
                 <span class="mt-1 block text-xs leading-5 text-slate-600">
-                    {format!(
-                        "{} px SVG · {} px PNG · up to V{}",
-                        profile.svg_dimensions().width().get(),
-                        profile.png_dimensions().width().get(),
-                        profile.maximum_version().number(),
-                    )}
+                    {if profile.id() == ProfileId::Adaptive {
+                        format!("Automatic dimensions · up to V{}", profile.maximum_version().number())
+                    } else {
+                        format!(
+                            "{} px SVG · {} px PNG · up to V{}",
+                            profile.svg_dimensions().width().get(),
+                            profile.png_dimensions().width().get(),
+                            profile.maximum_version().number(),
+                        )
+                    }}
                 </span>
             </label>
         }

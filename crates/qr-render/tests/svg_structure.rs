@@ -29,8 +29,8 @@ const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 5] = [
         "318dd2cd412fe2ab44dde0f12f2793f9f17bf44c86a523e055d121f5b8ff12d8",
     ]],
     [[
-        "8fc963d14e4948870984b001a188296c60a789b051ff71ab0b2ddfbd77e04f8a",
-        "f35ee0201f2a87cc4cdfb0c80e8bf4f48b99a43c515ec3ed24dc217dad507e40",
+        "e7b7d45f00a07adc2bbd219f139a67d0ed5e2e68d1b1a8c3f36b4ff9fc2ceb59",
+        "514167590bf18fff4b67ee55fdd89d88a6c1a0406c918e97afb7df6dd9caa8c4",
     ]],
 ];
 
@@ -153,7 +153,12 @@ fn every_supported_profile_version_has_stable_in_bounds_glyph_paths() {
             let svg = render_svg(&model).unwrap();
             let document = roxmltree::Document::parse(&svg).unwrap();
             let root = document.root_element();
-            let width = profile.svg_dimensions().width().get().to_string();
+            let width = profile
+                .svg_dimensions_for(encoded.version())
+                .unwrap()
+                .width()
+                .get()
+                .to_string();
             let extent = model.symbol().extent_modules().get();
             let quiet = model.symbol().quiet_zone_modules_per_side().get();
 

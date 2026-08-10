@@ -6,8 +6,8 @@ use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, Version, encode};
 use qr_render::{
     BRANDED_LOGO_VERSION, Background, ContrastRatio, FinderStyle, Foreground, LogoPlacement,
-    LogoStyle, ModuleStyle, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel,
-    RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
+    LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, ModuleStyle, OutputProfile, OutputSafety, ProfileId,
+    RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -70,10 +70,10 @@ pub const fn profile_presentation(profile_id: ProfileId) -> ProfilePresentation 
             value: "print",
             guidance: PRINT_OUTPUT_GUIDANCE,
         },
-        ProfileId::AdaptiveBranded => ProfilePresentation {
-            name: "Adaptive Branded",
-            value: "adaptive-branded",
-            guidance: PRINT_OUTPUT_GUIDANCE,
+        ProfileId::Adaptive => ProfilePresentation {
+            name: "Adaptive",
+            value: "adaptive",
+            guidance: SAFE_OUTPUT_GUIDANCE,
         },
     }
 }
@@ -423,9 +423,13 @@ impl WorkflowFailure {
             ),
             Self::UnsafeLogoGeometry {
                 adaptive_recommended,
-            } => format!(
+            } if *adaptive_recommended => format!(
                 "Logo mode is unavailable because no safe placement exists for this QR version.{}",
-                adaptive_recommendation(*adaptive_recommended),
+                adaptive_recommendation(true),
+            ),
+            Self::UnsafeLogoGeometry { .. } => format!(
+                "Adaptive logo placement is approved only through QR Version {}; disable the logo to keep this exact payload.",
+                MAXIMUM_ADAPTIVE_LOGO_VERSION.number(),
             ),
             Self::Internal => INTERNAL_FAILURE_MESSAGE.to_owned(),
         }
@@ -727,8 +731,8 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             available_data_bits: encoded.data_bits_capacity(),
             data_codewords,
             matrix_modules: encoded.version().symbol_size(),
-            svg_side_pixels: profile.svg_dimensions().width().get(),
-            png_side_pixels: profile.png_dimensions().width().get(),
+            svg_side_pixels: model.svg_placement().output_dimensions().width().get(),
+            png_side_pixels: png_placement.canvas_dimensions().width().get(),
             quiet_zone_modules: png_placement.symbol().quiet_zone_modules_per_side().get(),
             module_scale: png_placement.module_scale().get(),
             rendered_symbol_side_pixels: png_placement.rendered_symbol_dimensions().width().get(),
@@ -808,7 +812,7 @@ fn classify_encode_error(
             EncodingError::PayloadTooLargeForProfile { .. } | EncodingError::PayloadTooLargeForQr,
         ) => WorkflowFailure::OverCapacity {
             maximum_version: profile.maximum_version(),
-            adaptive_recommended: profile.id() != ProfileId::AdaptiveBranded,
+            adaptive_recommended: profile.id() != ProfileId::Adaptive,
         },
         EncodeError::Payload(EncodingError::InvalidVersionRange { minimum, maximum })
             if request.logo_enabled =>
@@ -830,7 +834,7 @@ fn classify_render_error(error: RenderError, profile: OutputProfile) -> Workflow
         }
         RenderError::LogoRequiresOpaqueWhite => WorkflowFailure::LogoRequiresOpaqueWhite,
         RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry {
-            adaptive_recommended: profile.id() != ProfileId::AdaptiveBranded,
+            adaptive_recommended: profile.id() != ProfileId::Adaptive,
         },
         _ => WorkflowFailure::Internal,
     }
@@ -838,7 +842,7 @@ fn classify_render_error(error: RenderError, profile: OutputProfile) -> Workflow
 
 const fn adaptive_recommendation(recommended: bool) -> &'static str {
     if recommended {
-        " Try Adaptive Branded for long branded payloads."
+        " Try Adaptive for long payloads and version-aware logo placement."
     } else {
         ""
     }

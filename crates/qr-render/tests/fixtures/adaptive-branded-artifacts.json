@@ -1,47 +1,54 @@
 {
   "schema_version": 1,
-  "id": "synthetic-adaptive-branded-v06-v10-artifacts",
+  "id": "synthetic-adaptive-v06-v11-artifacts",
   "synthetic": true,
   "payload_provenance": "Generated non-sensitive version-labelled and 110-byte URL regression payloads",
   "encoding": "utf-8",
-  "profile": "Adaptive Branded",
+  "profile": "Adaptive",
   "ecc": "H",
   "logo": "bundled ONE",
   "cases": [
     {
-      "payload": "adaptive branded version 6",
-      "payload_sha256": "e8b7baa834e2e56b0c46a031ac35f733e316999a9afdc5c18a40029eef14b51f",
+      "payload": "adaptive version 6",
+      "payload_sha256": "262188d09116e5b4064054a68bb89323ae31f28c2c03887f3f52cca698671c2e",
       "version": 6,
-      "svg_sha256": "dd592d85a3480eb7b65ed1407bd226979ee7fa7d58558a3b8a3d47fc3bb2c767",
-      "png_sha256": "dae1c7165d015239cb1c519f1f97cf2b8196f8a020602a2877e47027c838b042"
+      "svg_sha256": "dfc18037980a1a848d02bccf6cae97ecabacf268fdb84bbe5c421032e2b00061",
+      "png_sha256": "f7603652aa0f911b0cd641d3f3f8b40c611c7d116cff4fe885771d7cb3e71710"
     },
     {
-      "payload": "adaptive branded version 7",
-      "payload_sha256": "6b634846142059ac5d2c382140376ec083316bca44649a875701051154eb2078",
+      "payload": "adaptive version 7",
+      "payload_sha256": "fc2e07bbd6051ad13d715f89bbc13df005119630eb67a5c366f4b3a2927e4bcc",
       "version": 7,
-      "svg_sha256": "c732031d99f6430be50a01470b53c18114874b34c28cff70b59c00e435ed69a4",
-      "png_sha256": "7695db15fbf0ea4bfb5594ea94fa79f4f70f280b9331f173ed328b1ffd1c2307"
+      "svg_sha256": "7d5bcab343b6d275870fd485cb473a68f088d180b8d648691714c3ecc3cf3109",
+      "png_sha256": "c21d9a95a01fecaa600bb38e11df41f5a7ff8d4fdae38fc7608874a33e7e0c46"
     },
     {
-      "payload": "adaptive branded version 8",
-      "payload_sha256": "570a4823fe305b27b2dc46cb539a5c3e916c0f8439d73778615294f50ab498e1",
+      "payload": "adaptive version 8",
+      "payload_sha256": "830212b38402eae572941f38aa0f4167a5e46c926dbade314500628d4b42259a",
       "version": 8,
-      "svg_sha256": "16529c4d8ba105fa7065c649a3333687f7e8ca184abc150e86c3d0e27ebcc732",
-      "png_sha256": "8f5e49387d17862ac237afb9ea65ba1655e5562772e64923f34984c5a83ca38f"
+      "svg_sha256": "caf225b9e4683d763cb12e463c852befb308156fc501d78e3fff1d47a1308d77",
+      "png_sha256": "70135597571215a404d67d81439f7e39642308c69da243b52c7aa710841331ba"
     },
     {
-      "payload": "adaptive branded version 9",
-      "payload_sha256": "ae9e31f9d14b4a007c6d37254b7617b69bee2b86717eed362273370f2e607706",
+      "payload": "adaptive version 9",
+      "payload_sha256": "32857879f26cf4971a7153a0655c5802c5d506ec8548d44cbfa80888e215ab5a",
       "version": 9,
-      "svg_sha256": "a3bfc07b9b42f3f9f9060765645ccdd7f63a6e2db30cec432b95b6b0142647ff",
-      "png_sha256": "06dabd7a9479babf5ff132d298b270fad1094821a125d44819cd9bb589a7963a"
+      "svg_sha256": "b55d3f15f1afe4c162af7ccad385390231ff7d1eb1c4ed4fd7f6a1c140c03dd1",
+      "png_sha256": "82eb00d2b45d5832d8e410720ca76b23230f6a485d87256a9d5b7b0771775765"
     },
     {
       "payload": "https://example.test/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "payload_sha256": "bbbf9a1e577d3becfb32e3f9afe61328591f358b3fbfb5ddc72ecbc17de46caf",
       "version": 10,
-      "svg_sha256": "267dd3d841e69a5189026fb8f566826f259c2e8fcc59ec366a7847f98ab67580",
-      "png_sha256": "7b60a292ad89cccbbb90669e6e75f91d13abb1676fdc1888d961e45921510ea1"
+      "svg_sha256": "5f1cc32a6d17e8fee82b688fdeda14c098ccd246427bd08af25e57131e4d3b7f",
+      "png_sha256": "d198c58ad515ac4928f1acf868919e0ee3420591b37a9633aae4975920d6d062"
+    },
+    {
+      "payload": "adaptive version 11",
+      "payload_sha256": "4d02e3477fcf921f7b4c878fd5c123b6cb981aaec112e8fd2e76f3580363f02a",
+      "version": 11,
+      "svg_sha256": "96ae8bd6ae3d4820afa945dddb059caebf0bc0ce090cff368da3e5ebfc44d4d1",
+      "png_sha256": "90bb858cff8c329277751457531c837d28cdf533bd931ce4df008c3a9f16ba46"
     }
   ],
   "generation": {
@@ -50,13 +57,13 @@
     "source": "crates/qr-render/tests/support/adaptive_branded_artifact_fixture.rs"
   },
   "local_verification": [
-    "Native and wasm32 tests render identical Version 6 through Version 10 SVG and PNG inputs and compare both SHA-256 digests",
-    "The manifest-pinned ZXing-C++ 3.0.2 reader independently decodes native PNG and rasterized SVG artifacts for every enabled adaptive branded version; separate workflow, Chromium, decoder, and adverse tests cover the exact ONE news URL"
+    "Native and wasm32 tests render identical Version 6 through Version 11 SVG and PNG inputs and compare both SHA-256 digests",
+    "The manifest-pinned ZXing-C++ 3.0.2 reader independently decodes native PNG and rasterized SVG artifacts for every enabled adaptive version; separate workflow, Chromium, decoder, and adverse tests cover the exact ONE news URL"
   ],
   "verification": {
     "state": "accepted",
     "reviewer": "ticket-29-native-wasm-and-decoder-review",
-    "verified_at": "2026-08-09",
+    "verified_at": "2026-08-10",
     "notes": "All payloads are generated, synthetic, and non-sensitive. The Version 10 URL matches the reported URL's 110-byte length without copying external content. These goldens record deterministic cross-target equality, while pinned decoder evidence separately establishes readability."
   }
 }

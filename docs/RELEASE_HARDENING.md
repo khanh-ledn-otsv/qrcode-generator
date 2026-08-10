@@ -75,26 +75,32 @@ pnpm run release:evidence
 ```
 
 This writes the approved matrix, adverse decoder outcomes, and artifact SHA-256
-hashes under `target/release-evidence/`. The matrix has 316 generated scenario
+hashes under `target/release-evidence/`. The matrix has 436 generated scenario
 rows: 120 required-payload rows and 196 exact-version coverage rows spanning all
 compiled profile, background, logo, payload, and enabled-version paths. Each row
-contains matched native-PNG and independently rasterized SVG evidence. The 194
+contains matched native-PNG and independently rasterized SVG evidence. The 254
 renderable rows record safety, deterministic artifact and decoder-input hashes,
-a ZXing decode, and reviewed fixed/adaptive logo geometry where applicable; the 122 unsupported
+a ZXing decode, and reviewed fixed/adaptive logo geometry where applicable; the 182 unsupported
 logo/background or profile-specific geometry rows record the expected typed
 rejection.
 The executable counts and dimensions have one versioned owner in
 `tests/approved-output-matrix-policy.json`; the Rust coverage test and Python
 readiness validator both reject drift from it.
 `tests/adverse/parameters.json` is the versioned transform manifest. The adverse
-evidence records exactly 35 decoded outcomes across four declared envelopes:
+evidence records exactly 39 decoded outcomes across five declared envelopes:
 all 13 transforms for a low-density opaque Print compact-dot symbol (`safe`),
 10 placement-relevant transforms for transparent compact dots (`caution`), and
-six transforms for the centered Version 6 Print logo (`caution`), and six for
-the Adaptive Branded Version 10 exact long-URL artifact (`caution`). It compares
+six transforms for the centered Version 6 Print logo (`caution`), and five each
+for Adaptive Version 10 and Version 11 long-URL artifacts (`caution`). It compares
 decoded pixels before invoking ZXing and includes light, darker, and patterned
 placement backgrounds; each evidence row records the configuration, safety
 class, transform, decoder, and outcome.
+
+Adaptive release evidence additionally covers selected-version dimensions
+through Version 40, the exact Version 40 ECC-M byte boundary, decode-approved
+branding through Version 11, and typed branded rejection from Version 12
+through Version 40. Recorded artifact ceilings are 1,070,097 SVG bytes, 52,889
+PNG bytes, and 4,928,400 bytes for the direct RGBA buffer.
 
 Approved matrix artifact and allocation ceilings live in
 `tests/baselines/resources.json` and are exercised in ordinary native tests.

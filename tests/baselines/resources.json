@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "approved_matrix": {
-    "maximum_svg_bytes": 230189,
-    "maximum_png_bytes": 14068,
-    "maximum_rgba_buffer_bytes": 1166400
+    "maximum_svg_bytes": 1070097,
+    "maximum_png_bytes": 52889,
+    "maximum_rgba_buffer_bytes": 4928400
   }
 }

@@ -296,6 +296,13 @@ fn evidence_row(metadata: EvidenceMetadata<'_>, artifact: serde_json::Value) -> 
         logo_placement,
     } = metadata;
     let profile = tuple.profile;
+    let selected_version = version.and_then(|number| qr_core::Version::new(number).ok());
+    let svg_dimensions = selected_version
+        .and_then(|selected| profile.svg_dimensions_for(selected).ok())
+        .unwrap_or_else(|| profile.svg_dimensions());
+    let png_dimensions = selected_version
+        .and_then(|selected| profile.png_dimensions_for(selected).ok())
+        .unwrap_or_else(|| profile.png_dimensions());
     serde_json::json!({
         "id": id,
         "case_kind": case_kind.label(),
@@ -311,8 +318,8 @@ fn evidence_row(metadata: EvidenceMetadata<'_>, artifact: serde_json::Value) -> 
         "ecc": format!("{:?}", tuple.ecc()),
         "version": version,
         "matrix_modules": version.map(|number| 17 + u16::from(number) * 4),
-        "svg_dimensions": [profile.svg_dimensions().width().get(), profile.svg_dimensions().height().get()],
-        "png_dimensions": [profile.png_dimensions().width().get(), profile.png_dimensions().height().get()],
+        "svg_dimensions": [svg_dimensions.width().get(), svg_dimensions.height().get()],
+        "png_dimensions": [png_dimensions.width().get(), png_dimensions.height().get()],
         "safety": safety.map(safety_label),
         "logo_geometry": logo_placement.map(logo_geometry),
         "artifact": artifact,

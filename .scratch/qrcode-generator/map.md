@@ -102,12 +102,15 @@
   its deterministic function-safe placement keeps the largest reviewed ONE
   treatment, lets the exact long URL export at ECC H / Version 10, and is backed
   by 316-row dual-format decoder evidence plus a 35-outcome adverse manifest.
+- [Ticket 30](issues/30-replace-adaptive-branded-with-fully-adaptive-output.md):
+  Adaptive now derives selected-version SVG/PNG dimensions and supports exact
+  unbranded ECC-M payloads through Version 40; logo mode remains ECC H and is
+  independently decode- and adverse-approved through Version 11, with typed
+  rejection above that boundary and all four fixed profiles preserved.
 
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
-
-## Planned work
 
 ## Fog
 

@@ -100,10 +100,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             and (
                 (
                     case_kind == "required-payload"
-                    and (
-                        payload_class != "dense-url"
-                        or profile_index in (0, branding["adaptive_profile_index"])
-                    )
+                    and (payload_class != "dense-url" or profile_index == 0)
                 )
                 or (
                     case_kind == "version-coverage"
@@ -237,11 +234,15 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(
-            "fixed profiles recommend Adaptive Branded when centered branding is unavailable",
+            "fixed profiles recommend Adaptive when centered branding is unavailable",
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(
-            "Adaptive Branded preserves and exports the long ONE URL at Version 10",
+            "Adaptive preserves and exports the long ONE URL at Version 10",
+            CRITICAL_WORKFLOW_TESTS,
+        )
+        self.assertIn(
+            "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertNotIn(

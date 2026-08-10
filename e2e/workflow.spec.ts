@@ -185,36 +185,36 @@ test("logo mode is selected by default, uses ECC H, and requires opaque white", 
   expect(visibleArtworkCoverage.height).toBeGreaterThanOrEqual(0.85);
 });
 
-test("fixed profiles recommend Adaptive Branded when centered branding is unavailable", async ({
+test("fixed profiles recommend Adaptive when centered branding is unavailable", async ({
   page,
 }) => {
   await page.getByText("Print", { exact: true }).click();
   await page.getByLabel("Text to encode").fill("a".repeat(59));
 
   await expect(page.getByRole("alert")).toContainText(
-    "Try Adaptive Branded for long branded payloads.",
+    "Try Adaptive for long payloads and version-aware logo placement.",
   );
   await expect(page.getByTestId("download-svg")).toBeDisabled();
   await expect(page.getByTestId("download-png")).toBeDisabled();
 });
 
-test("Adaptive Branded preserves and exports the long ONE URL at Version 10", async ({ page }) => {
+test("Adaptive preserves and exports the long ONE URL at Version 10", async ({ page }) => {
   const payload =
     "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-  await page.getByText("Adaptive Branded", { exact: true }).click();
+  await page.getByText("Adaptive", { exact: true }).click();
   await enterPayload(page, payload);
 
-  await expect(page.getByRole("radio", { name: /Adaptive Branded/ })).toBeChecked();
-  await expect(page.getByRole("radio", { name: /Adaptive Branded/ })).toHaveAccessibleName(
-    /180 px SVG · 540 px PNG · up to V10/,
+  await expect(page.getByRole("radio", { name: /Adaptive/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Adaptive/ })).toHaveAccessibleName(
+    /Automatic dimensions · up to V40/,
   );
   await expect(page.getByLabel("Text to encode")).toHaveValue(payload);
-  await expect.poll(() => diagnostic(page, "Version")).toBe("V10 / V10 max");
+  await expect.poll(() => diagnostic(page, "Version")).toBe("V10 / V40 max");
   await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
   await expect
     .poll(() => diagnostic(page, "PNG geometry"))
-    .toBe("8 px/module · 520 px symbol · 10 px padding");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("180 px SVG · 540 px PNG");
+    .toBe("6 px/module · 390 px symbol · 0 px padding");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("130 px SVG · 390 px PNG");
   await expect
     .poll(() => diagnostic(page, "Logo"))
     .toBe("ONE lettermark · 105 data · 0 remainder modules obscured");
@@ -228,6 +228,31 @@ test("Adaptive Branded preserves and exports the long ONE URL at Version 10", as
   await expect(renderedLogo).toHaveAttribute("y", "24.0625");
   await expect(renderedLogo).toHaveAttribute("width", "13");
   await expect(renderedLogo).toHaveAttribute("height", "4.8750");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
+});
+
+test("Adaptive grows through Version 11 and gates unreviewed higher-version branding", async ({
+  page,
+}) => {
+  await page.getByText("Adaptive", { exact: true }).click();
+  const versionElevenUrl = `https://example.test/${"a".repeat(105)}`;
+  await enterPayload(page, versionElevenUrl);
+
+  await expect.poll(() => diagnostic(page, "Version")).toBe("V11 / V40 max");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("138 px SVG · 414 px PNG");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
+
+  const versionTwelveUrl = `https://example.test/${"a".repeat(120)}`;
+  await page.getByLabel("Text to encode").fill(versionTwelveUrl);
+  await expect(page.getByRole("alert")).toContainText(
+    "Adaptive logo placement is approved only through QR Version 11; disable the logo to keep this exact payload.",
+  );
+  await expect(page.getByTestId("download-svg")).toBeDisabled();
+
+  await page.getByText("ONE lettermark", { exact: true }).click();
+  await expect(page.getByLabel("Text to encode")).toHaveValue(versionTwelveUrl);
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
 });

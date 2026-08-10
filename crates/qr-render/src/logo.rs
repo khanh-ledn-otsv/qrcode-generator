@@ -49,6 +49,12 @@ pub const BRANDED_LOGO_VERSION: Version = match Version::new(6) {
     Err(_) => panic!("the approved branded logo version must be a valid QR version"),
 };
 
+/// Highest adaptive logo version backed by the committed decode campaign.
+pub const MAXIMUM_ADAPTIVE_LOGO_VERSION: Version = match Version::new(11) {
+    Ok(version) => version,
+    Err(_) => panic!("the approved adaptive logo maximum must be a valid QR version"),
+};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModuleCoordinate(u32);
 
@@ -182,7 +188,7 @@ pub(crate) fn calculate_logo_placement(
     matrix: &ModuleMatrix,
     profile_id: ProfileId,
 ) -> Result<LogoPlacement, RenderError> {
-    if profile_id == ProfileId::AdaptiveBranded {
+    if profile_id == ProfileId::Adaptive {
         return calculate_adaptive_logo_placement(matrix);
     }
     if matrix.version() != BRANDED_LOGO_VERSION {
@@ -214,7 +220,7 @@ fn centered_logo_placement(
 }
 
 fn calculate_adaptive_logo_placement(matrix: &ModuleMatrix) -> Result<LogoPlacement, RenderError> {
-    if matrix.version() < BRANDED_LOGO_VERSION {
+    if matrix.version() < BRANDED_LOGO_VERSION || matrix.version() > MAXIMUM_ADAPTIVE_LOGO_VERSION {
         return Err(RenderError::UnsafeLogoGeometry);
     }
     let matrix_width = u32::from(matrix.size());

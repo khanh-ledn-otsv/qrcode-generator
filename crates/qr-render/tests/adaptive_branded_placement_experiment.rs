@@ -100,8 +100,8 @@ fn compare_and_record_adaptive_branded_placement_candidates() -> Result<(), Box<
     let decoder = decoder.verify()?;
     let profile = SUPPORTED_PROFILES
         .into_iter()
-        .find(|profile| profile.id() == ProfileId::AdaptiveBranded)
-        .ok_or("Adaptive Branded profile is missing")?;
+        .find(|profile| profile.id() == ProfileId::Adaptive)
+        .ok_or("Adaptive profile is missing")?;
     let version = Version::new(VERSION)?;
     let output = tempfile::tempdir()?;
     let geometry_seed = encode(EncodeRequest::with_version_range(
@@ -160,7 +160,7 @@ fn compare_and_record_adaptive_branded_placement_candidates() -> Result<(), Box<
                 decoded += 1;
 
                 let svg = render_candidate_svg(&encoded, profile, appearance, false)?;
-                let dimensions = profile.png_dimensions();
+                let dimensions = profile.png_dimensions_for(encoded.version())?;
                 let svg_path = output.path().join(format!("{stem}-svg.png"));
                 raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?
                     .save_png(&svg_path)?;
@@ -191,7 +191,7 @@ fn compare_and_record_adaptive_branded_placement_candidates() -> Result<(), Box<
             version: manifest.decoder().version().to_owned(),
             source_commit: manifest.decoder().source_commit().to_owned(),
         },
-        profile: "Adaptive Branded".to_owned(),
+        profile: "Adaptive".to_owned(),
         version: VERSION,
         ecc: "H".to_owned(),
         payload_classes: PAYLOADS
@@ -233,7 +233,7 @@ fn committed_adaptive_placement_policy_covers_every_candidate_and_full_decode() 
         policy.decoder.source_commit,
         "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825"
     );
-    assert_eq!(policy.profile, "Adaptive Branded");
+    assert_eq!(policy.profile, "Adaptive");
     assert_eq!(policy.version, VERSION);
     assert_eq!(policy.ecc, "H");
     assert_eq!(policy.candidate_widths_modules, WIDTHS);

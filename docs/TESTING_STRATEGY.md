@@ -282,7 +282,9 @@ Then test combined matrices and tie behavior. For each automatic-mask fixture:
 
 Exhaustively iterate every version permitted by each profile:
 
-- SVG `width` and `height` equal the profile base dimensions;
+- fixed-profile SVG `width` and `height` equal the compiled base dimensions;
+- Adaptive SVG and PNG dimensions equal the selected logical extent multiplied
+  by two and six respectively, through Version 40;
 - SVG `viewBox` is exactly `0 0 N N`, where `N` is the matrix width plus eight modules for the four-module quiet zone on each side; it contains no fixed-canvas surplus padding;
 - PNG dimensions equal exactly 3× base dimensions;
 - complete symbol includes four quiet modules per side;
@@ -295,7 +297,7 @@ Exhaustively iterate every version permitted by each profile:
 - transparent surplus padding has zero alpha and opaque surplus padding exactly matches the configured background;
 - unsafe logo geometry is rejected before rendering.
 
-Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Branded Version 10 must assert its 65-module logical extent, eight-pixel PNG module scale, 520 px rendered symbol, and 10 px symmetric padding inside the 540 px canvas.
+Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 370 px SVG, and 1110 px PNG.
 
 ### 6.2 SVG artifact tests
 
@@ -317,7 +319,7 @@ Parse every generated SVG and assert:
 
 Use `insta` only for normalized semantic snapshots. Exact fixture hashes remain the determinism gate.
 
-Rasterize SVG with pinned `resvg` at the profile's 3× export density and feed
+Rasterize SVG with pinned `resvg` at the selected output's 3× export density and feed
 the pixels to ZXing-C++. Structural tests independently enforce its base
 `width`/`height`; export-density rasterization keeps the Version 13 vector above
 the decoder's minimum pixel density. This tests the artifact, not an internal
@@ -358,14 +360,14 @@ The generated coverage test must fail if a new approved enum variant is not incl
 The versioned coverage contract is
 [`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
 which is consumed by both the Rust generator test and Python readiness validator.
-The release evidence contains 316 generated scenario rows: 120 required-payload
+The release evidence contains 436 generated scenario rows: 120 required-payload
 rows (six payload classes for each compiled profile/background/logo tuple) and
-196 exact-version rows (every version admitted by each profile for the same
+316 exact-version rows (every version admitted by each profile for the same
 background/logo choices). Both the native PNG and independently rasterized SVG
 artifact are hashed and passed to the pinned decoder for each accepted row.
-There are 194 accepted rows and 122 expected-invalid rows. Accepted fixed-profile
-logo rows record the reviewed Version 6 placement. Adaptive Branded records the
-reviewed Version 6–10 placement for each accepted row; profiles/versions outside
+There are 254 accepted rows and 182 expected-invalid rows. Accepted fixed-profile
+logo rows record the reviewed Version 6 placement. Adaptive records the
+reviewed Version 6–11 placement for each accepted row; profiles/versions outside
 those policies record their typed rejection.
 
 The branded-geometry approval experiment is replayed separately with:
@@ -394,7 +396,7 @@ at its Version 6 ceiling. Versions 7–13 are expected-invalid exact-centering
 rows because of protected alignment geometry. Exactly four quiet-zone modules
 and the absence of decorative export borders are invariant across candidates.
 
-Adaptive Branded has a separate focused Version 10 placement experiment in
+Adaptive has a separate focused Version 10 placement experiment in
 [`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json).
 It evaluates source widths 10–13 modules at the center and six modules above and
 below it, over seven payload classes (including the exact ONE news URL) and both
@@ -402,11 +404,14 @@ native PNG and independently rasterized SVG. Every function-safe candidate must
 decode all 14 artifacts; protected-module intersections remain unrendered. The
 largest full-pass candidate is selected, with upward winning the deterministic
 equal-distance tie. Production and matrix tests additionally cover every enabled
-Adaptive Branded version from 6 through 10, native/WASM byte equality, exact
-payload preservation, and the typed rejection surface.
+Adaptive version from 6 through 11, native/WASM byte equality, exact payload
+preservation, the Version 40 unbranded boundary, and typed logo rejection for
+Versions 12–40. The pinned decoder campaign independently decodes native PNG
+and rasterized SVG for every enabled row, including Version 11.
 
-The native/WASM artifact golden uses a generated synthetic 110-byte URL, as
-required by the fixture policy. Separate native and WASM workflow tests verify
+The native/WASM artifact golden uses generated synthetic payloads through
+Version 11, including a 110-byte URL as required by the fixture policy.
+Separate native and WASM workflow tests verify
 repeatable SVG/PNG bytes for the exact reported ONE URL, while Chromium verifies
 repeatable downloads and pinned-reader decoding of that exact payload. This
 keeps external content out of golden fixtures without substituting the
@@ -442,14 +447,15 @@ Keep transforms deterministic with named parameters and seeds. Start with separa
 
 Define a baseline pass envelope before launch from real approved outputs. Do not invent universal thresholds. Safe presets should meet a stronger envelope than logo caution presets. Store transform parameters and decoder outcomes as machine-readable release evidence.
 
-The release-1 manifest defines three explicit pass envelopes rather than a
+The release-1 manifest defines five explicit pass envelopes rather than a
 universal compact-dot claim: a low-density opaque Print symbol passes all 13
 named transforms and is classified safe; transparent compact dots pass 10
 placement-relevant transforms as a caution; and the centered Version 6 logo on
-the Print profile passes six transforms as a caution. The Adaptive Branded
-Version 10 exact long-URL artifact passes the same six-transform caution
-envelope. The exact fixture payload, seed, parameters, membership, safety,
-decoder version, and 35 outcomes are
+the Print profile passes six transforms as a caution. The Adaptive Version 10
+and Version 11 long-URL artifacts each pass a five-transform caution envelope;
+the 80% display downscale is excluded because the new compact adaptive exports
+do not satisfy that transform. The exact fixture payload, seed, parameters,
+membership, safety, decoder version, and 39 outcomes are
 machine-validated release evidence.
 
 ## 7. Web and WASM tests
@@ -514,7 +520,7 @@ Playwright intercepts all network requests after initial navigation. Fail if gen
 Use custom `proptest` strategies that favor boundaries rather than uniformly random data:
 
 - version bands: 1, 9, 10, 26, 27, 40 and neighbors;
-- profile ceilings: 6, 8, 12, 13 and one-over cases;
+- profile ceilings: 6, 8, 12, 13, 40 and one-over cases;
 - payload lengths around each capacity boundary;
 - mode-changing characters such as lowercase, space, `:`, non-ASCII, and multi-byte UTF-8;
 - all ECC and mask values;
@@ -532,7 +538,8 @@ Core properties:
 - identical requests produce identical matrix, SVG, PNG, diagnostics, and hashes;
 - branding never changes encoded matrix values or module classification;
 - render output stays within allocation and dimension bounds;
-- profile output always obeys fixed dimensions and integer geometry.
+- fixed-profile output obeys compiled dimensions; Adaptive output obeys its
+  deterministic selected-version dimensions and integer geometry.
 
 Routine local runs use a stable committed RNG seed plus persisted failure cases. Extended runs add several recorded rotating seeds. A failing seed and minimized input become a permanent regression test.
 

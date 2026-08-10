@@ -222,7 +222,7 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
         (ProfileId::Content, 8, 120, 360, false),
         (ProfileId::Landing, 12, 150, 450, false),
         (ProfileId::Print, 13, 160, 480, true),
-        (ProfileId::AdaptiveBranded, 10, 180, 540, true),
+        (ProfileId::Adaptive, 40, 58, 174, false),
     ];
 
     for (profile_id, maximum_version, svg_side, png_side, is_print) in cases {
@@ -245,9 +245,9 @@ fn every_profile_derives_its_limit_dimensions_and_guidance() {
 }
 
 #[test]
-fn adaptive_branded_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
+fn adaptive_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     let payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-    let mut state = WorkflowState::new(ProfileId::AdaptiveBranded);
+    let mut state = WorkflowState::new(ProfileId::Adaptive);
     let request = state
         .set_payload(payload.to_owned())
         .expect("revision is available");
@@ -255,8 +255,8 @@ fn adaptive_branded_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     assert_eq!(request.payload(), payload);
     assert_eq!(request.ecc(), ErrorCorrection::High);
     assert_eq!(request.minimum_version().number(), 6);
-    let first = evaluate_preview(&request).expect("adaptive branded URL renders");
-    let second = evaluate_preview(&request).expect("repeated adaptive branded URL renders");
+    let first = evaluate_preview(&request).expect("adaptive URL renders");
+    let second = evaluate_preview(&request).expect("repeated adaptive URL renders");
     assert_eq!(first.svg(), second.svg());
     assert_eq!(
         first.artifact(ArtifactKind::Png).bytes(),
@@ -264,16 +264,16 @@ fn adaptive_branded_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     );
     assert!(state.complete_preview(request.revision(), Ok(first)));
 
-    let preview = state.preview().expect("adaptive branded URL fits");
+    let preview = state.preview().expect("adaptive URL fits");
     let diagnostics = preview.diagnostics();
     assert_eq!(diagnostics.selected_version().number(), 10);
-    assert_eq!(diagnostics.maximum_version().number(), 10);
+    assert_eq!(diagnostics.maximum_version().number(), 40);
     assert!(!diagnostics.branding_increased_version());
-    assert_eq!(diagnostics.svg_side_pixels(), 180);
-    assert_eq!(diagnostics.png_side_pixels(), 540);
-    assert_eq!(diagnostics.module_scale(), 8);
-    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 520);
-    assert_eq!(diagnostics.outer_padding_per_side(), 10);
+    assert_eq!(diagnostics.svg_side_pixels(), 130);
+    assert_eq!(diagnostics.png_side_pixels(), 390);
+    assert_eq!(diagnostics.module_scale(), 6);
+    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 390);
+    assert_eq!(diagnostics.outer_padding_per_side(), 0);
     let placement = diagnostics
         .logo_placement()
         .expect("adaptive logo placement");
@@ -282,6 +282,113 @@ fn adaptive_branded_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     assert_eq!(placement.knockout_bounds().left().get(), 21);
     assert_eq!(placement.knockout_bounds().top().get(), 19);
     assert!(state.exports_enabled());
+}
+
+#[test]
+fn adaptive_grows_past_version_ten_for_a_long_branded_url() {
+    let payload = format!("https://example.test/{}", "a".repeat(105));
+    let mut state = WorkflowState::new(ProfileId::Adaptive);
+    let request = state
+        .set_payload(payload.clone())
+        .expect("revision is available");
+
+    let preview = evaluate_preview(&request).expect("Version 11 branded URL renders");
+    let diagnostics = preview.diagnostics();
+    assert_eq!(request.payload(), payload);
+    assert_eq!(diagnostics.ecc(), ErrorCorrection::High);
+    assert_eq!(diagnostics.selected_version().number(), 11);
+    assert_eq!(diagnostics.maximum_version().number(), 40);
+    assert_eq!(diagnostics.svg_side_pixels(), 138);
+    assert_eq!(diagnostics.png_side_pixels(), 414);
+    assert_eq!(diagnostics.module_scale(), 6);
+    assert!(diagnostics.logo_placement().is_some());
+    assert!(state.complete_preview(request.revision(), Ok(preview)));
+    assert!(state.exports_enabled());
+}
+
+#[test]
+fn adaptive_url_crosses_the_exact_version_ten_byte_boundary() {
+    let prefix = "https://example.test/";
+    let exact_payload = format!("{prefix}{}", "a".repeat(98));
+    let one_over_payload = format!("{prefix}{}", "a".repeat(99));
+
+    let exact = evaluate_preview(
+        &WorkflowState::new(ProfileId::Adaptive)
+            .set_payload(exact_payload)
+            .expect("revision is available"),
+    )
+    .expect("119-byte URL fits Version 10-H exactly");
+    let one_over = evaluate_preview(
+        &WorkflowState::new(ProfileId::Adaptive)
+            .set_payload(one_over_payload)
+            .expect("revision is available"),
+    )
+    .expect("120-byte URL advances to Version 11-H");
+
+    assert_eq!(exact.diagnostics().selected_version().number(), 10);
+    assert_eq!(exact.diagnostics().used_data_bits(), 972);
+    assert_eq!(exact.diagnostics().available_data_bits(), 976);
+    assert_eq!(one_over.diagnostics().selected_version().number(), 11);
+}
+
+#[test]
+fn adaptive_rejects_unreviewed_higher_version_branding_without_losing_unbranded_output() {
+    let payload = format!("https://example.test/{}", "a".repeat(120));
+    let mut state = WorkflowState::new(ProfileId::Adaptive);
+    let branded = state
+        .set_payload(payload.clone())
+        .expect("revision is available");
+
+    assert_eq!(branded.ecc(), ErrorCorrection::High);
+    let result = evaluate_preview(&branded);
+    assert_eq!(
+        result,
+        Err(WorkflowFailure::UnsafeLogoGeometry {
+            adaptive_recommended: false,
+        })
+    );
+    assert!(state.complete_preview(branded.revision(), result));
+    assert_eq!(
+        state.validation_message().as_deref(),
+        Some(
+            "Adaptive logo placement is approved only through QR Version 11; disable the logo to keep this exact payload."
+        ),
+    );
+
+    let unbranded = state
+        .set_logo_enabled(false)
+        .expect("revision is available");
+    let preview = evaluate_preview(&unbranded).expect("unbranded Adaptive remains available");
+    assert_eq!(unbranded.payload(), payload);
+    assert_eq!(preview.diagnostics().ecc(), ErrorCorrection::Medium);
+    assert!(preview.diagnostics().selected_version().number() <= 40);
+}
+
+#[test]
+fn adaptive_supports_the_version_forty_byte_boundary_without_a_logo() {
+    let mut state = state_without_logo(ProfileId::Adaptive);
+    let exact = state
+        .set_payload("a".repeat(2_331))
+        .expect("revision is available");
+    let preview = evaluate_preview(&exact).expect("Version 40 ECC-M byte boundary fits");
+    let diagnostics = preview.diagnostics();
+    assert_eq!(diagnostics.ecc(), ErrorCorrection::Medium);
+    assert_eq!(diagnostics.selected_version().number(), 40);
+    assert_eq!(diagnostics.maximum_version().number(), 40);
+    assert_eq!(diagnostics.svg_side_pixels(), 370);
+    assert_eq!(diagnostics.png_side_pixels(), 1_110);
+    assert_eq!(diagnostics.module_scale(), 6);
+
+    let one_over = state
+        .set_payload("a".repeat(2_332))
+        .expect("revision is available");
+    assert_eq!(
+        evaluate_preview(&one_over),
+        Err(WorkflowFailure::OverCapacity {
+            maximum_version: qr_core::Version::new(40).unwrap(),
+            adaptive_recommended: false,
+        })
+    );
 }
 
 #[test]
@@ -440,7 +547,7 @@ fn logo_mode_rejects_a_naturally_larger_version_without_reviewed_centered_geomet
     assert_eq!(
         state.validation_message().as_deref(),
         Some(
-            "Logo mode is unavailable because no safe placement exists for this QR version. Try Adaptive Branded for long branded payloads."
+            "Logo mode is unavailable because no safe placement exists for this QR version. Try Adaptive for long payloads and version-aware logo placement."
         ),
     );
     assert!(!state.exports_enabled());
@@ -493,7 +600,7 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     assert_eq!(
         state.validation_message().as_deref(),
         Some(
-            "The payload does not fit this profile's maximum QR version 6. Try Adaptive Branded for long branded payloads."
+            "The payload does not fit this profile's maximum QR version 6. Try Adaptive for long payloads and version-aware logo placement."
         ),
     );
     assert!(!state.exports_enabled());

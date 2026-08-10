@@ -573,6 +573,10 @@ impl<'encoded> RenderModel<'encoded> {
             )?),
         };
         let cells = classify_cells(encoded.modules(), logo_placement)?;
+        let svg_dimensions = options
+            .profile()
+            .svg_dimensions_for(encoded.version())
+            .map_err(RenderError::InvalidGeometry)?;
         let png_geometry = options
             .profile()
             .geometry(encoded.version())
@@ -602,7 +606,7 @@ impl<'encoded> RenderModel<'encoded> {
             options,
             symbol,
             svg_placement: SvgPlacement {
-                output_dimensions: options.profile().svg_dimensions(),
+                output_dimensions: svg_dimensions,
                 view_box: ModuleDimensions::square(symbol.extent_modules()),
                 matrix_origin: ModulePoint::square_offset(symbol.quiet_zone_modules_per_side()),
             },

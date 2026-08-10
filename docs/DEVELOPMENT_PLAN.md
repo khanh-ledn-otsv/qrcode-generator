@@ -60,9 +60,9 @@ Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics
 The compiled selectable profiles are Inline (100 px SVG / 300 px PNG, through
 Version 6), Content (120/360, through Version 8), Landing (150/450, through
 Version 12), Print (160/480, through Version 13), and the separate non-default
-Adaptive Branded profile (180/540, through Version 10). Adaptive Branded does
-not replace or silently select any fixed profile; without the logo it follows
-the same ordinary ECC-M first-fit rule.
+Adaptive profile through Version 40. Adaptive does not replace or silently
+select any fixed profile; without the logo it follows the same ordinary ECC-M
+first-fit rule and derives dimensions only after selecting the version.
 
 Enabling the bundled logo is the only release-1 transition that changes ECC: it changes the request to ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
@@ -79,6 +79,10 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
   inside the approved 0.45-module circular envelope contribute coverage. The
   complete image is never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
+- Fixed profiles retain their compiled dimensions. Adaptive uses the selected
+  matrix plus the four-module quiet zone to derive a two-pixel-per-logical-module
+  SVG side and a six-pixel-per-logical-module PNG side. The PNG is exactly 3×
+  the SVG, uses an integer six-pixel module scale, and needs no surplus padding.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering and numeric formatting.
@@ -88,7 +92,8 @@ This keeps the pixel geometry testable on native Rust and WASM and avoids browse
 ### 2.6 Branding safety defaults
 
 These release-1 defaults use the approved ONE treatment. The decode-backed
-geometry below was accepted on 2026-08-09 for implementation by Tickets 24–29;
+geometry below was accepted on 2026-08-09 for implementation by Tickets 24–29
+and extended on 2026-08-10 by Ticket 30;
 the production renderer applies the selected dot treatment, the unchanged
 fixed-profile Version 6 placement, and the decode-backed adaptive placements.
 
@@ -135,17 +140,20 @@ candidate evidence is committed in
 - Inline, Content, Landing, and Print retain that exact Version 6-only policy.
   Versions 7–13 on those fixed profiles intentionally reject branding because
   exact centering intersects protected central alignment geometry.
-- Adaptive Branded admits Versions 6–10 on its 180 px SVG / 540 px PNG canvas.
+- Adaptive admits Versions 6–11 with dimensions derived from the selected
+  version. Version 10 uses a 130 px SVG / 390 px PNG canvas.
   Version 10 has a 57-module matrix, a 65-module logical extent including the
-  quiet zone, an eight-pixel PNG module scale, a 520 px rendered symbol, and
-  10 px symmetric background-only padding. Its Version 10 placement keeps the
+  quiet zone, a six-pixel PNG module scale, a 390 px rendered symbol, and no
+  surplus padding. Its Version 10 placement keeps the
   13×4.875-module source horizontally centered and shifts it six modules upward
   to `(left 22, top 20.0625)`, with a function-safe `(21, 19, 15, 7)` knockout.
+  Version 11 uses 138/414 dimensions and the same source size shifted six
+  modules upward at `(24, 22.0625)`, with knockout `(23, 21, 15, 7)`.
 - Adaptive placement tries the exact center first, then searches integer module
   offsets in increasing Euclidean distance with a stable center/above/below/
   left/right tie order. It considers source widths from 13 down through the
   reviewed 10-module legibility floor and selects the largest safe candidate.
-  Versions 7–10 select the nearest placement six modules upward; upward wins
+  Versions 7–11 select the nearest placement six modules upward; upward wins
   the equal-distance tie with the equally decodable placement below center.
   The focused committed experiment in
   [`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json)
@@ -153,16 +161,18 @@ candidate evidence is committed in
   function-safe native-PNG/rasterized-SVG artifacts decoded, while every
   centered Version 10 candidate was rejected before decoding for protected
   alignment-module overlap.
-- Versions 1–5 remain below the branded minimum. Logo output stays classified
-  as a caution on every valid profile/version row.
+- Versions 1–5 remain below the branded minimum. Versions 12–40 return a typed
+  unsafe-logo-geometry rejection until separately approved decode evidence is
+  committed; users can disable the logo without changing the payload. Logo
+  output stays classified as a caution on every valid profile/version row.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
 - Logo mode requires an opaque white background and knockout; transparency remains available only without the logo.
 - The bundled logo option is selected by default. Users may turn it off to restore ECC M and transparent-background availability.
-- Exact centering remains mandatory for the four fixed profiles. Adaptive
-  Branded alone may use the reviewed deterministic nearby search. The compiled
+- Exact centering remains mandatory for the four fixed profiles. Adaptive alone
+  may use the reviewed deterministic nearby search. The selected-version
   dimensions and generated evidence are recorded in
   [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - If geometry is unsafe for the selected version, logo mode is disabled with a
@@ -171,14 +181,14 @@ candidate evidence is committed in
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
-Release evidence exhausts the selectable surface with 316 generated scenarios:
-120 required-payload rows and 196 exact-version rows. Native PNG and independently
+Release evidence exhausts the selectable surface with 436 generated scenarios:
+120 required-payload rows and 316 exact-version rows. Native PNG and independently
 rasterized SVG artifacts share one scenario identity and record deterministic
 hashes, safety, decode outcome, and fixed/adaptive logo geometry. The resulting policy
-has 194 accepted rows and 122 typed expected rejections. Deterministic adverse
-evidence separately records 35 outcomes across explicit safe opaque-Print,
-transparent-caution, centered-logo-caution, and Adaptive-Branded-Version-10
-long-URL caution pass envelopes; it does not imply
+has 254 accepted rows and 182 typed expected rejections. Deterministic adverse
+evidence separately records 39 outcomes across explicit safe opaque-Print,
+transparent-caution, centered-logo-caution, and Adaptive-Version-10 and
+Version-11 long-URL caution pass envelopes; it does not imply
 that every compact-dot density passes every transform.
 
 The exported symbol always retains exactly four quiet-zone modules per side.
@@ -189,7 +199,7 @@ PNG canvas surplus is background-only.
 
 These are implementation interpretations until merged back into the product specification.
 
-1. **No border layer and explicit SVG sizing:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only. SVG `width` and `height` equal the selected profile's base dimensions, while its `viewBox` is the tight logical extent of the QR matrix plus exactly four quiet-zone modules on every side; it contains no fixed-canvas surplus padding. Consumers scale the vector through `width` and `height`. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
+1. **No border layer and explicit SVG sizing:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only. Fixed-profile SVG `width` and `height` equal the compiled base dimensions; Adaptive dimensions are derived from the selected logical extent. Every SVG `viewBox` is the tight logical extent of the QR matrix plus exactly four quiet-zone modules on every side and contains no fixed-canvas surplus padding. Consumers scale the vector through `width` and `height`. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
 2. **Capacity diagnostics:** Display exact `used data bits / available data bits` and data codewords. “Remaining capacity” means additional characters in the currently selected whole-payload mode, computed by the same fit function; label it as an estimate for edits that could change mode.
 3. **Function-module protection:** Branding and logo knockout never modify function modules. The spec's general “protect function patterns” goal takes precedence over language that only makes finder overlap explicitly invalid.
 4. **Mask evaluation:** Apply each mask only to data/remainder modules, write the corresponding format bits, then score the complete final matrix. Choose the lowest score and lower mask ID on a tie.
@@ -413,7 +423,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 ### M3 — Functional Leptos workflow (1–2 weeks, risk: low)
 
 - Payload input with character and byte counts.
-- Four profile cards and derived version/capacity state; diagnostics show the fixed safe ECC M or logo-triggered ECC H.
+- Five profile cards and derived version/capacity state; diagnostics show the fixed safe ECC M or logo-triggered ECC H.
 - Debounced preview and accessible validation announcements.
 - Diagnostics panel with exact geometry and warnings.
 - SVG and PNG Blob downloads with fixed safe filenames.

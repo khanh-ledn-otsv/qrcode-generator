@@ -48,10 +48,8 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
     );
     assert_eq!(suite.envelope_ids("transparent-compact-dots")?.len(), 10);
     assert_eq!(suite.envelope_ids("centered-logo")?.len(), 6);
-    assert_eq!(
-        suite.envelope_ids("adaptive-branded-v10-long-url")?.len(),
-        6
-    );
+    assert_eq!(suite.envelope_ids("adaptive-v10-long-url")?.len(), 5);
+    assert_eq!(suite.envelope_ids("adaptive-v11-long-url")?.len(), 5);
     Ok(())
 }
 
@@ -168,8 +166,8 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
     let adaptive_payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
     let adaptive_profile = SUPPORTED_PROFILES
         .into_iter()
-        .find(|profile| profile.id() == ProfileId::AdaptiveBranded)
-        .ok_or("Adaptive Branded profile is missing")?;
+        .find(|profile| profile.id() == ProfileId::Adaptive)
+        .ok_or("Adaptive profile is missing")?;
     let version_ten = Version::new(10)?;
     let adaptive_encoded = encode(EncodeRequest::with_version_range(
         adaptive_payload,
@@ -188,6 +186,25 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         eci_assignment: None,
     };
 
+    let adaptive_v11_payload = format!("https://example.test/{}", "a".repeat(105));
+    let version_eleven = Version::new(11)?;
+    let adaptive_v11_encoded = encode(EncodeRequest::with_version_range(
+        adaptive_v11_payload.as_str(),
+        ErrorCorrection::High,
+        version_eleven,
+        version_eleven,
+    ))?;
+    let adaptive_v11_source = render_png(&RenderModel::new(
+        &adaptive_v11_encoded,
+        RenderOptions::safe(adaptive_profile)?.with_logo(LogoStyle::Bundled)?,
+    )?)?;
+    let adaptive_v11_expected = DecodeExpectation {
+        payload: adaptive_v11_payload.as_bytes().to_vec(),
+        version: QrVersion::new(11)?,
+        ecc: FixtureEcc::H,
+        eci_assignment: None,
+    };
+
     let configurations = [
         ("print-compact-dots", safe_source, safe_expected),
         (
@@ -196,10 +213,11 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
             transparent_expected,
         ),
         ("centered-logo", logo_source, logo_expected),
+        ("adaptive-v10-long-url", adaptive_source, adaptive_expected),
         (
-            "adaptive-branded-v10-long-url",
-            adaptive_source,
-            adaptive_expected,
+            "adaptive-v11-long-url",
+            adaptive_v11_source,
+            adaptive_v11_expected,
         ),
     ];
     let suite = adverse::TransformSuite::load()?;

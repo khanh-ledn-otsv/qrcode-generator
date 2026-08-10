@@ -195,13 +195,19 @@ fn every_supported_profile_version_has_complete_composed_placement() {
                 symbol.extent_modules().get(),
                 u32::from(encoded.modules().size()) + 8
             );
-            assert_eq!(svg.output_dimensions(), profile.svg_dimensions());
+            assert_eq!(
+                svg.output_dimensions(),
+                profile.svg_dimensions_for(encoded.version()).unwrap()
+            );
             assert_eq!(svg.view_box().width(), symbol.extent_modules());
             assert_eq!(svg.view_box().height(), symbol.extent_modules());
             assert_eq!(svg.matrix_origin().x().get(), 4);
             assert_eq!(svg.matrix_origin().y().get(), 4);
             assert_eq!(png.symbol(), symbol);
-            assert_eq!(png.canvas_dimensions(), profile.png_dimensions());
+            assert_eq!(
+                png.canvas_dimensions(),
+                profile.png_dimensions_for(encoded.version()).unwrap()
+            );
             assert_eq!(png.outer_padding().left, png.outer_padding().right);
             assert_eq!(png.outer_padding().top, png.outer_padding().bottom);
             assert_eq!(
@@ -215,9 +221,19 @@ fn every_supported_profile_version_has_complete_composed_placement() {
             assert_eq!(
                 png.rgba_buffer_len(),
                 usize::try_from(
-                    u64::from(profile.png_dimensions().width().get())
-                        * u64::from(profile.png_dimensions().height().get())
-                        * 4
+                    u64::from(
+                        profile
+                            .png_dimensions_for(encoded.version())
+                            .unwrap()
+                            .width()
+                            .get(),
+                    ) * u64::from(
+                        profile
+                            .png_dimensions_for(encoded.version())
+                            .unwrap()
+                            .height()
+                            .get(),
+                    ) * 4
                 )
                 .unwrap()
             );

@@ -5,8 +5,8 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    Background, Foreground, LogoStyle, OutputSafety, ProfileId, RenderError, RenderModel,
-    RenderOptions, Rgba, SUPPORTED_PROFILES,
+    Background, Foreground, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, OutputSafety, ProfileId,
+    RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
 };
 
 const LONG_ONE_URL: &str = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
@@ -62,7 +62,7 @@ fn adaptive_branded_version_ten_uses_the_nearest_function_safe_logo_placement() 
     .unwrap();
     let profile = SUPPORTED_PROFILES
         .into_iter()
-        .find(|profile| profile.id() == ProfileId::AdaptiveBranded)
+        .find(|profile| profile.id() == ProfileId::Adaptive)
         .unwrap();
     let options = RenderOptions::safe(profile)
         .unwrap()
@@ -107,7 +107,14 @@ fn adaptive_branded_version_ten_uses_the_nearest_function_safe_logo_placement() 
 #[test]
 fn every_enabled_fixed_and_adaptive_logo_placement_is_function_safe() {
     for profile in SUPPORTED_PROFILES {
-        for version_number in 1..=profile.maximum_version().number() {
+        let versions: Vec<u8> = if profile.id() == ProfileId::Adaptive {
+            (1..=MAXIMUM_ADAPTIVE_LOGO_VERSION.number())
+                .chain([12, Version::MAX])
+                .collect()
+        } else {
+            (1..=profile.maximum_version().number()).collect()
+        };
+        for version_number in versions {
             let text = high_versions::payload_for_high_version(version_number).unwrap();
             let encoded = encode(EncodeRequest::first_fit(
                 &text,
@@ -122,8 +129,11 @@ fn every_enabled_fixed_and_adaptive_logo_placement_is_function_safe() {
                 .with_logo(LogoStyle::Bundled)
                 .unwrap();
             let model = RenderModel::new(&encoded, options);
-            let adaptive = profile.id() == ProfileId::AdaptiveBranded;
-            let enabled = version_number == 6 || (adaptive && version_number > 6);
+            let adaptive = profile.id() == ProfileId::Adaptive;
+            let enabled = version_number == 6
+                || (adaptive
+                    && version_number > 6
+                    && version_number <= MAXIMUM_ADAPTIVE_LOGO_VERSION.number());
             if !enabled {
                 assert_eq!(model.unwrap_err(), RenderError::UnsafeLogoGeometry);
                 continue;

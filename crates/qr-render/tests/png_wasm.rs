@@ -33,7 +33,7 @@ fn branded_svg_and_png_bytes_match_every_enabled_native_fixture() {
 }
 
 #[wasm_bindgen_test]
-fn adaptive_branded_svg_and_png_bytes_match_versions_six_through_ten() {
+fn adaptive_svg_and_png_bytes_match_versions_six_through_eleven() {
     assert_eq!(
         adaptive_branded_artifact_fixture::hashes(),
         adaptive_branded_artifact_fixture::SHA256

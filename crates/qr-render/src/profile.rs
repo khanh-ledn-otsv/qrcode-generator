@@ -7,6 +7,9 @@ use crate::{CanvasGeometry, GeometryError, ModuleCount, PixelDimensions};
 
 const PNG_SCALE_FACTOR: u32 = 3;
 const MINIMUM_MAX_VERSION_MODULE_SCALE: u32 = 6;
+const ADAPTIVE_SVG_PIXELS_PER_MODULE: u32 = 2;
+const ADAPTIVE_PNG_PIXELS_PER_MODULE: u32 = ADAPTIVE_SVG_PIXELS_PER_MODULE * PNG_SCALE_FACTOR;
+const QUIET_ZONE_MODULES_TOTAL: u32 = 8;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProfileId {
@@ -14,7 +17,7 @@ pub enum ProfileId {
     Content,
     Landing,
     Print,
-    AdaptiveBranded,
+    Adaptive,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -120,15 +123,45 @@ impl OutputProfile {
         self.base_dimensions
     }
 
-    pub fn geometry(self, version: Version) -> Result<CanvasGeometry, GeometryError> {
+    pub fn svg_dimensions_for(self, version: Version) -> Result<PixelDimensions, GeometryError> {
+        self.dimensions_for(
+            version,
+            ADAPTIVE_SVG_PIXELS_PER_MODULE,
+            self.base_dimensions,
+        )
+    }
+
+    pub fn png_dimensions_for(self, version: Version) -> Result<PixelDimensions, GeometryError> {
+        self.dimensions_for(version, ADAPTIVE_PNG_PIXELS_PER_MODULE, self.png_dimensions)
+    }
+
+    fn dimensions_for(
+        self,
+        version: Version,
+        adaptive_scale: u32,
+        fixed_dimensions: PixelDimensions,
+    ) -> Result<PixelDimensions, GeometryError> {
         if version > self.maximum_version {
             return Err(GeometryError::VersionExceedsProfile {
                 requested: version,
                 maximum: self.maximum_version,
             });
         }
+        if self.id != ProfileId::Adaptive {
+            return Ok(fixed_dimensions);
+        }
+        let logical_extent = u32::from(version.symbol_size())
+            .checked_add(QUIET_ZONE_MODULES_TOTAL)
+            .ok_or(GeometryError::DimensionOverflow)?;
+        let side = logical_extent
+            .checked_mul(adaptive_scale)
+            .ok_or(GeometryError::DimensionOverflow)?;
+        Ok(PixelDimensions::square(side))
+    }
+
+    pub fn geometry(self, version: Version) -> Result<CanvasGeometry, GeometryError> {
         CanvasGeometry::calculate(
-            self.png_dimensions,
+            self.png_dimensions_for(version)?,
             ModuleCount::new(u32::from(version.symbol_size()))?,
         )
     }
@@ -139,7 +172,7 @@ pub const SUPPORTED_PROFILES: [OutputProfile; 5] = [
     OutputProfile::compiled(ProfileId::Content, 120, 360, 8),
     OutputProfile::compiled(ProfileId::Landing, 150, 450, 12),
     OutputProfile::compiled(ProfileId::Print, 160, 480, 13),
-    OutputProfile::compiled(ProfileId::AdaptiveBranded, 180, 540, 10),
+    OutputProfile::compiled(ProfileId::Adaptive, 370, 1110, 40),
 ];
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

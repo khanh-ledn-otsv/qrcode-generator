@@ -11,8 +11,8 @@ use std::path::Path;
 
 use qr_render::{
     APPROVED_BACKGROUNDS, APPROVED_FINDERS, APPROVED_FOREGROUNDS, APPROVED_LOGO_STYLES,
-    APPROVED_MODULE_STYLES, Background, FinderStyle, LogoStyle, ModuleStyle, Rgba,
-    SUPPORTED_PROFILES,
+    APPROVED_MODULE_STYLES, Background, FinderStyle, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
+    ModuleStyle, Rgba, SUPPORTED_PROFILES,
 };
 
 fn matrix_policy() -> serde_json::Value {
@@ -178,8 +178,8 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
             let version = record.version.expect("branded rows record a version");
             assert!(
                 version == 6
-                    || (record.tuple.profile.id() == qr_render::ProfileId::AdaptiveBranded
-                        && version <= 10),
+                    || (record.tuple.profile.id() == qr_render::ProfileId::Adaptive
+                        && version <= MAXIMUM_ADAPTIVE_LOGO_VERSION.number()),
                 "{} branded version",
                 record.label()
             );

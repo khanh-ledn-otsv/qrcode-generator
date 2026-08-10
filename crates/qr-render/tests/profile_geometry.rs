@@ -35,7 +35,7 @@ fn supported_profiles_match_the_approved_output_contract() {
         (ProfileId::Content, 120, 360, 8),
         (ProfileId::Landing, 150, 450, 12),
         (ProfileId::Print, 160, 480, 13),
-        (ProfileId::AdaptiveBranded, 180, 540, 10),
+        (ProfileId::Adaptive, 370, 1110, 40),
     ];
 
     assert_eq!(SUPPORTED_PROFILES.len(), expected.len());
@@ -52,6 +52,37 @@ fn supported_profiles_match_the_approved_output_contract() {
         );
         assert_eq!(profile.png_dimensions(), PixelDimensions::square(png_side));
         assert_eq!(profile.maximum_version().number(), maximum_version);
+    }
+}
+
+#[test]
+fn adaptive_dimensions_grow_with_the_selected_version() {
+    let adaptive = SUPPORTED_PROFILES[4];
+    let examples = [
+        (1, 58, 174),
+        (10, 130, 390),
+        (11, 138, 414),
+        (40, 370, 1110),
+    ];
+
+    assert_eq!(adaptive.id(), ProfileId::Adaptive);
+    for (version_number, svg_side, png_side) in examples {
+        let version = Version::try_from(version_number).unwrap();
+        assert_eq!(
+            adaptive.svg_dimensions_for(version).unwrap(),
+            PixelDimensions::square(svg_side)
+        );
+        assert_eq!(
+            adaptive.png_dimensions_for(version).unwrap(),
+            PixelDimensions::square(png_side)
+        );
+        let geometry = adaptive.geometry(version).unwrap();
+        assert_eq!(
+            geometry.canvas_dimensions(),
+            PixelDimensions::square(png_side)
+        );
+        assert_eq!(geometry.module_scale().get(), 6);
+        assert_eq!(geometry.outer_padding().left.get(), 0);
     }
 }
 
@@ -73,7 +104,10 @@ fn every_supported_version_has_centered_even_integer_geometry() {
                 geometry.outer_padding().top,
                 geometry.outer_padding().bottom
             );
-            assert_eq!(geometry.canvas_dimensions(), profile.png_dimensions());
+            assert_eq!(
+                geometry.canvas_dimensions(),
+                profile.png_dimensions_for(version).unwrap()
+            );
             assert_eq!(
                 geometry.outer_padding().content,
                 PaddingContent::BackgroundOnly
@@ -81,7 +115,7 @@ fn every_supported_version_has_centered_even_integer_geometry() {
 
             let next_even_scale = geometry.module_scale().get() + 2;
             let next_width = geometry.symbol_modules().get() * next_even_scale;
-            assert!(next_width > profile.png_dimensions().width().get());
+            assert!(next_width > profile.png_dimensions_for(version).unwrap().width().get());
         }
 
         let maximum_geometry = profile.geometry(profile.maximum_version()).unwrap();
@@ -96,7 +130,7 @@ fn profile_ceiling_geometry_matches_the_approved_worked_examples() {
         (ProfileId::Content, 57, 6, 9),
         (ProfileId::Landing, 73, 6, 6),
         (ProfileId::Print, 77, 6, 9),
-        (ProfileId::AdaptiveBranded, 65, 8, 10),
+        (ProfileId::Adaptive, 185, 6, 0),
     ];
 
     for (profile, (id, symbol_modules, scale, padding)) in SUPPORTED_PROFILES.iter().zip(expected) {
@@ -115,7 +149,10 @@ fn scale_transitions_are_exercised_for_each_profile() {
         &[12, 10, 8, 8, 8, 6, 6, 6],
         &[14, 12, 12, 10, 10, 8, 8, 6, 6, 6, 6, 6],
         &[16, 14, 12, 10, 10, 8, 8, 8, 6, 6, 6, 6, 6],
-        &[18, 16, 14, 12, 12, 10, 10, 8, 8, 8],
+        &[
+            6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+            6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+        ],
     ];
 
     assert_eq!(SUPPORTED_PROFILES.len(), expected_scales.len());
@@ -248,13 +285,13 @@ proptest! {
         let scale = geometry.module_scale().get();
         let symbol_side = geometry.symbol_modules().get();
 
-        prop_assert_eq!(geometry.canvas_dimensions(), profile.png_dimensions());
+        prop_assert_eq!(geometry.canvas_dimensions(), profile.png_dimensions_for(version).unwrap());
         prop_assert!(scale > 0);
         prop_assert_eq!(scale % 2, 0);
         prop_assert_eq!(geometry.outer_padding().left, geometry.outer_padding().right);
         prop_assert_eq!(geometry.outer_padding().top, geometry.outer_padding().bottom);
         prop_assert_eq!(geometry.outer_padding().content, PaddingContent::BackgroundOnly);
-        prop_assert!(symbol_side * (scale + 2) > profile.png_dimensions().width().get());
+        prop_assert!(symbol_side * (scale + 2) > profile.png_dimensions_for(version).unwrap().width().get());
     }
 
     #[test]

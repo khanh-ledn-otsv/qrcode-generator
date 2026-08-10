@@ -120,11 +120,11 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
     let decoder = decoder.verify()?;
     let output = tempfile::tempdir()?;
     // This committed experiment preserves the four fixed-profile policy selected
-    // before Adaptive Branded existed. Its separate focused experiment owns the
+    // before Adaptive existed. Its separate focused experiment owns the
     // displaced Version 10 candidate campaign.
     let fixed_profiles = SUPPORTED_PROFILES
         .into_iter()
-        .filter(|profile| profile.id() != ProfileId::AdaptiveBranded)
+        .filter(|profile| profile.id() != ProfileId::Adaptive)
         .collect::<Vec<_>>();
 
     let mut dot_outcomes = Vec::new();

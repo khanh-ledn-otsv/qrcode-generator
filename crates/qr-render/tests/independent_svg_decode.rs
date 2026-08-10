@@ -44,7 +44,7 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
             }
             let model = RenderModel::new(&encoded, RenderOptions::safe(profile)?)?;
             let svg = render_svg(&model)?;
-            let dimensions = profile.png_dimensions();
+            let dimensions = profile.png_dimensions_for(encoded.version())?;
             let pixmap =
                 raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
             let artifact = output
@@ -74,7 +74,10 @@ fn independently_rasterized_svgs_decode_across_profiles_and_versions() -> Result
         let model = RenderModel::new(&case.encoded, case.options)?;
         let svg = render_svg(&model)?;
         let artifact_sha256 = styling::sha256_hex(svg.as_bytes());
-        let dimensions = case.options.profile().png_dimensions();
+        let dimensions = case
+            .options
+            .profile()
+            .png_dimensions_for(case.encoded.version())?;
         let pixmap =
             raster::rasterize_svg(&svg, dimensions.width().get(), dimensions.height().get())?;
         let artifact = output

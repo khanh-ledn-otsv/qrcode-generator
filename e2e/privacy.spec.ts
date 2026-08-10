@@ -57,7 +57,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
 
   await page.getByText("Opaque white", { exact: true }).click();
-  await page.getByText("Adaptive Branded", { exact: true }).click();
+  await page.getByText("Adaptive", { exact: true }).click();
   await page.getByText("ONE lettermark", { exact: true }).click();
   await enterPayload(page, LONG_ONE_URL);
   await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();

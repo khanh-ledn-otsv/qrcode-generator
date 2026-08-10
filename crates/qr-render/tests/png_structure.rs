@@ -31,8 +31,8 @@ const APPROVED_PNG_SHA256: [[[&str; 2]; 1]; 5] = [
         "596449c63573908606467378aa3d82b40fa472768365cb3f1c971fbbc3b022bc",
     ]],
     [[
-        "8693af51e228e9df73450ac32e26b5a190e2e82d05c1967a9729602793104811",
-        "b8da582fa045732a6849d354655bfd98abf2e1f71478d4dbf7bf167028a71932",
+        "67360695a3438cbbdf942f942f52546ff7d3be3a39b5755af2ef67c9db80e87b",
+        "162046ba7a39de4b60c14e11d67cfd2c4223441761a27eb8a951bbe70a5d4ff2",
     ]],
 ];
 
@@ -83,8 +83,9 @@ fn every_profile_version_matches_the_independent_dot_coverage_reference() {
                 let png = render_png(&model).unwrap();
                 let (width, height, pixels) = decode_rgba(&png);
 
-                assert_eq!(width, profile.png_dimensions().width().get());
-                assert_eq!(height, profile.png_dimensions().height().get());
+                let dimensions = profile.png_dimensions_for(encoded.version()).unwrap();
+                assert_eq!(width, dimensions.width().get());
+                assert_eq!(height, dimensions.height().get());
                 assert_eq!(pixels.len(), model.png_placement().rgba_buffer_len());
 
                 let placement = model.png_placement();

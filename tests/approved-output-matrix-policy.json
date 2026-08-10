@@ -8,7 +8,7 @@
     "finder_styles": 1,
     "logo_states": 2
   },
-  "profile_max_versions": [6, 8, 12, 13, 10],
+  "profile_max_versions": [6, 8, 12, 13, 40],
   "required_payload_classes": [
     "short-url",
     "dense-url",
@@ -22,7 +22,7 @@
     "fixed_profile_indices": [0, 1, 2, 3],
     "adaptive_profile_index": 4,
     "minimum_version": 6,
-    "adaptive_maximum_version": 10,
+    "adaptive_maximum_version": 11,
     "geometry_rows": [
       {
         "profile_indices": [0, 1, 2, 3, 4],
@@ -68,14 +68,23 @@
         "protected_clearance_modules": 0,
         "obscured_data_modules": 105,
         "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [4],
+        "version": 11,
+        "source_ten_thousandths": [240000, 220625, 130000, 48750],
+        "knockout_modules": [23, 21, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
       }
     ]
   },
   "expected_rows": {
     "required_payload": 120,
-    "version_coverage": 196,
-    "total": 316,
-    "decoded": 194,
-    "expected_invalid": 122
+    "version_coverage": 316,
+    "total": 436,
+    "decoded": 254,
+    "expected_invalid": 182
   }
 }
