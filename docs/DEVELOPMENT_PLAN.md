@@ -84,7 +84,7 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
   rectangles. Every other visible module uses the approved centered circular
   glyph described below.
 - PNG dots use deterministic 8×8 final-pixel coverage inside the approved
-  0.45-module circular envelope. Fully covered pixels use exact `#BD0F72`;
+  0.75-module circular envelope. Fully covered pixels use exact `#BD0F72`;
   contour pixels blend with an opaque background or retain brand RGB beneath
   partial alpha on a transparent background. This preserves a solid brand core
   and a visibly round edge without introducing a second foreground token. The
@@ -93,7 +93,7 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
 - Fixed profiles retain their compiled dimensions and 3× PNG relationship.
   Adaptive uses the selected matrix plus the four-module quiet zone to derive a
   four-pixel-per-logical-module SVG side and a six-pixel-per-logical-module PNG
-  side. This keeps 0.45-module compact dots visible when Chromium displays the
+  side. This keeps 0.75-module compact dots visibly round when Chromium displays the
   SVG at its declared size; the PNG retains an integer six-pixel module scale
   and needs no surplus padding.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
@@ -115,7 +115,7 @@ fixed-profile Version 6 placement, and the decode-backed adaptive placements.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
 - Visible data, remainder, timing, alignment, format, version, and fixed-dark
-  modules use exactly centered circular glyphs with a diameter of `0.45`
+  modules use exactly centered circular glyphs with a diameter of `0.75`
   module. Encoded values and module coordinates are unchanged.
 - All three 7×7 finder regions remain full-cell square patterns. Separator
   modules remain blank. The closer-reference non-finder dot treatment is
@@ -127,7 +127,7 @@ fixed-profile Version 6 placement, and the decode-backed adaptive placements.
 
 **Launch decisions accepted by the project owner on 2026-08-07 and revised on
 2026-08-09:** release 1 uses only the magenta ONE foreground, the 4.5:1 opaque
-contrast threshold, optional no-logo transparency as a caution, 0.45-module
+contrast threshold, optional no-logo transparency as a caution, 0.75-module
 centered dots outside the full-size square finder regions, and the bundled ONE
 lettermark described below. Rounded modules remain excluded. The complete
 candidate evidence is committed in
@@ -457,7 +457,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 - Apply the owner-approved launch preset list.
 - Implement contrast classification using the approved measurable thresholds.
-- Apply the single 0.45-module non-finder-dot treatment with standard square
+- Apply the single 0.75-module non-finder-dot treatment with standard square
   finders.
 - Integrate sanitized bundled logo, knockout, function-overlap validation, and overlap diagnostics.
 - Add transparency surface previews and exhaustive approved-combination decode tests.
@@ -502,7 +502,7 @@ The following ticket slices are small enough for review and preserve dependency 
 16. Leptos state model, payload/profile workflow, and preview.
 17. Diagnostics, validation, accessibility, and downloads.
 18. Approved color/contrast and transparency previews.
-19. Compact 0.45-module non-finder dots with standard square finders.
+19. Compact 0.75-module non-finder dots with standard square finders.
 20. Bundled magenta ONE lettermark, knockout, overlap checks, and decode matrix.
 21. Hardening, automated release evidence, and docs.
 

@@ -41,7 +41,8 @@
       570,
       580,
       590,
-      600
+      600,
+      750
     ],
     "function_treatments": [
       "square-functions",
@@ -239,9 +240,21 @@
         "decoded": 96,
         "diameter_thousandths": 600,
         "function_treatment": "non-finder-dots"
+      },
+      {
+        "attempted": 96,
+        "decoded": 96,
+        "diameter_thousandths": 750,
+        "function_treatment": "square-functions"
+      },
+      {
+        "attempted": 96,
+        "decoded": 96,
+        "diameter_thousandths": 750,
+        "function_treatment": "non-finder-dots"
       }
     ],
-    "selected_diameter_thousandths": 450,
+    "selected_diameter_thousandths": 750,
     "selected_function_treatment": "non-finder-dots"
   },
   "logo": {

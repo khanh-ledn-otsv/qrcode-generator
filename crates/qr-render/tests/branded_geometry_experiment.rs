@@ -20,8 +20,8 @@ use qr_core::{EciAssignment, EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{OutputProfile, ProfileId, SUPPORTED_PROFILES};
 use serde::Serialize;
 
-const DIAMETERS: [u16; 16] = [
-    450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600,
+const DIAMETERS: [u16; 17] = [
+    450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 750,
 ];
 const TREATMENTS: [FunctionTreatment; 2] = [
     FunctionTreatment::SquareFunctions,
@@ -194,7 +194,8 @@ fn compare_and_record_branded_geometry_candidates() -> Result<(), Box<dyn Error>
     let selected_diameter = dot_outcomes
         .iter()
         .filter(|outcome| outcome.function_treatment == selected_treatment.label())
-        .find(|outcome| outcome.decoded == outcome.attempted)
+        .filter(|outcome| outcome.decoded == outcome.attempted)
+        .max_by_key(|outcome| outcome.diameter_thousandths)
         .map(|outcome| outcome.diameter_thousandths)
         .ok_or("no non-finder-dot candidate passed the complete sample")?;
 

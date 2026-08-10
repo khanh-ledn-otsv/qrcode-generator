@@ -22,6 +22,7 @@ use qr_render::{ProfileId, SUPPORTED_PROFILES};
 use serde::{Deserialize, Serialize};
 
 const VERSION: u8 = 10;
+const DOT_DIAMETER_THOUSANDTHS: u16 = 750;
 const WIDTHS: [u32; 4] = [10, 11, 12, 13];
 const VERTICAL_OFFSETS: [i32; 3] = [-6, 0, 6];
 const PAYLOADS: [(&str, &str); 7] = [
@@ -48,6 +49,7 @@ struct Policy {
     profile: String,
     version: u8,
     ecc: String,
+    dot_diameter_thousandths: u16,
     payload_classes: Vec<String>,
     artifact_paths: Vec<String>,
     candidate_widths_modules: Vec<u32>,
@@ -129,7 +131,7 @@ fn compare_and_record_adaptive_branded_placement_candidates() -> Result<(), Box<
                 continue;
             };
             let appearance = CandidateAppearance {
-                dot_diameter_thousandths: 450,
+                dot_diameter_thousandths: DOT_DIAMETER_THOUSANDTHS,
                 function_treatment: FunctionTreatment::NonFinderDots,
                 logo: Some(candidate),
             };
@@ -194,6 +196,7 @@ fn compare_and_record_adaptive_branded_placement_candidates() -> Result<(), Box<
         profile: "Adaptive".to_owned(),
         version: VERSION,
         ecc: "H".to_owned(),
+        dot_diameter_thousandths: DOT_DIAMETER_THOUSANDTHS,
         payload_classes: PAYLOADS
             .iter()
             .map(|(label, _)| (*label).to_owned())
@@ -236,6 +239,7 @@ fn committed_adaptive_placement_policy_covers_every_candidate_and_full_decode() 
     assert_eq!(policy.profile, "Adaptive");
     assert_eq!(policy.version, VERSION);
     assert_eq!(policy.ecc, "H");
+    assert_eq!(policy.dot_diameter_thousandths, 750);
     assert_eq!(policy.candidate_widths_modules, WIDTHS);
     assert_eq!(policy.candidate_vertical_offsets_modules, VERTICAL_OFFSETS);
     assert_eq!(policy.outcomes.len(), WIDTHS.len() * VERTICAL_OFFSETS.len());

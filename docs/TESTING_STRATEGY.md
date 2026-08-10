@@ -311,7 +311,7 @@ Parse every generated SVG and assert:
 - no frame, label, stroke, or path exists outside the QR symbol geometry;
 - paths stay inside their cells and within checked bounds;
 - the three finder regions retain full-cell square glyphs while every other
-  visible module uses an exactly centered 0.45-module circle; separator modules
+  visible module uses an exactly centered 0.75-module circle; separator modules
   remain blank;
 - the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with unchanged geometry, the reviewed `180 180 640 240` presentation box, and no external reference;
 - logo knockout geometry is opaque white, outside the four-module quiet zone, function-safe, deterministic, and independently decoded for every enabled H-level profile/version row;
@@ -338,7 +338,7 @@ Decode the emitted PNG as a file and inspect:
 - quiet-zone and outer-padding pixels;
 - no non-background pixel exists in surplus outer padding;
 - full-cell square finder rectangles have no intermediate colors; centered dot
-  coverage uses deterministic 8×8 sampling inside the approved 0.45-module
+  coverage uses deterministic 8×8 sampling inside the approved 0.75-module
   circle envelope, retains an exact brand core, and has a symmetric
   antialiased contour (brand RGB beneath partial alpha for transparent output);
 - approved edge coverage only for the bundled PNG logo; logo coverage must include intermediate opaque colors at artwork edges while retaining exact brand and white interior pixels;
@@ -376,7 +376,7 @@ those policies record their typed rejection.
 The branded-geometry approval experiment is replayed separately with:
 
 - every centered dot diameter from 0.45 through 0.60 module in 0.01-module
-  increments;
+  increments, plus the 0.75-module visual-legibility candidate;
 - both square-function controls and non-finder-dot treatment;
 - all four fixed profiles, opaque-white and transparent-background handling, all six
   required payload classes, and both direct RGBA PNG and independently
@@ -390,8 +390,9 @@ The branded-geometry approval experiment is replayed separately with:
 The committed record in
 [`generated/branded-geometry-policy.json`](generated/branded-geometry-policy.json)
 must stay strict-schema valid. A diameter/treatment is selectable only after
-every one of its 96 artifact cases decodes. The approved 0.45-module
-non-finder-dot treatment passed 96/96. Version 6 is the first branded version
+every one of its 96 artifact cases decodes. The approved 0.75-module
+non-finder-dot treatment passed 96/96 and renders at a three-CSS-pixel diameter
+for Adaptive's four-pixel module scale. Version 6 is the first branded version
 meeting the 13-module logo hierarchy, and its selected 13×4.875-module logo
 passed 48/48 artifact cases across all four profiles that admit Version 6.
 Inline's 100 px SVG / 300 px PNG profile retains a six-pixel PNG module scale

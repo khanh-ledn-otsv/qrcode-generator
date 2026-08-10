@@ -15,24 +15,24 @@ use qr_render::{
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const APPROVED_PNG_SHA256: [[[&str; 2]; 1]; 5] = [
     [[
-        "46f262231af36abfccfd1534267feb9ce5156424036dbf01fa048af0180d807a",
-        "3ca9a91bc3b27e8dcb55dfefb10e62c9eb888b9066923e7cd9b28cdfae13aa7d",
+        "8b5fb2d1b15846e8a042b8e8760a007f5bbb0daafc9a52efe4b030a9d373bf83",
+        "5e39014eea2a4a482221360129bfcb7f41f759fb0672fe24ada661d45df2787e",
     ]],
     [[
-        "c49d0359bae6f0c3c209e1d27124bdf1413f71468db98d382ae86385c6fde703",
-        "184a95ff139de35bc853138d8a7a772d1e25a25d263724ab00846c87884222c8",
+        "d54f8f4e9f1a611fe9d01ed834a0f2689db792a25dff858d80bf272db5b55dde",
+        "536efc23ea5add3528cb153355c2e3ceca796a9bdd95d63a4d223e1b0c4df1d1",
     ]],
     [[
-        "e464d40e46ef154fa20a830dffae00980454b14525eeb9bf4176c853e899410c",
-        "0f984f28462febe76332c4df24f15a19155858b207241704597ddbc093b65f6a",
+        "7d2d2509ce3f2c137e6b1c101e6a1f40c463a629224758ee4495a030bf8d6534",
+        "0f94b5d4c0d3479c6d28f3ed4cbdcd70029555acafa4b1a04e2b78c335dc7a4f",
     ]],
     [[
-        "497bb7bfd94d7c4719eeae748ecdfcc78b769fcf216b5f9208b686c3b720647c",
-        "596449c63573908606467378aa3d82b40fa472768365cb3f1c971fbbc3b022bc",
+        "096241af7fe54c60049ed8f5f3129cd8edbb4be8c6acfb8b4fe60a8eb3b142b5",
+        "12d75ecd3e45ab7d611403068a71f6131eaf78df775ed7cc8d131afaa6fb9767",
     ]],
     [[
-        "67360695a3438cbbdf942f942f52546ff7d3be3a39b5755af2ef67c9db80e87b",
-        "162046ba7a39de4b60c14e11d67cfd2c4223441761a27eb8a951bbe70a5d4ff2",
+        "b2449d3047a832ccad08721669878f91cd3a635181bfaabfa0fb53a36a957f68",
+        "73c4a5c3f01b6b8e7f6bfb6c376f9f272a10e32e8dd78d332430e28c4b56cde1",
     ]],
 ];
 
@@ -295,7 +295,7 @@ fn reference_dot_pixel(scale: u32, x: u32, y: u32, background: Background) -> [u
     const SAMPLES_PER_AXIS: u32 = 8;
     const SAMPLE_COUNT: u32 = SAMPLES_PER_AXIS * SAMPLES_PER_AXIS;
     let center = f64::from(scale) / 2.0;
-    let radius = f64::from(scale) * 0.45 / 2.0;
+    let radius = f64::from(scale) * 0.75 / 2.0;
     let mut covered = 0;
     for sample_y in 0..SAMPLES_PER_AXIS {
         for sample_x in 0..SAMPLES_PER_AXIS {

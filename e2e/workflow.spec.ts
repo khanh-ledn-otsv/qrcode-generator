@@ -328,17 +328,31 @@ test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }
 test("uses round compact dots and standard square finders without a shape control", async ({
   page,
 }) => {
-  await enterPayload(page, "approved styling workflow");
+  await selectProfile(page, "Adaptive");
+  await enterPayload(
+    page,
+    "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya",
+  );
 
   await expect(page.getByRole("group", { name: "Data module shape" })).toHaveCount(0);
   await expect.poll(() => diagnostic(page, "Non-finder modules")).toBe("Compact dots");
   await expect.poll(() => diagnostic(page, "Finders")).toBe("Standard square");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("260 px SVG · 390 px PNG");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const modulePath = page.getByTestId("qr-preview").locator("path").first();
   await expect(modulePath).not.toHaveAttribute("shape-rendering", "crispEdges");
-  await expect(modulePath).toHaveAttribute("d", /M\d+\.275 \d+\.500a0\.225 0\.225 0 1 0 0\.450 0/);
+  await expect(modulePath).toHaveAttribute("d", /M\d+\.125 \d+\.500a0\.375 0\.375 0 1 0 0\.750 0/);
   await expect(modulePath).toHaveAttribute("d", /M4 4h1v1h-1z/);
+  const renderedDotDiameter = await modulePath.evaluate((path) => {
+    const svg = path.ownerSVGElement;
+    const arc = path.getAttribute("d")?.match(/a([0-9.]+) [0-9.]+ 0 1 0 ([0-9.]+) 0/);
+    if (!svg || !arc) {
+      throw new Error("compact-dot arc geometry is missing");
+    }
+    return (Number(arc[2]) * svg.getBoundingClientRect().width) / svg.viewBox.baseVal.width;
+  });
+  expect(renderedDotDiameter).toBeGreaterThanOrEqual(3);
 });
 
 test("explains export, physical sizing, and placement validation before generation", async ({

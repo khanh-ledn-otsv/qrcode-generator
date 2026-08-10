@@ -135,7 +135,7 @@ impl CompactDotGeometry {
 }
 
 pub(crate) const COMPACT_DOT_GEOMETRY: CompactDotGeometry = CompactDotGeometry {
-    diameter_thousandths: 450,
+    diameter_thousandths: 750,
     samples_per_axis: 8,
 };
 

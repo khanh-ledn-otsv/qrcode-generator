@@ -7,8 +7,8 @@ use sha2::{Digest, Sha256};
 
 pub const PAYLOAD_LENGTH: usize = 2_331;
 pub const SHA256: [&str; 2] = [
-    "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
-    "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
+    "e6546e2da8c610f896ab5f639634923173ac8a775cbb3e9e9fc0b95acbd70fa5",
+    "69e6587286fcd49c5f45c5556b19c33ecbbf7e1ad2bfeb743d02bee8a849c8f8",
 ];
 
 pub fn artifacts() -> (Vec<u8>, Vec<u8>) {
@@ -61,7 +61,7 @@ pub fn provenance_hashes() -> [String; 2] {
     assert_eq!(manifest["local_verification"].as_array().unwrap().len(), 3);
     assert_eq!(
         manifest["verification"]["reviewer"],
-        "ticket-31-round-dot-regression-review"
+        "ticket-31-visible-round-dot-review"
     );
     assert_eq!(manifest["verification"]["verified_at"], "2026-08-10");
 

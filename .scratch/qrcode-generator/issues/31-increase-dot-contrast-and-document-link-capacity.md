@@ -105,14 +105,21 @@ regenerate golden evidence to accept the new output.
   deterministic PNG contour coverage after those treatments made the compact
   circles display as diamonds/squares. Both formats retain an exact solid brand
   core with antialiasing confined to the mathematical circular contour.
+- Visual follow-up: browser pixel measurement showed the preserved 0.45-module
+  circle was only 1.8 CSS pixels wide in Adaptive output, so it still appeared
+  square. A new decode campaign approved a 0.75-module diameter at 96/96 for
+  both candidate treatments; Adaptive Version 10 now renders each dot at a
+  three-pixel diameter, with all placement and encoding policies unchanged.
 
 ## Answer
 
 Compact non-finder modules now use the exact ONE-magenta fill in both SVG and
 PNG while retaining their round appearance. SVG uses its true circular arcs
 with normal antialiasing; PNG keeps an exact solid brand core and deterministic
-8-by-8 contour coverage. Finder geometry, quiet zones, knockout, encoding,
-version selection, masks, and ECC policy are unchanged.
+8-by-8 contour coverage. The diameter is 0.75 module so Adaptive output has a
+three-pixel visual floor instead of 1.8-pixel specks. Finder geometry, quiet
+zones, knockout, encoding, version selection, masks, and ECC policy are
+unchanged.
 
 The practical guide now contains a semantic five-row table for Inline,
 Content, Landing, Print, and Adaptive, with separate no-logo and logo limits.

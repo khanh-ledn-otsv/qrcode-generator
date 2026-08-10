@@ -150,13 +150,13 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
 
     assert_eq!(
         policy.dots.candidate_diameters_thousandths,
-        (450..=600).step_by(10).collect::<Vec<_>>()
+        (450..=600).step_by(10).chain([750]).collect::<Vec<_>>()
     );
     assert_eq!(
         policy.dots.function_treatments,
         ["square-functions", "non-finder-dots"]
     );
-    assert_eq!(policy.dots.outcomes.len(), 32);
+    assert_eq!(policy.dots.outcomes.len(), 34);
     for diameter in &policy.dots.candidate_diameters_thousandths {
         for treatment in &policy.dots.function_treatments {
             let outcome = policy
@@ -182,11 +182,11 @@ fn committed_policy_is_complete_and_selects_only_full_decode_passes() {
         })
         .expect("selected dot policy must be present");
     assert_eq!(selected.decoded, selected.attempted);
-    assert_eq!(policy.dots.selected_diameter_thousandths, 450);
+    assert_eq!(policy.dots.selected_diameter_thousandths, 750);
     assert_eq!(policy.dots.selected_function_treatment, "non-finder-dots");
     assert!(!policy.dots.outcomes.iter().any(|outcome| {
         outcome.function_treatment == policy.dots.selected_function_treatment
-            && outcome.diameter_thousandths < policy.dots.selected_diameter_thousandths
+            && outcome.diameter_thousandths > policy.dots.selected_diameter_thousandths
             && outcome.decoded == outcome.attempted
     }));
 

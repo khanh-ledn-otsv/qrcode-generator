@@ -13,24 +13,24 @@ use sha2::{Digest, Sha256};
 
 const APPROVED_SVG_SHA256: [[[&str; 2]; 1]; 5] = [
     [[
-        "f8a646a085a1210cbf6ad8301ad1839c36a3d80e37cba83b1e19581d2e4a7de7",
-        "3164ec58af57186d0ce11cf79b24f87314781f0cdc6b0ba8999bb6218d66d243",
+        "daf2fe0172d65378561edcba4eb9abeedb8dd5cf14e32b46e015dbf440f3c2e7",
+        "de338fae3a073bb288bb5937abba53e6b4ce9036740b9c70b6d441de38a47ba6",
     ]],
     [[
-        "c16df2711bb5e1a9758a6dcbcadfe92d64350adaf85a9aa7c3bad81aec576748",
-        "89f848a1ddcf1c51160c2cc21c78289d169199c2ff50a357378a161132fc1af9",
+        "ff2c1833c8cb26708c7f853fed3d36879da20b27dddcf90f922900e1f51d5159",
+        "873fec561c6d05031427d230d9bc880c7df43935fdf9f634d4aaf4574375fca6",
     ]],
     [[
-        "15ffb1de6ba46ada33e04af3f4c97339b20a1c9159538e501b1c8c6844a59d49",
-        "09675b8a6f8065f1754e4d32a5bd0f7b3366371fab02855e575f1cb8bd27a70c",
+        "5848c124f328020c11affa058b40e00a3b1d2da3273bb8b999b80bec28d1ffe2",
+        "b4ef8619b34d82dbb5f23ac6619ebb2f4d9453cc17488498a7ca5ebffbc97cd3",
     ]],
     [[
-        "32edc0766a613b8088218533f80c80b01f12a33966da5cd8c968a023265443b1",
-        "318dd2cd412fe2ab44dde0f12f2793f9f17bf44c86a523e055d121f5b8ff12d8",
+        "e2f684d53ed6f928fdc93bdcc96764699aed0943f594d6d1f44c02be5744c3b9",
+        "7fc8380302359f90367e963fe89b196e032e1bf4179dcb2a03e8e1e79124bea3",
     ]],
     [[
-        "8698d052998c2e7e81aff6c8595ca40246e718f7320dc925d9e2d70d8acb3fbe",
-        "7278f97579e8249df426fe8f9dd65ffa0b3da8d996329457d75a0fc7affafa93",
+        "b7fb7e4af12a280a887c769a1e1d9b374875b8294544f51be69b5f3717ac98e2",
+        "e9233043122b49b6492d011c7426ed2221683c375548fd1ba1da4a91364cab42",
     ]],
 ];
 
@@ -82,7 +82,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(first.as_bytes(), second.as_bytes());
     assert_eq!(
         sha256_hex(first.as_bytes()),
-        "b137c91a4c08ada49d2230010df90580b3681dabcc5c906475abdc150cb38d8d"
+        "91c4016a9262eacf7be60268d7cb81159c118c0a2588237f19d5f5530839b7fa"
     );
     assert!(!first.contains(payload));
 
@@ -293,7 +293,7 @@ fn svg_uses_full_cell_finders_and_exact_centered_compact_dots() {
     assert!(
         path.contains(
             format!(
-                "M{dot_left}.275 {dot_top}.500a0.225 0.225 0 1 0 0.450 0a0.225 0.225 0 1 0-0.450 0z"
+                "M{dot_left}.125 {dot_top}.500a0.375 0.375 0 1 0 0.750 0a0.375 0.375 0 1 0-0.750 0z"
             )
             .as_str()
         )
@@ -335,11 +335,11 @@ fn dark_module_coordinates(path: &str) -> Vec<(u32, u32)> {
                 (x.parse().unwrap(), y.parse().unwrap())
             } else {
                 let coordinates = command
-                    .strip_suffix("a0.225 0.225 0 1 0 0.450 0a0.225 0.225 0 1 0-0.450 0z")
+                    .strip_suffix("a0.375 0.375 0 1 0 0.750 0a0.375 0.375 0 1 0-0.750 0z")
                     .unwrap();
                 let (left, center_y) = coordinates.split_once(' ').unwrap();
                 (
-                    left.strip_suffix(".275").unwrap().parse().unwrap(),
+                    left.strip_suffix(".125").unwrap().parse().unwrap(),
                     center_y.strip_suffix(".500").unwrap().parse().unwrap(),
                 )
             }

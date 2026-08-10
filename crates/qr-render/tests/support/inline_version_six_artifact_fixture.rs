@@ -7,8 +7,8 @@ use sha2::{Digest, Sha256};
 
 pub const PAYLOAD: &str = "cross-target unbranded Inline Version 6 artifact";
 pub const SHA256: [&str; 2] = [
-    "4dfcdbac53bad49e5757dd67c0142725f8172d056afd7552439320296e833ab7",
-    "6e06b6694c8269e7651f16fa89b2a47b7fe4a85971e3c9da02c7c561ca402461",
+    "aa68d6cf9c639f76fb37879e63f67bb9879a53b300b896d2bad74659f248bba0",
+    "ce5ec70df43b2588a98845e34c4c71fe330c8c79a1fa20687c0d7df36adcc56a",
 ];
 
 pub fn artifacts() -> (Vec<u8>, Vec<u8>) {

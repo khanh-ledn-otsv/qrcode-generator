@@ -9,8 +9,8 @@
   "version": 40,
   "ecc": "M",
   "logo": "none",
-  "svg_sha256": "f0cc143655cfba8ce4ca91ecd20f5c34e14433523605772ca305f1905e80995d",
-  "png_sha256": "0f381144267e70a45273d74dbe94bcad09e2afe1ba7c163ccf8aa346c45eacc8",
+  "svg_sha256": "e6546e2da8c610f896ab5f639634923173ac8a775cbb3e9e9fc0b95acbd70fa5",
+  "png_sha256": "69e6587286fcd49c5f45c5556b19c33ecbbf7e1ad2bfeb743d02bee8a849c8f8",
   "generation": {
     "tool": "qr-render native test fixture",
     "command": "cargo test -p qr-render --test logo_asset print_adaptive_v40_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
@@ -23,8 +23,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-31-round-dot-regression-review",
+    "reviewer": "ticket-31-visible-round-dot-review",
     "verified_at": "2026-08-10",
-    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG and PNG hashes were reviewed after restoring circular antialiased contours while retaining an exact solid ONE-magenta core; decoder evidence separately establishes native PNG and rasterized-SVG readability."
+    "notes": "Synthetic non-sensitive payload at the exact Version 40 ECC-M byte boundary. The SVG and PNG hashes were reviewed after increasing compact circles to 0.75 module for visible roundness; decoder evidence separately establishes native PNG and rasterized-SVG readability."
   }
 }

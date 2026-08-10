@@ -8,6 +8,7 @@
   "profile": "Adaptive",
   "version": 10,
   "ecc": "H",
+  "dot_diameter_thousandths": 750,
   "payload_classes": [
     "short-url",
     "one-news-url",
