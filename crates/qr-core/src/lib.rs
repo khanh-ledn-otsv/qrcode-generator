@@ -24,9 +24,9 @@ pub use encoding::{EciAssignment, EncodeRequest, EncodedSegment, EncodingMode};
 /// ISO/IEC 18004:2024, 5.3.2.1 defines versions 1 through 40 and their
 /// corresponding symbol sizes.
 /// 2024 clause mapping pending audit.
-/// Public-corroborated, non-normative evidence is retained in
-/// `tests/fixtures/qr_tables.csv`, generated from `qrcodegen` 1.8.0 and
-/// `python-qrcode` 8.2.
+/// Public-corroborated, non-normative evidence is the DENSO WAVE version
+/// overview recorded in `docs/research/qr-public-source-provenance.md`; the
+/// all-version invariant is retained in `crates/qr-core/tests/tables.rs`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Version(u8);
 
@@ -52,9 +52,9 @@ impl Version {
     /// ISO/IEC 18004:2024, 5.3.2.1 defines Version 1 as 21 modules square
     /// and each subsequent version as four modules wider per side.
     /// 2024 clause mapping pending audit.
-    /// Public-corroborated, non-normative evidence is retained in
-    /// `tests/fixtures/qr_tables.csv`, generated from `qrcodegen` 1.8.0 and
-    /// `python-qrcode` 8.2.
+    /// Public-corroborated, non-normative evidence is the DENSO WAVE version
+    /// overview recorded in `docs/research/qr-public-source-provenance.md`; the
+    /// all-version invariant is retained in `crates/qr-core/tests/tables.rs`.
     #[must_use]
     pub fn symbol_size(self) -> u16 {
         17 + u16::from(self.0) * 4
