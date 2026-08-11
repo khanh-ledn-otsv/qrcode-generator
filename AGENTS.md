@@ -124,7 +124,7 @@ shared fixtures, or native/WASM equivalence.
 
 | Command | Included coverage | Do not add separately |
 |---|---|---|
-| `pnpm run verify:meta` | selector/doc-validation lint and tests, documentation links/metadata, and shell syntax | product tests unless changed commands/runtime require them |
+| `pnpm run verify:meta` | selector/doc-validation and workflow-action-pin checks, documentation links/metadata, and shell syntax | product tests unless changed commands/runtime require them |
 | `pnpm run verify:python` | Ruff, Ruff format, ty, Python unit tests | separate Python lint/test commands |
 | `pnpm run verify:core` | Rust format, qr-core Clippy, all routine qr-core tests | workspace/web/render checks |
 | `pnpm run verify:render` | Rust format, qr-render Clippy/native tests, WASM PNG renderer test | full web/browser gate |

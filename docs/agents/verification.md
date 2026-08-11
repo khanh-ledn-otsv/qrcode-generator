@@ -51,7 +51,7 @@ fail thresholds.
 | Command | Typical warm cost | Coverage boundary |
 |---|---:|---|
 | `git diff --check` | <1 s | whitespace errors only |
-| `pnpm run verify:meta` | 1–3 s | selector cases and all shell syntax |
+| `pnpm run verify:meta` | 1–3 s | selector cases, workflow action pins, documentation validation, and all shell syntax |
 | `pnpm run verify:python` | 15–30 s | Python lint, format, types, unit tests |
 | `pnpm run verify:core` | 15–35 s | qr-core format, Clippy, routine tests |
 | `pnpm run verify:render` | 20–60 s | qr-render format, Clippy, native tests, WASM PNG test |
