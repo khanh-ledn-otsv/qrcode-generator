@@ -33,8 +33,11 @@
     "release:readiness": "bash scripts/release-readiness.sh",
     "verify": "bash scripts/verify.sh",
     "verify:core": "cargo fmt --check && cargo clippy -p qr-core --all-targets -- -D warnings && cargo test -p qr-core",
+    "verify:changed": "bash scripts/verify-changed.sh",
+    "verify:meta": "bash scripts/test-select-verification.sh && bash -n scripts/*.sh",
+    "verify:python": "pnpm run check:python && pnpm run test:python",
     "verify:render": "cargo fmt --check && cargo clippy -p qr-render --all-targets -- -D warnings && cargo test -p qr-render && cargo test -p qr-render --target wasm32-unknown-unknown --test png_wasm",
-    "verify:web": "cargo fmt --check && pnpm run check:web && cargo clippy -p qr-web --all-targets -- -D warnings && cargo test -p qr-web --target wasm32-unknown-unknown --lib --test wasm_browser && NO_COLOR=true trunk build"
+    "verify:web": "cargo fmt --check && pnpm run check:web && cargo clippy -p qr-web --all-targets -- -D warnings && cargo test -p qr-web && cargo test -p qr-web --target wasm32-unknown-unknown --lib --test wasm_browser && pnpm run build && pnpm run test:e2e:dist"
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",

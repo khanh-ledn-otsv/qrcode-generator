@@ -594,7 +594,11 @@ retain the standard workspace target layout. When `CI=true`, the compiled,
 Python, and browser test lanes run serially to avoid resource-contention flakes
 on smaller hosted runners; they still reuse the one optimized build. The
 `verify:core`, `verify:render`, and `verify:web` commands provide focused local
-feedback but do not replace the complete gate before handoff or push.
+feedback. `verify:python` covers Python-support-only changes, `verify:meta`
+covers verification-routing and workflow-only edits, and `verify:changed`
+selects conservatively from the changed paths. The full gate is required only
+when the impact crosses crates or shared build/runtime boundaries, changes
+dependencies or release behavior, or cannot be classified safely.
 
 ### Extended local verification
 
@@ -614,15 +618,18 @@ Manual product checks are performed separately by the owner and are not collecte
 
 The repository-owned local command surface and machine-readable evidence layout
 for these suites is now specified in [`RELEASE_HARDENING.md`](RELEASE_HARDENING.md).
-The `Correctness` hosted workflow runs `pnpm run verify` for pull requests and
-pushes to `main` when source, tests, tooling, or CI inputs change, and runs the
-complete pinned ZXing-C++ plus representative quirc decoder campaigns on
-matching pushes to `main`. Pages publishing is likewise limited to site and
-build-input changes and only builds, uploads, and deploys the site; correctness
+The `Correctness` hosted workflow classifies changed paths on pushes to `main`.
+Web-only and Python-support-only pushes run their focused covering gates;
+core, render, dependency, shared-configuration, mixed, and unknown changes run
+`pnpm run verify`. The complete pinned ZXing-C++ plus representative quirc
+decoder campaigns live in a separate workflow limited to matching core,
+render, artifact, oracle, and release-evidence inputs. Pages publishing is
+likewise limited to site and build-input changes and only builds, uploads, and
+deploys the site; correctness
 verification remains the responsibility of the separate workflow. Both
-workflows retain manual dispatch. Successful correctness jobs never rewrite
-committed goldens or evidence; extended failures upload logs and generated
-failure evidence.
+correctness workflows and Pages retain manual dispatch. Successful jobs never
+rewrite committed goldens or evidence; extended failures upload logs and
+generated failure evidence.
 
 ## 13. Flake and failure policy
 

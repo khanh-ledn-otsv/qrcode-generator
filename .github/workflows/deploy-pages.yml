@@ -45,7 +45,7 @@ jobs:
           cache-bin: false
 
       - name: Cache pinned Trunk
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/bin/trunk
           key: trunk-${{ runner.os }}-${{ runner.arch }}-${{ env.TRUNK_VERSION }}

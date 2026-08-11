@@ -32,7 +32,8 @@ Trunk builds the Rust application to WebAssembly and compiles Tailwind CSS autom
 ## Deploy to GitHub Pages
 
 The `Deploy GitHub Pages` workflow builds and publishes the static site after
-every push to `main`, and it can also be started manually. Before the first
+pushes to `main` that change site or build inputs, and it can also be started
+manually. Before the first
 deployment, open the repository's **Settings → Pages** and select **GitHub
 Actions** as the source.
 
@@ -49,6 +50,13 @@ Run the complete repository gate with one command:
 pnpm run verify
 ```
 
+For the normal agent and pre-push path, let the repository choose the smallest
+covering gate from the current changes:
+
+```sh
+pnpm run verify:changed
+```
+
 The complete gate runs independent Rust, web, and Python lanes concurrently,
 keeps Cargo-heavy commands serialized, and reuses its single release build for
 the Chromium tests. It uses the standard Cargo target directories, including
@@ -62,10 +70,12 @@ For a faster edit loop, run the gate closest to the code being changed:
 pnpm run verify:core
 pnpm run verify:render
 pnpm run verify:web
+pnpm run verify:python
+pnpm run verify:meta
 ```
 
-These focused gates are conveniences, not substitutes for `pnpm run verify`
-before handoff or push.
+Use the full gate for cross-crate, dependency, shared build/runtime, or unknown
+changes. Focused gates are the expected handoff checks for isolated changes.
 
 Use `pnpm run check` for static checks and the release build, `pnpm run test`
 for all native, Python, WASM, and browser tests, and `pnpm run format` to apply

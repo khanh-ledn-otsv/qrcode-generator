@@ -70,21 +70,43 @@ Treat those documents as authoritative. Update them when an implementation decis
 
 ## Verification
 
-Use the smallest focused gate that covers the active edit loop:
+Choose verification from the behavior and dependency surface changed. Do not
+run the complete gate merely because it exists, and do not rerun unrelated
+checks after a focused gate succeeds. For an automatic conservative choice,
+use:
+
+```sh
+pnpm run verify:changed
+```
+
+The selector inspects the working-tree paths, chooses a focused gate, and falls
+back to the full gate for unknown or cross-crate changes. Use the smallest
+explicit gate when the impact is already known:
 
 ```sh
 pnpm run verify:core    # qr-core-only changes
 pnpm run verify:render  # qr-render changes, including its WASM renderer test
 pnpm run verify:web     # qr-web, HTML, CSS, and ordinary web changes
+pnpm run verify:python  # tests/support Python-only changes
+pnpm run verify:meta    # workflow/routing-script-only changes
 ```
 
-Before handoff, run the complete repository gate for cross-crate work and for
-changes to dependencies, build or test configuration, WASM boundaries, browser
-tooling, CI workflows, verification scripts, or release behavior:
+Run the complete repository gate only when the change can affect multiple
+crates or the shared build/runtime contract, including production dependency or
+lockfile changes, Cargo/Trunk configuration, QR core/render behavior, WASM
+boundaries, release behavior, or an unknown path:
 
 ```sh
 pnpm run verify
 ```
+
+Workflow documentation, CI path filters, and verification-routing script edits
+do not automatically require every product test. Run `verify:meta`, exercise
+the affected selector cases, and run a product gate only if those edits change
+that product gate's commands or runtime assumptions. If a complete gate already
+passed and subsequent edits are limited to documentation, workflow YAML, or
+verification routing, validate only those later edits rather than rerunning the
+complete gate.
 
 `pnpm run verify` is the authoritative routine gate. It already runs Rust
 formatting, native and WASM checks, warnings-as-errors Clippy, native/Python/WASM
@@ -112,6 +134,11 @@ hosted CI execution mode, which serializes resource-heavy test lanes.
 If a gate fails, preserve the failure, diagnose it, and rerun the narrowest
 failing command while iterating. Run the required covering gate again after the
 fix. If required tooling is unavailable, report the skipped check and reason.
+
+Do not run release evidence, extended decoder campaigns, coverage, mutation,
+fuzzing, or Miri unless the change touches the behavior those suites cover or
+the user explicitly requests them. Hosted extended decoder CI is path-filtered
+to core, render, artifact, oracle, and release-evidence inputs.
 
 ## Tests and Fixtures
 

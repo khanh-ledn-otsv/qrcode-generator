@@ -1,29 +1,29 @@
-name: Correctness
+name: Extended decoders
 
 on:
   push:
     branches: [main]
     paths:
       - ".cargo/**"
-      - ".github/workflows/**"
-      - ".nvmrc"
-      - ".oxfmtrc.json"
-      - ".oxlintrc.json"
+      - ".github/workflows/extended-decoders.yml"
       - "Cargo.lock"
       - "Cargo.toml"
-      - "Trunk.toml"
       - "assets/**"
-      - "crates/**"
-      - "e2e/**"
+      - "crates/qr-core/**"
+      - "crates/qr-render/**"
       - "package.json"
-      - "playwright.config.ts"
       - "pnpm-lock.yaml"
-      - "ruff.toml"
       - "rust-toolchain.toml"
-      - "scripts/**"
-      - "tests/**"
+      - "scripts/release-evidence.sh"
+      - "scripts/setup-decoders.sh"
+      - "scripts/setup.sh"
+      - "tests/adverse/**"
+      - "tests/approved-output-matrix-policy.json"
+      - "tests/baselines/**"
+      - "tests/fixtures/**"
+      - "tests/oracles/**"
+      - "tests/support/collect_approved_output_evidence.py"
       - "tools/**"
-      - "ty.toml"
   workflow_dispatch:
 
 permissions:
@@ -36,17 +36,10 @@ env:
   QUIRC_COMMIT: 542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca
 
 jobs:
-  routine:
+  extended-decoders:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-      - name: Determine verification scope
-        id: verification
-        env:
-          CI_VERIFY_BASE_SHA: ${{ github.event.before }}
-        run: echo "scope=$(scripts/verify-changed.sh --scope-only)" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -55,23 +48,18 @@ jobs:
           corepack enable
           corepack prepare "$(node -p "require('./package.json').packageManager")" --activate
       - name: Resolve pnpm store
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         id: pnpm-store
         run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
       - name: Cache pnpm store
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
       - uses: dtolnay/rust-toolchain@1.97.1
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         with:
           targets: wasm32-unknown-unknown
-          components: clippy,rustfmt
       - uses: astral-sh/setup-uv@v9
-        if: steps.verification.outputs.scope == 'python' || steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         with:
           enable-cache: true
           prune-cache: true
@@ -79,12 +67,10 @@ jobs:
             tests/oracles/pyproject.toml
             tests/oracles/uv.lock
       - name: Cache Rust dependencies
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: Swatinem/rust-cache@v2
         with:
           cache-bin: false
       - name: Cache pinned tools
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: actions/cache@v6
         with:
           path: |
@@ -94,7 +80,6 @@ jobs:
             ~/.cargo/bin/wasm2es6js
           key: tools-${{ runner.os }}-${{ runner.arch }}-trunk-${{ env.TRUNK_VERSION }}-wasm-bindgen-${{ env.WASM_BINDGEN_CLI_VERSION }}
       - name: Cache verified decoder build inputs
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: actions/cache@v6
         with:
           path: |
@@ -103,11 +88,24 @@ jobs:
           key: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-${{ hashFiles('scripts/setup-decoders.sh', 'tests/oracles/quirc-reader.c', 'tests/oracles/pyproject.toml', 'tests/oracles/uv.lock') }}
           restore-keys: decoders-${{ runner.os }}-${{ runner.arch }}-zxing-${{ env.ZXING_COMMIT }}-quirc-${{ env.QUIRC_COMMIT }}-
       - name: Install dependencies and verify pinned decoder builds
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         env:
-          QR_PLAYWRIGHT_INSTALL_MODE: with-deps
+          QR_PLAYWRIGHT_INSTALL_MODE: skip
         run: ./scripts/setup.sh
-      - name: Run routine correctness gate
-        env:
-          CI_VERIFY_BASE_SHA: ${{ github.event.before }}
-        run: pnpm run verify:changed
+      - name: Run extended decoder campaigns without retries
+        run: |
+          mkdir -p target/decoder-logs
+          set -o pipefail
+          cargo test -p qr-core --test independent_decode -- --ignored --nocapture 2>&1 | tee target/decoder-logs/core.log
+          pnpm run release:evidence 2>&1 | tee target/decoder-logs/artifacts.log
+          pnpm run test:quirc 2>&1 | tee target/decoder-logs/quirc.log
+      - name: Upload decoder failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: decoder-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          path: |
+            target/decoder-logs
+            target/release-evidence
+            test-results
+            playwright-report

@@ -476,10 +476,14 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, and adverse-image checks performed during release hardening.
 
-Repository-owned hosted correctness automation gates pull requests and pushes
-to `main` when source, tests, tooling, or CI inputs change. Pages publishing is
+Repository-owned hosted correctness automation selects a conservative focused
+gate for each push to `main`: web-only and Python-support-only changes use their
+own covering gates, while core, render, dependency, shared-configuration, and
+unknown changes use the complete routine gate. Extended decoder campaigns run
+in a separate path-filtered workflow only when core, render, artifact, oracle,
+or release-evidence inputs change. Pages publishing is
 limited to site and build-input changes and only builds, uploads, and deploys
-the site; both workflows retain manual dispatch. Caches are keyed by the
+the site; all workflows retain manual dispatch. Caches are keyed by the
 controlling lockfiles, toolchain/tool versions, runner OS, and architecture;
 restored tools and decoder checkouts are verified before use.
 
