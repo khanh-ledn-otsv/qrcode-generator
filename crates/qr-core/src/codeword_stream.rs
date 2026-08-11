@@ -1,8 +1,9 @@
 //! QR data-block construction and final codeword interleaving.
 //!
-//! ISO/IEC 18004:2024 final-message construction, exact clause mapping pending
-//! audit. Block splitting and interleaving are public-corroborated,
-//! non-normative evidence from Nayuki QR Code Generator 1.8.0
+//! ISO/IEC 18004:2024 final-message construction.
+//! 2024 clause mapping pending audit.
+//! Block splitting and interleaving are public-corroborated, non-normative
+//! evidence from Nayuki QR Code Generator 1.8.0
 //! (`add_ecc_and_interleave`) and python-qrcode 8.2 (`create_bytes`). See
 //! `docs/research/qr-public-source-provenance.md` and the accepted
 //! `qr-interleaved-codeword-vectors` entry in `tests/fixtures/manifest.json`.

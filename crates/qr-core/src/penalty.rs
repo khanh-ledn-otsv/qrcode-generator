@@ -1,7 +1,8 @@
 //! Penalty scoring for completed QR matrices.
 //!
-//! ISO/IEC 18004:2024 mask evaluation penalty rules; 2024 clause mapping
-//! pending audit. Nayuki 1.8.0
+//! ISO/IEC 18004:2024 mask evaluation penalty rules.
+//! 2024 clause mapping pending audit.
+//! Nayuki 1.8.0
 //! `rust/src/lib.rs::{get_penalty_score,FinderPenalty}` and python-qrcode 8.2
 //! `qrcode/util.py::lost_point` are the pinned public sources, but their Rule 3
 //! totals disagree on completed candidates. The owner-approved interpretation

@@ -1,7 +1,8 @@
 //! QR format and version BCH information values.
 //!
-//! ISO/IEC 18004:2024 format/version information BCH construction; 2024
-//! clause mapping pending audit. Corroborated by Nayuki 1.8.0
+//! ISO/IEC 18004:2024 format/version information BCH construction.
+//! 2024 clause mapping pending audit.
+//! Corroborated by Nayuki 1.8.0
 //! `rust/src/lib.rs::{draw_format_bits,draw_version}` and python-qrcode 8.2
 //! `qrcode/util.py::{BCH_type_info,BCH_type_number}`. Evidence is
 //! `public-corroborated, non-normative` pending a complete 2024 audit.

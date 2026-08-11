@@ -2,7 +2,9 @@
 //!
 //! ISO/IEC 18004:2024 defines ECI and mode encoding in 7.4.3 through 7.4.7,
 //! terminator handling in 7.4.10, and bit-stream-to-codeword conversion in
-//! 7.4.11. The UTF-8 ECI 26 choice is the project's explicit release policy.
+//! 7.4.11.
+//! 2024 clause mapping pending audit.
+//! The UTF-8 ECI 26 choice is the project's explicit release policy.
 //! Equal-bit segment plans prefer fewer segments, then Numeric, Alphanumeric,
 //! and Byte in that order, then a longer first segment; the canonical suffix
 //! applies the same rule recursively.
@@ -709,6 +711,7 @@ fn append_bytes(buffer: &mut BitBuffer, payload: &[u8]) -> Result<(), EncodingEr
 
 fn alphanumeric_value(byte: u8) -> Option<u8> {
     // ISO/IEC 18004:2024, 7.4.5 defines this 45-character value mapping.
+    // 2024 clause mapping pending audit.
     match byte {
         b'0'..=b'9' => Some(byte - b'0'),
         b'A'..=b'Z' => Some(byte - b'A' + 10),

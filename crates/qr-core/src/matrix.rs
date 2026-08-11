@@ -1,7 +1,8 @@
 //! Checked construction of classified QR module matrices.
 //!
-//! ISO/IEC 18004:2024 function-pattern placement and reservation; 2024
-//! clause mapping pending audit. The placement rules are corroborated by the
+//! ISO/IEC 18004:2024 function-pattern placement and reservation.
+//! 2024 clause mapping pending audit.
+//! The placement rules are corroborated by the
 //! pinned public encoders recorded by the `qr-classified-function-matrices`
 //! fixture in `tests/fixtures/manifest.json`: Nayuki 1.8.0
 //! `rust/src/lib.rs::{draw_function_patterns,draw_finder_pattern,

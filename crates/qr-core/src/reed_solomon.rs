@@ -1,8 +1,9 @@
 //! QR Reed–Solomon arithmetic over GF(256).
 //!
-//! ISO/IEC 18004:2024 error-correction codeword generation, exact clause
-//! mapping pending audit. The field polynomial, supported QR generator degrees,
-//! and algorithm vectors are public-corroborated, non-normative evidence from
+//! ISO/IEC 18004:2024 error-correction codeword generation.
+//! 2024 clause mapping pending audit.
+//! The field polynomial, supported QR generator degrees, and algorithm vectors
+//! are public-corroborated, non-normative evidence from
 //! Nayuki QR Code Generator 1.8.0 (`reed_solomon_*`) and python-qrcode 8.2
 //! (`Polynomial`, `gexp`, and `glog`). See
 //! `docs/research/qr-public-source-provenance.md` and the accepted

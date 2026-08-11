@@ -2,10 +2,11 @@
 //!
 //! ISO/IEC 18004:2024 defines the corresponding behavior in 5.3.2 (versions
 //! and sizes), 7.4 (data encoding), 7.5.1 (error-correction capacity), 7.6
-//! (final message construction), and Annex E (alignment positions). The values
-//! are cross-validated by `tests/fixtures/qr_tables.csv`, generated from
-//! independently maintained `qrcodegen` 1.8.0 and `python-qrcode` 8.2
-//! development oracles.
+//! (final message construction), and Annex E (alignment positions).
+//! 2024 clause mapping pending audit.
+//! The values are cross-validated by
+//! `tests/fixtures/qr_tables.csv`, generated from independently maintained
+//! `qrcodegen` 1.8.0 and `python-qrcode` 8.2 development oracles.
 
 use crate::{Version, VersionError};
 use std::error::Error;

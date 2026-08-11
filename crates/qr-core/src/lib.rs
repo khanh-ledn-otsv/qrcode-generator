@@ -23,6 +23,7 @@ pub use encoding::{EciAssignment, EncodeRequest, EncodedSegment, EncodingMode};
 ///
 /// ISO/IEC 18004:2024, 5.3.2.1 defines versions 1 through 40 and their
 /// corresponding symbol sizes.
+/// 2024 clause mapping pending audit.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Version(u8);
 
@@ -47,6 +48,7 @@ impl Version {
     ///
     /// ISO/IEC 18004:2024, 5.3.2.1 defines Version 1 as 21 modules square
     /// and each subsequent version as four modules wider per side.
+    /// 2024 clause mapping pending audit.
     #[must_use]
     pub fn symbol_size(self) -> u16 {
         17 + u16::from(self.0) * 4

@@ -25,6 +25,11 @@
   zig-zag placement preserves data/remainder ownership, protects every function
   module, supports all eight explicit masks through a typed core API, and
   matches dual-oracle fixtures at Versions 1, 2, 7, and 40.
+- [Ticket 10](issues/10-select-masks-with-bch-and-penalties.md): The owner
+  resolved the Rule 3 oracle disagreement in favor of literal complete
+  11-module windows without virtual quiet-zone padding; the differing Nayuki
+  totals remain preserved as a named historical exception in
+  [the disagreement record](penalty-oracle-disagreement.md).
 - [Ticket 12](issues/12-create-safe-render-model.md): A borrowed immutable
   render model preserves encoded ownership and diagnostics, centralizes the
   exact quiet-zone extent, separates tight SVG from fixed-canvas PNG placement,
@@ -132,18 +137,18 @@
 ## Deferred review tasks
 
 - [Ticket 33](issues/33-bound-preview-resource-work.md): Reject oversized input
-  before request cloning and avoid unnecessary main-thread PNG preview work.
-- [Ticket 34](issues/34-complete-coverage-and-mutation-gates.md): Close the
-  documented coverage and mutation gaps and include them in release readiness.
-- [Ticket 35](issues/35-improve-capacity-and-recovery-guidance.md): Add
-  mode-aware remaining capacity and avoid suggesting Adaptive when it cannot
-  succeed.
+  before request cloning, measure dense mixed-mode Chromium previews, and avoid
+  unnecessary main-thread PNG work only if the measurement justifies it.
+- [Ticket 34](issues/34-complete-coverage-and-mutation-gates.md): Triage the
+  three surviving BCH mutations and bind passing coverage/mutation summaries
+  to release-readiness evidence; all current quantitative thresholds pass.
+- [Ticket 35](issues/35-improve-capacity-and-recovery-guidance.md): Avoid
+  suggesting Adaptive when the exact payload/logo policy cannot succeed while
+  retaining honest bit-based capacity diagnostics instead of an unstable
+  character estimate.
 - [Ticket 36](issues/36-reconcile-standards-and-logo-evidence.md): Qualify
-  unaudited ISO clause mappings and repair missing adaptive-logo evidence links.
-
-## Fog
-
-- [Ticket 10 penalty-oracle disagreement](penalty-oracle-disagreement.md):
-  Nayuki 1.8.0 and python-qrcode 8.2 agree on completed matrices but disagree
-  on exposed Rule 3 penalty totals, blocking fixture acceptance under the
-  public-source provenance policy.
+  unaudited ISO clause mappings; adaptive-logo references and authoritative
+  documentation link validation are already repaired.
+- [Ticket 38](issues/38-close-hosted-verification-trigger-gaps.md): Ensure
+  policy/documentation changes reach hosted verification and decide whether
+  pre-merge pull-request correctness is part of the repository workflow.

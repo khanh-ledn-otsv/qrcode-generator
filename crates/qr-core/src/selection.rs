@@ -1,7 +1,8 @@
 //! Deterministic QR mask selection over completed candidates.
 //!
-//! ISO/IEC 18004:2024 mask evaluation and selection; 2024 clause mapping
-//! pending audit. Compared against Nayuki 1.8.0
+//! ISO/IEC 18004:2024 mask evaluation and selection.
+//! 2024 clause mapping pending audit.
+//! Compared against Nayuki 1.8.0
 //! `rust/src/lib.rs::{draw_format_bits,draw_version,get_penalty_score}` and
 //! python-qrcode 8.2 `qrcode/main.py::{makeImpl,best_mask_pattern}` plus
 //! `qrcode/util.py::lost_point`. Their completed matrices agree but exposed
