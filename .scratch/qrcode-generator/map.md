@@ -129,6 +129,10 @@
   exact payload bytes, emits UTF-8 ECI 26 once when required, and reports mixed
   symbols explicitly; complete routine, oracle, decode, adverse, coverage,
   mutation, and applicable nightly-fuzz gates pass.
+- [Ticket 36](issues/36-reconcile-standards-and-logo-evidence.md): Every
+  production ISO/IEC 18004:2024 citation now points to retained evidence and
+  labels its exact clause mapping pending audit; licensed-text confirmation
+  remains a separate future review rather than an unrecorded assumption.
 
 ## Notes
 
@@ -146,9 +150,6 @@
   suggesting Adaptive when the exact payload/logo policy cannot succeed while
   retaining honest bit-based capacity diagnostics instead of an unstable
   character estimate.
-- [Ticket 36](issues/36-reconcile-standards-and-logo-evidence.md): Qualify
-  unaudited ISO clause mappings; adaptive-logo references and authoritative
-  documentation link validation are already repaired.
 - [Ticket 38](issues/38-close-hosted-verification-trigger-gaps.md): Ensure
   policy/documentation changes reach hosted verification and decide whether
   pre-merge pull-request correctness is part of the repository workflow.

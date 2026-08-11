@@ -40,15 +40,15 @@ not be substituted for that audit.
 
 ## Answer
 
-Audited every ISO/IEC 18004:2024 reference in production Rust comments. Exact
-clause and annex references for version sizing, data encoding, QR tables, and
-the four-module quiet zone now carry the required
-`2024 clause mapping pending audit` label. Existing public-source identities,
-fixture paths, and non-normative provenance remain intact. Comments that
-already carried the qualifier were retained, and the Reed–Solomon and
-interleaving module wording was made consistent with the required label.
+All production Rust references to ISO/IEC 18004:2024 now carry the required
+`2024 clause mapping pending audit` label. Version sizing, data encoding, and
+quiet-zone comments now point to retained public-source, pinned-oracle,
+fixture, or executable evidence as applicable. Existing public-source
+identities, fixture paths, and non-normative provenance remain intact. The
+Reed–Solomon and interleaving module wording was made consistent with the
+required label.
 
-No licensed standard text was available, so this resolves the repository
-provenance-labeling task without claiming that the cited 2024 clause numbers
-have been confirmed. A later licensed-text audit may confirm or correct those
-mappings as a separate reviewed change.
+No licensed standard text was available, so this audit classifies every exact
+clause number as unverified rather than claiming licensed confirmation. A later
+licensed-text audit may confirm or correct those mappings as a separate
+reviewed change.

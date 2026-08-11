@@ -3,6 +3,9 @@ use std::fmt;
 
 // ISO/IEC 18004:2024, 5.3.8 requires a four-module quiet zone for QR Code.
 // 2024 clause mapping pending audit.
+// Public-source evidence is the DENSO WAVE FAQ recorded in
+// `docs/research/qr-public-source-provenance.md`; retained render tests verify
+// the geometry and decode artifacts with manifest-pinned ZXing-C++ 3.0.2.
 pub(crate) const QUIET_ZONE_MODULES_PER_SIDE: u32 = 4;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
