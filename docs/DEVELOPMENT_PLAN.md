@@ -33,13 +33,12 @@ Development can proceed with the decisions in this document. Physical validation
 
 ### 2.2 Text, byte mode, and ECI
 
-Use this deterministic first-release policy:
+Use this deterministic text and ECI policy:
 
 1. Preserve the exact input string; do not silently trim or normalize it.
 2. Empty input is invalid.
-3. Select Numeric only when every character is ASCII `0`–`9`.
-4. Otherwise select Alphanumeric only when every character is in the QR alphanumeric set (`0–9`, `A–Z`, space, `$%*+-./:`).
-5. Otherwise use Byte mode.
+3. Segment the payload across Numeric, Alphanumeric, and Byte modes with the
+   version-aware minimum-bit policy in section 2.3.
 6. For ASCII-only Byte payloads, emit the UTF-8/ASCII bytes without ECI.
 7. For any non-ASCII payload, emit ECI assignment 26 followed by UTF-8 Byte mode.
 8. In Byte mode, the character-count indicator contains the number of encoded bytes, not Unicode scalar values or grapheme count.
@@ -49,9 +48,19 @@ This policy is standards-explicit for non-ASCII and avoids spending ECI bits for
 
 ### 2.3 Segmentation
 
-Use one data mode for the complete payload in release 1. ECI is a control segment followed by the one data segment, not mixed data-mode optimization. Version selection must account for the actual ECI and data bits.
+Use version-aware dynamic programming to minimize the complete segment bit
+length across Numeric, Alphanumeric, and Byte segments. The calculation
+includes each mode indicator, the character-count width for the selected
+version band, payload bits, and one UTF-8 ECI 26 control segment when the exact
+input contains non-ASCII bytes. Segment boundaries remain UTF-8 boundaries.
 
-Mixed-mode dynamic programming is deferred. Add it later only if telemetry-free testing of representative internal URLs shows a meaningful reduction in rejected profiles or selected versions. Introducing it later changes output matrices but not decoded payloads, so deterministic golden fixtures must be versioned if it is added.
+Equal-bit plans resolve deterministically by fewer segments, then Numeric /
+Alphanumeric / Byte mode priority, then the longer first segment; the same rule
+recursively applies to the canonical suffix. Recompute the plan at the 9→10
+and 26→27 version-band transitions. Pure whole-payload encodings retain their
+previous codewords whenever that representation remains optimal. `EncodedQr`
+exposes typed segment summaries and the web diagnostic reports `Mixed` rather
+than attributing a mixed symbol to one mode.
 
 ### 2.4 Safe-workflow error-correction policy
 
@@ -80,7 +89,7 @@ The bundled logo is enabled by default and is the only release-1 choice that cha
 
 Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rust `png` crate. Do not use Canvas, browser SVG screenshots, or a general scene renderer for production PNG export.
 
-- Standard output uses deterministic 8×8 coverage for centered 0.75-module
+- Standard output uses deterministic 8×8 coverage for centered 0.90-module
   dots in `#BD0F72` outside the square finder regions on opaque white. Logo
   knockout cells are exact opaque-white rectangles. The complete image is
   never resized.
@@ -108,7 +117,7 @@ Rounded ONE modules with the unchanged fixed-profile Version 6 placement and
 the decode-backed adaptive placements.
 
 - `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
-- Rounded ONE uses centered 0.75-module dots for non-finder modules while
+- Rounded ONE uses centered 0.90-module dots for non-finder modules while
   keeping standard square finders. Separator modules remain blank. Encoded
   values and coordinates are unchanged.
 - The background is always opaque white; transparency is absent from the public
@@ -133,8 +142,9 @@ is enabled by default and can be disabled; transparent output is excluded.
 - Version 6 uses the unchanged `180 180 640 240` asset presentation box at
   exactly `13 × 4.875` modules, centered on both matrix axes at
   ten-thousandth-module precision. Its outward-snapped
-  opaque-white knockout is `(left 13, top 17, width 15, height 7)`, clears the
-  nearest protected module by six modules, and obscures 105 data modules and
+  centered opaque-white knockout remains `15 × 7` modules and removes the
+  cell range `(left 13, top 17, width 15, height 7)`, clears the nearest
+  protected module by six modules, and obscures 105 data modules and
   zero remainder modules. Every integer source width from 10 through 13
   modules decoded 48/48 native-PNG and SVG-rasterized samples across Inline,
   Content, Landing, and Print. Inline uses a 100 px SVG / 300 px PNG canvas and
@@ -154,12 +164,10 @@ is enabled by default and can be disabled; transparent output is excluded.
   to `(left 22, top 20.0625)`, with a function-safe `(21, 19, 15, 7)` knockout.
   Version 11 uses 276/414 dimensions and the same source size shifted six
   modules upward at `(24, 22.0625)`, with knockout `(23, 21, 15, 7)`.
-- Adaptive placement tries the exact center first, then searches integer module
-  offsets in increasing Euclidean distance with a stable center/above/below/
-  left/right tie order. It considers source widths from 13 down through the
-  reviewed 10-module legibility floor and selects the largest safe candidate.
-  Versions 7–11 select the nearest placement six modules upward; upward wins
-  the equal-distance tie with the equally decodable placement below center.
+- Adaptive placement preserves the reviewed Version 6 center and the fixed
+  six-module upward source offset for Versions 7–11. The source remains exactly
+  13 modules wide; retaining the 15×7 knockout does not trigger a nearer
+  placement or a smaller logo.
   The focused committed experiment in
   [`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json)
   records 10–13-module candidates above, centered, and below: all 112
@@ -206,7 +214,7 @@ PNG canvas surplus is background-only.
 These are implementation interpretations until merged back into the product specification.
 
 1. **No border layer and explicit SVG sizing:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only. Fixed-profile SVG `width` and `height` equal the compiled base dimensions; Adaptive dimensions are derived from the selected logical extent. Every SVG `viewBox` is the tight logical extent of the QR matrix plus exactly four quiet-zone modules on every side and contains no fixed-canvas surplus padding. Consumers scale the vector through `width` and `height`. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
-2. **Capacity diagnostics:** Display exact `used data bits / available data bits` and data codewords. “Remaining capacity” means additional characters in the currently selected whole-payload mode, computed by the same fit function; label it as an estimate for edits that could change mode.
+2. **Capacity diagnostics:** Display exact `used data bits / available data bits`, data codewords, and whether the symbol uses one mode or a mixed segment plan. “Remaining capacity” is an estimate because an edit can change the optimal segmentation.
 3. **Function-module protection:** Branding and logo knockout never modify function modules. The spec's general “protect function patterns” goal takes precedence over language that only makes finder overlap explicitly invalid.
 4. **Mask evaluation:** Apply each mask only to data/remainder modules, write the corresponding format bits, then score the complete final matrix. Choose the lowest score and lower mask ID on a tie.
 5. **Remainder bits:** Capacity tables and placement must explicitly include the standard remainder-bit count per version. Every non-function matrix cell must be assigned once, including remainder bits.
@@ -292,7 +300,8 @@ impl<'a> EncodeRequest<'a> {
 pub struct EncodedQr {
     pub version: Version,
     pub ecc: ErrorCorrection,
-    pub mode: DataMode,
+    pub mode: EncodingMode,
+    pub segments: Vec<EncodedSegment>,
     pub mask: MaskId,
     pub data_bits_used: u32,
     pub data_bits_capacity: u32,

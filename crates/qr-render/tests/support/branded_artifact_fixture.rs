@@ -10,24 +10,24 @@ pub const PAYLOAD: &str = "cross-target branded artifact";
 pub const ENABLED_PROFILE_INDICES: [usize; 5] = [0, 1, 2, 3, 4];
 pub const SHA256: [[&str; 2]; 5] = [
     [
-        "bee8532a83dd1a11b1953616f50bb32c8666bdb7b159033ace3ff2dd9231cbab",
-        "5d8b876247505411e62d2e11781063f5db525b147de1cb7050af5347dcc2b174",
+        "2b99c437c5acf5c9dd1a760c1a95e26631f8e3b6d8d1d52e2133a45cbc51a001",
+        "9f6ac2b6a5ec87295241df30c64b854860b2e816b28d8eaeea429ff8b3d71ed8",
     ],
     [
-        "7b3c0247549b399b4afd697eb09c2070901cab9ce24bb64066acb22cfdaedd4f",
-        "4ec62f4fbcfd579c8f76099c72f564c485a6b90b9ab2ae3ce9bc7196a72f8585",
+        "c355dc46f90879873a1e1ce7e951181f2d4f99b1c8f37e252652b761e36c0179",
+        "cea27bef2c98b9a45c3d6231633cf24679973e9ec2f9e4042d691d8e19b13df7",
     ],
     [
-        "0f987440039d4b3988777f3e87460e05d83eadc94c63176dd90fc6d7d9dc498f",
-        "b4bef6d193cbf9a4fe2b1b54355124f98f78e9380b4b3479d85685cf47f8e98e",
+        "6a04ec5ef969a9cd4d183cfe875f4800c39749cc386030c5ffc1f00a64b6e261",
+        "8edb35e689fb15837546053fc4de4a93e66f1b6f7a19e374d41d419e33750be6",
     ],
     [
-        "48c591b6e80d44ca2a6e53bbb95d0b9e84fbab674b5515f989f816521981c295",
-        "05f5dd50e689bc703ee11f865533c19e405b54c73a5cd79b6fc32e3368081020",
+        "684519e4a83da0e96cd431b3a0a9bab6d890cbf69b2c88ab15cc74f735bd98ad",
+        "3b9760350a61fbcd198357d26d4a6d21151d2f9b9844b4bde8b571bb12f74dec",
     ],
     [
-        "fa5845337fc3ca37edb7d26ff6355989bd2c38369e1f2ea001b36abdacbaabaa",
-        "b301cce425117f6aa9b894304f9b3f563d12d24f5b9d8906da19a0e75c2fbbe7",
+        "7fe0ca72be4a8467b8fd2f76945dd709dbeb66ecf1f36b0227ac47f0b63d8a88",
+        "7dd883fec5e2cb1a54151bdd22160fd969537b091b367578bac7dd5be5c8b3f2",
     ],
 ];
 

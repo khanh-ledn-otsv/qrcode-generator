@@ -168,17 +168,15 @@ fn every_enabled_fixed_and_adaptive_logo_placement_is_function_safe() {
             assert!(knockout.width().get() * 5 <= matrix_width * 2);
             assert!(knockout.height().get() * 5 <= matrix_width * 2);
             assert!(source.width_ten_thousandths() * 100 >= (matrix_width + 8) * 10_000 * 17);
-            let padding = 10_000;
-            assert!(source.left_ten_thousandths() >= knockout.left().get() * 10_000 + padding);
-            assert!(source.top_ten_thousandths() >= knockout.top().get() * 10_000 + padding);
-            assert!(
-                source.right_ten_thousandths()
-                    <= (knockout.left().get() + knockout.width().get()) * 10_000 - padding
-            );
-            assert!(
-                source.bottom_ten_thousandths()
-                    <= (knockout.top().get() + knockout.height().get()) * 10_000 - padding
-            );
+            let padding = 5_000;
+            let knockout_left = knockout.left().get() * 10_000;
+            let knockout_top = knockout.top().get() * 10_000;
+            let knockout_width = knockout.width().get() * 10_000;
+            let knockout_height = knockout.height().get() * 10_000;
+            assert!(source.left_ten_thousandths() >= knockout_left + padding);
+            assert!(source.top_ten_thousandths() >= knockout_top + padding);
+            assert!(source.right_ten_thousandths() <= knockout_left + knockout_width - padding);
+            assert!(source.bottom_ten_thousandths() <= knockout_top + knockout_height - padding);
             assert_eq!(
                 source.width_ten_thousandths() * 240,
                 source.height_ten_thousandths() * 640

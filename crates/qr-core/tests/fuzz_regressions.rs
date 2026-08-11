@@ -1,6 +1,6 @@
 use qr_core::encoding::EncodingError;
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_core::{EciAssignment, EncodeError, EncodeRequest, Version, encode};
+use qr_core::{EciAssignment, EncodeError, EncodeRequest, EncodingMode, Version, encode};
 
 #[test]
 fn committed_fuzz_regressions_replay_intended_paths_without_panics() {
@@ -45,7 +45,7 @@ fn committed_fuzz_regressions_replay_intended_paths_without_panics() {
             )),
             Some((mode, eci)) => {
                 let encoded = result.expect("named corpus input must encode");
-                assert_eq!(encoded.mode(), mode);
+                assert_eq!(encoded.mode(), EncodingMode::Single(mode));
                 assert_eq!(encoded.eci_assignment(), eci);
             }
         }

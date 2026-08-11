@@ -3,9 +3,7 @@
 use libfuzzer_sys::fuzz_target;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, encode};
-use qr_render::{
-    Background, Foreground, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_svg,
-};
+use qr_render::{LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_svg};
 
 fuzz_target!(|data: &[u8]| {
     let Some((&control, payload)) = data.split_first() else {
@@ -13,17 +11,28 @@ fuzz_target!(|data: &[u8]| {
     };
     let text = String::from_utf8_lossy(payload);
     let profile = SUPPORTED_PROFILES[usize::from(control) % SUPPORTED_PROFILES.len()];
-    let Ok(encoded) = encode(EncodeRequest::first_fit(&text, ErrorCorrection::Medium, profile.maximum_version())) else {
-        return;
-    };
-    let background = if control & 0b100 == 0 {
-        Background::Opaque(Rgba::WHITE)
+    let logo = control & 0b100 != 0;
+    let ecc = if logo {
+        ErrorCorrection::High
     } else {
-        Background::Transparent
+        ErrorCorrection::Medium
     };
-    let Ok(options) = RenderOptions::approved(profile, Foreground::Brand, background) else {
+    let Ok(encoded) = encode(EncodeRequest::first_fit(
+        &text,
+        ecc,
+        profile.maximum_version(),
+    )) else {
         return;
     };
+    let Ok(mut options) = RenderOptions::safe(profile) else {
+        return;
+    };
+    if logo {
+        let Ok(logo_options) = options.with_logo(LogoStyle::Bundled) else {
+            return;
+        };
+        options = logo_options;
+    }
     let Ok(model) = RenderModel::new(&encoded, options) else {
         return;
     };

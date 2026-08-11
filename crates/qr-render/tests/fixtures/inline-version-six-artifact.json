@@ -9,8 +9,8 @@
   "version": 6,
   "ecc": "M",
   "logo": "none",
-  "svg_sha256": "aa68d6cf9c639f76fb37879e63f67bb9879a53b300b896d2bad74659f248bba0",
-  "png_sha256": "ce5ec70df43b2588a98845e34c4c71fe330c8c79a1fa20687c0d7df36adcc56a",
+  "svg_sha256": "f5bf04c4a52a5072a9343d5ce6e39a5ff6beeaa673981637787a1946e94769c9",
+  "png_sha256": "227b1d5167d233638ac734d3537c0e4a7e581421c498287f9f74199149c7a99e",
   "generation": {
     "tool": "qr-render native test fixture",
     "command": "cargo test -p qr-render --test profile_geometry print_unbranded_inline_version_six_hashes_for_fixture_refresh -- --ignored --exact --nocapture",
@@ -22,8 +22,8 @@
   ],
   "verification": {
     "state": "accepted",
-    "reviewer": "ticket-32-opaque-square-review",
-    "verified_at": "2026-08-10",
-    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target equality for the opaque-white Rounded ONE output, while independent decoder evidence separately establishes readability."
+    "reviewer": "ticket-37-readability-campaign",
+    "verified_at": "2026-08-11",
+    "notes": "Synthetic non-sensitive payload; this golden records deterministic cross-target equality for the decode-backed 0.90-module Rounded ONE output, while independent decoder evidence separately establishes readability."
   }
 }

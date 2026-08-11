@@ -42,7 +42,6 @@ const SOURCE_VIEW_BOX_WIDTH: u32 = 640;
 const SOURCE_VIEW_BOX_HEIGHT: u32 = 240;
 const TEN_THOUSANDTHS_PER_MODULE: u32 = 10_000;
 const SOURCE_WIDTH_TEN_THOUSANDTHS: u32 = 130_000;
-const MINIMUM_ADAPTIVE_SOURCE_WIDTH_TEN_THOUSANDTHS: u32 = 100_000;
 
 pub const BRANDED_LOGO_VERSION: Version = match Version::new(6) {
     Ok(version) => version,
@@ -227,85 +226,26 @@ fn calculate_adaptive_logo_placement(matrix: &ModuleMatrix) -> Result<LogoPlacem
     let matrix_width_units = matrix_width
         .checked_mul(TEN_THOUSANDTHS_PER_MODULE)
         .ok_or(RenderError::DimensionOverflow)?;
-    let maximum_offset = i32::try_from(matrix_width).map_err(|_| RenderError::DimensionOverflow)?;
-    let mut source_width = SOURCE_WIDTH_TEN_THOUSANDTHS;
-
-    loop {
-        let source_height = source_width
-            .checked_mul(SOURCE_VIEW_BOX_HEIGHT)
-            .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
-            .ok_or(RenderError::DimensionOverflow)?;
-        let centered_left = matrix_width_units
-            .checked_sub(source_width)
-            .map(|difference| difference / 2)
-            .ok_or(RenderError::UnsafeLogoGeometry)?;
-        let centered_top = matrix_width_units
-            .checked_sub(source_height)
-            .map(|difference| difference / 2)
-            .ok_or(RenderError::UnsafeLogoGeometry)?;
-        let mut best: Option<((u64, u8, u32, u32), LogoPlacement)> = None;
-
-        for vertical_offset in -maximum_offset..=maximum_offset {
-            for horizontal_offset in -maximum_offset..=maximum_offset {
-                let Some(left) = shifted_coordinate(centered_left, horizontal_offset) else {
-                    continue;
-                };
-                let Some(top) = shifted_coordinate(centered_top, vertical_offset) else {
-                    continue;
-                };
-                if left
-                    .checked_add(source_width)
-                    .is_none_or(|right| right > matrix_width_units)
-                    || top
-                        .checked_add(source_height)
-                        .is_none_or(|bottom| bottom > matrix_width_units)
-                {
-                    continue;
-                }
-                let Ok(placement) = placement_for_source(matrix, left, top, source_width) else {
-                    continue;
-                };
-                let score = placement_score(horizontal_offset, vertical_offset);
-                if best
-                    .as_ref()
-                    .is_none_or(|(best_score, _)| score < *best_score)
-                {
-                    best = Some((score, placement));
-                }
-            }
-        }
-        if let Some((_, placement)) = best {
-            return Ok(placement);
-        }
-        if source_width == MINIMUM_ADAPTIVE_SOURCE_WIDTH_TEN_THOUSANDTHS {
-            break;
-        }
-        source_width = source_width
-            .checked_sub(TEN_THOUSANDTHS_PER_MODULE)
-            .ok_or(RenderError::DimensionOverflow)?;
-    }
-    Err(RenderError::UnsafeLogoGeometry)
-}
-
-fn shifted_coordinate(coordinate: u32, offset_modules: i32) -> Option<u32> {
-    let offset = i64::from(offset_modules) * i64::from(TEN_THOUSANDTHS_PER_MODULE);
-    u32::try_from(i64::from(coordinate) + offset).ok()
-}
-
-fn placement_score(horizontal_offset: i32, vertical_offset: i32) -> (u64, u8, u32, u32) {
-    let horizontal = horizontal_offset.unsigned_abs();
-    let vertical = vertical_offset.unsigned_abs();
-    let distance =
-        u64::from(horizontal) * u64::from(horizontal) + u64::from(vertical) * u64::from(vertical);
-    let direction = match (horizontal_offset, vertical_offset) {
-        (0, value) if value < 0 => 0,
-        (0, value) if value > 0 => 1,
-        (value, 0) if value < 0 => 2,
-        (value, 0) if value > 0 => 3,
-        (_, value) if value < 0 => 4,
-        _ => 5,
+    let source_height = SOURCE_WIDTH_TEN_THOUSANDTHS
+        .checked_mul(SOURCE_VIEW_BOX_HEIGHT)
+        .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
+        .ok_or(RenderError::DimensionOverflow)?;
+    let centered_left = matrix_width_units
+        .checked_sub(SOURCE_WIDTH_TEN_THOUSANDTHS)
+        .map(|difference| difference / 2)
+        .ok_or(RenderError::UnsafeLogoGeometry)?;
+    let centered_top = matrix_width_units
+        .checked_sub(source_height)
+        .map(|difference| difference / 2)
+        .ok_or(RenderError::UnsafeLogoGeometry)?;
+    let top = if matrix.version() == BRANDED_LOGO_VERSION {
+        centered_top
+    } else {
+        centered_top
+            .checked_sub(6 * TEN_THOUSANDTHS_PER_MODULE)
+            .ok_or(RenderError::UnsafeLogoGeometry)?
     };
-    (distance, direction, vertical, horizontal)
+    placement_for_source(matrix, centered_left, top, SOURCE_WIDTH_TEN_THOUSANDTHS)
 }
 
 fn placement_for_source(
@@ -319,13 +259,12 @@ fn placement_for_source(
         .checked_mul(SOURCE_VIEW_BOX_HEIGHT)
         .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
         .ok_or(RenderError::DimensionOverflow)?;
-    let knockout_padding = TEN_THOUSANDTHS_PER_MODULE;
     let knockout = knockout_for_source(
         source_left,
         source_top,
         source_width,
         source_height,
-        knockout_padding,
+        TEN_THOUSANDTHS_PER_MODULE,
     )?;
 
     let (data_count, remainder_count, clearance) =

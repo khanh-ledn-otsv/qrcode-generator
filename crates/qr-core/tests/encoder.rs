@@ -2,7 +2,7 @@ use proptest::prelude::*;
 use qr_core::encoding::EncodingError;
 use qr_core::matrix::ModuleKind;
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_core::{EncodeError, EncodeRequest, Version, encode};
+use qr_core::{EncodeError, EncodeRequest, EncodingMode, Version, encode};
 
 #[test]
 fn public_encoder_returns_diagnostics_and_a_complete_immutable_matrix() {
@@ -18,9 +18,12 @@ fn public_encoder_returns_diagnostics_and_a_complete_immutable_matrix() {
         Version::new(1).expect("Version 1 is valid")
     );
     assert_eq!(encoded.ecc(), ErrorCorrection::Medium);
-    assert_eq!(encoded.mode(), DataMode::Alphanumeric);
+    assert_eq!(encoded.mode(), EncodingMode::Single(DataMode::Alphanumeric));
+    assert_eq!(encoded.segments().len(), 1);
+    assert_eq!(encoded.segments()[0].mode(), DataMode::Alphanumeric);
     assert_eq!(encoded.data_bits_used(), 74);
     assert_eq!(encoded.data_bits_capacity(), 128);
+    assert!(!encoded.minimum_version_increased_selection());
     assert_eq!(encoded.modules().version(), encoded.version());
     assert_eq!(encoded.modules().size(), 21);
     assert_eq!(
@@ -116,7 +119,12 @@ fn public_encoder_matches_dual_oracle_composed_matrix_goldens() {
             "byte" | "utf8" => DataMode::Byte,
             value => panic!("unknown golden mode {value}"),
         };
-        assert_eq!(encoded.mode(), expected_mode, "golden {}", fields[0]);
+        assert_eq!(
+            encoded.mode(),
+            EncodingMode::Single(expected_mode),
+            "golden {}",
+            fields[0]
+        );
         assert_eq!(encoded.ecc(), ecc, "golden {}", fields[0]);
         assert_eq!(
             encoded.version().number().to_string(),
@@ -145,6 +153,28 @@ fn public_encoder_matches_dual_oracle_composed_matrix_goldens() {
             fields[7],
             "golden {}",
             fields[0]
+        );
+    }
+}
+
+#[test]
+fn public_encoder_matches_pinned_mixed_mode_oracle_matrices() {
+    for (payload, expected_version, expected_mask, expected_fingerprint) in [
+        ("HELLOworld1234567890", 1, 7, "12f40d557dbbb6e3"),
+        ("HELLOé1234567890", 1, 2, "8c9bfa9b862e78ef"),
+    ] {
+        let encoded = encode(EncodeRequest::first_fit(
+            payload,
+            ErrorCorrection::Low,
+            Version::new(40).expect("Version 40 is valid"),
+        ))
+        .expect("mixed oracle payload encodes");
+        assert_eq!(encoded.mode(), EncodingMode::Mixed);
+        assert_eq!(encoded.version().number(), expected_version);
+        assert_eq!(encoded.mask().number(), expected_mask);
+        assert_eq!(
+            format!("{:016x}", matrix_fingerprint(&encoded)),
+            expected_fingerprint
         );
     }
 }

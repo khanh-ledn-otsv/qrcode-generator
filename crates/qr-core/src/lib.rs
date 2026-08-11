@@ -17,7 +17,7 @@ pub mod selection;
 pub mod tables;
 
 pub use encoder::{EncodeError, EncodedQr, encode};
-pub use encoding::{EciAssignment, EncodeRequest};
+pub use encoding::{EciAssignment, EncodeRequest, EncodedSegment, EncodingMode};
 
 /// A QR Code Model 2 symbol version.
 ///

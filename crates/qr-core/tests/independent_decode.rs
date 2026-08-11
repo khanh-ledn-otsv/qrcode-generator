@@ -38,6 +38,16 @@ fn run_cases(reader: &Path, output: &Path) -> Result<(), Box<dyn Error>> {
             Version::MINIMUM,
         ),
         (
+            "HELLOworld1234567890".to_owned(),
+            ErrorCorrection::Low,
+            Version::MINIMUM,
+        ),
+        (
+            "HELLOé1234567890".to_owned(),
+            ErrorCorrection::Low,
+            Version::MINIMUM,
+        ),
+        (
             "  branded payload\r\nkeeps bytes  ".to_owned(),
             ErrorCorrection::High,
             Version::new(6)?,

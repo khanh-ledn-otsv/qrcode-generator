@@ -3,7 +3,7 @@
 use qr_core::encoding::{EciAssignment, EncodingError};
 use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_core::{EncodeError, EncodeRequest, Version, encode};
+use qr_core::{EncodeError, EncodeRequest, EncodingMode, Version, encode};
 use qr_render::{
     BRANDED_LOGO_VERSION, ContrastRatio, LogoPlacement, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
     OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
@@ -175,7 +175,7 @@ impl PreviewRequest {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Diagnostics {
-    mode: DataMode,
+    mode: EncodingMode,
     eci_assignment: Option<EciAssignment>,
     ecc: ErrorCorrection,
     mask: MaskId,
@@ -202,7 +202,7 @@ pub struct Diagnostics {
 
 impl Diagnostics {
     #[must_use]
-    pub const fn mode(self) -> DataMode {
+    pub const fn mode(self) -> EncodingMode {
         self.mode
     }
 
@@ -744,12 +744,13 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
 }
 
 #[must_use]
-pub const fn mode_label(mode: DataMode) -> &'static str {
+pub const fn mode_label(mode: EncodingMode) -> &'static str {
     match mode {
-        DataMode::Numeric => "Numeric",
-        DataMode::Alphanumeric => "Alphanumeric",
-        DataMode::Byte => "Byte",
-        DataMode::Kanji => "Kanji",
+        EncodingMode::Single(DataMode::Numeric) => "Numeric",
+        EncodingMode::Single(DataMode::Alphanumeric) => "Alphanumeric",
+        EncodingMode::Single(DataMode::Byte) => "Byte",
+        EncodingMode::Single(DataMode::Kanji) => "Kanji",
+        EncodingMode::Mixed => "Mixed",
     }
 }
 

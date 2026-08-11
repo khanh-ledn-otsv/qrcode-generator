@@ -118,6 +118,12 @@
   removable bundled logo. Transparent and phantom appearance dimensions are
   gone; routine and extended hosted gates use pinned, verified caches and run
   ZXing, quirc, adverse, browser, WASM, and reproducibility evidence.
+- [Ticket 37](issues/37-improve-branded-qr-readability.md): Rounded ONE now uses
+  the largest passing 0.90-module circle while retaining the visually safe
+  15×7 knockout. Version-aware Numeric/Alphanumeric/Byte segmentation preserves
+  exact payload bytes, emits UTF-8 ECI 26 once when required, and reports mixed
+  symbols explicitly; complete routine, oracle, decode, adverse, coverage,
+  mutation, and applicable nightly-fuzz gates pass.
 
 ## Notes
 

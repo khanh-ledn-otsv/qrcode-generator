@@ -11,11 +11,11 @@ use qr_render::{GlyphOwnership, RenderModel, RenderOptions, Rgba, SUPPORTED_PROF
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
 const APPROVED_PNG_SHA256: [&str; 5] = [
-    "8b5fb2d1b15846e8a042b8e8760a007f5bbb0daafc9a52efe4b030a9d373bf83",
-    "d54f8f4e9f1a611fe9d01ed834a0f2689db792a25dff858d80bf272db5b55dde",
-    "7d2d2509ce3f2c137e6b1c101e6a1f40c463a629224758ee4495a030bf8d6534",
-    "096241af7fe54c60049ed8f5f3129cd8edbb4be8c6acfb8b4fe60a8eb3b142b5",
-    "b2449d3047a832ccad08721669878f91cd3a635181bfaabfa0fb53a36a957f68",
+    "48e5185bcdd5a796e9c27bd0cb514ad670d57f1623c15e9db2e00ee15af55c32",
+    "a46afd15bc93b51a6d078bfb8d7816a80e868f9ca5ca56a86589b750a12c30f9",
+    "61f1048b72cbe60312e37fa698f0682b969b33af14b761a2d9850d19b7ae27c2",
+    "d43efaad97e5422da89785f9a1806056796d053ae8844b834657e025231cab34",
+    "7d55795a9e500124bf9e217f7330d1c8299dfdd806567dd93c5331814beef591",
 ];
 
 #[test]
@@ -108,6 +108,20 @@ fn rounded_one_png_uses_opaque_antialiased_dots_outside_finders() {
         pixel(&pixels, width, rounded_left, rounded_top),
         Rgba::WHITE.channels()
     );
+    for offset_y in [scale / 2 - 1, scale / 2] {
+        for offset_x in [scale / 2 - 1, scale / 2] {
+            assert_eq!(
+                pixel(
+                    &pixels,
+                    width,
+                    rounded_left + offset_x,
+                    rounded_top + offset_y,
+                ),
+                Rgba::BRAND.channels(),
+                "the approved circle retains a solid brand-color core"
+            );
+        }
+    }
 }
 
 #[test]

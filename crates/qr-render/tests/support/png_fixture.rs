@@ -4,7 +4,7 @@ use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 use sha2::{Digest, Sha256};
 
 pub const PAYLOAD: &str = r#"safe/<script>alert("payload")</script>"#;
-pub const SHA256: &str = "4d7a544a268b4d518980e5185346240cfd3e3a10fa433975b26430b4166c14fe";
+pub const SHA256: &str = "aa6b541af70eecde35a7d05f73fa8dcca5d7faa66819ea8ace380b4ddd3d6bc1";
 
 pub fn artifact() -> Vec<u8> {
     let encoded = encode(EncodeRequest::first_fit(

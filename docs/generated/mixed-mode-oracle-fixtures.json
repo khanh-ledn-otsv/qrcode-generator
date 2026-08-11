@@ -1,0 +1,75 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-08-11",
+  "synthetic": true,
+  "classification": "public-corroborated, non-normative",
+  "generation_command": "uv run --project tests/oracles --locked python tests/support/verify_mixed_mode_oracles.py",
+  "generators": [
+    {
+      "tool": "Nayuki QR Code Generator",
+      "distribution": "qrcodegen",
+      "version": "1.8.0",
+      "executed_source_url": "https://github.com/nayuki/QR-Code-generator/blob/v1.8.0/python/qrcodegen.py",
+      "executed_symbols": ["QrSegment.make_eci", "QrSegment.make_bytes", "QrSegment.make_numeric", "QrCode.encode_segments"]
+    },
+    {
+      "tool": "python-qrcode",
+      "distribution": "qrcode",
+      "version": "8.2",
+      "executed_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/main.py",
+      "supporting_source_url": "https://github.com/lincolnloop/python-qrcode/blob/v8.2/qrcode/util.py",
+      "executed_symbols": ["QRData", "BitBuffer", "create_bytes", "QRCode.makeImpl"]
+    }
+  ],
+  "mask_policy": "All eight explicit-mask matrices agree across both generators; selection uses the independently written literal-window penalty reference recorded by the project.",
+  "decoder": {
+    "tool": "ZXing-C++",
+    "version": "3.0.2",
+    "source_commit": "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825",
+    "verification_command": "cargo test -p qr-core --test independent_decode -- --ignored"
+  },
+  "render_verification_command": "cargo test -p qr-render --test mixed_mode_artifacts",
+  "cases": [
+    {
+      "id": "mixed-ascii-byte-numeric-v01-l",
+      "payload": "HELLOworld1234567890",
+      "payload_sha256": "a4401ac7c1c01ae5b5fabe257badfaaf11107a203632975279934de58e593c5c",
+      "ecc": "L",
+      "segments": [
+        { "mode": "byte", "byte_count": 10 },
+        { "mode": "numeric", "character_count": 10 }
+      ],
+      "eci_assignment": null,
+      "data_bits_used": 140,
+      "data_codewords_hex": "40A48454C4C4F776F726C6410287B7231500EC",
+      "selected_version": 1,
+      "selected_mask": 7,
+      "matrix_fnv1a64": "12f40d557dbbb6e3",
+      "decoded_bytes": "HELLOworld1234567890",
+      "decoder_outcome": "passed",
+      "content_svg_sha256": "7119f59cd331173ff2aa7748b66cf3629cdd9d01d21a66f28be7de6b5947c104",
+      "content_png_sha256": "0a15b62ea024e61171ca10ad407c8efb5e2a56fa4eeac9206473e5b631829861"
+    },
+    {
+      "id": "mixed-utf8-byte-numeric-v01-l",
+      "payload": "HELLOé1234567890",
+      "payload_sha256": "a818aa2a8cb3316669f675036aefb761089d3c63615dbbe318fa3316cf18f87d",
+      "ecc": "L",
+      "segments": [
+        { "mode": "eci", "assignment": 26 },
+        { "mode": "byte", "byte_count": 7 },
+        { "mode": "numeric", "character_count": 10 }
+      ],
+      "eci_assignment": 26,
+      "data_bits_used": 128,
+      "data_codewords_hex": "71A40748454C4C4FC3A910287B72315000EC11",
+      "selected_version": 1,
+      "selected_mask": 2,
+      "matrix_fnv1a64": "8c9bfa9b862e78ef",
+      "decoded_bytes_utf8": "HELLOé1234567890",
+      "decoder_outcome": "passed",
+      "content_svg_sha256": "34134d49a2c11ce3d2f42b75710aba86e517d9763022dff81b7bc9ab13402006",
+      "content_png_sha256": "6c8b253d5bd9e7cdc8fcbff26e1e81bf996960b389c95c9d7bc8c1f4e3bb8c06"
+    }
+  ]
+}

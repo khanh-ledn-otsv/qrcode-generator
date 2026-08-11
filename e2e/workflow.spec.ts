@@ -11,6 +11,7 @@ test("reports representative modes, UTF-8 counts, and latest debounced input", a
     ["1234567890", "Numeric"],
     ["HELLO WORLD", "Alphanumeric"],
     ["https://example.test/a", "Byte"],
+    ["HELLOworld1234567890", "Mixed"],
     ["café", "Byte"],
   ] as const;
 
@@ -325,7 +326,7 @@ test("always uses rounded ONE modules without an appearance control", async ({ p
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const modulePath = page.getByTestId("qr-preview").locator("path").first();
   await expect(modulePath).not.toHaveAttribute("shape-rendering", "crispEdges");
-  await expect(modulePath).toHaveAttribute("d", /a0\.375 0\.375/);
+  await expect(modulePath).toHaveAttribute("d", /a0\.450 0\.450/);
   await expect(modulePath).toHaveAttribute("d", /M4 4h1v1h-1z/);
 });
 

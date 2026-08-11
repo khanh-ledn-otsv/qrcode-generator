@@ -152,6 +152,14 @@ fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() 
     assert_eq!(rendered_logo.attribute("y"), Some("22.0625"));
     assert_eq!(rendered_logo.attribute("width"), Some("13"));
     assert_eq!(rendered_logo.attribute("height"), Some("4.8750"));
+    let rendered_knockout = rendered_document
+        .descendants()
+        .find(|node| node.attribute("data-role") == Some("logo-knockout"))
+        .unwrap();
+    assert_eq!(rendered_knockout.attribute("x"), Some("17"));
+    assert_eq!(rendered_knockout.attribute("y"), Some("21"));
+    assert_eq!(rendered_knockout.attribute("width"), Some("15"));
+    assert_eq!(rendered_knockout.attribute("height"), Some("7"));
     let source_shapes = shape_attributes(source_document.root_element());
     let rendered_shapes = shape_attributes(rendered_logo);
     assert_eq!(rendered_shapes, source_shapes);

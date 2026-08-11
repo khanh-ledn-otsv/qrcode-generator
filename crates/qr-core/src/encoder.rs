@@ -1,13 +1,16 @@
-//! Focused whole-payload QR encoding interface.
+//! Focused segmented QR encoding interface.
 
 use crate::Version;
 use crate::codeword_stream::{
     CodewordStreamError, CodewordStreamRequest, construct as construct_codewords,
 };
-use crate::encoding::{EciAssignment, EncodeRequest, EncodingError, encode as encode_data};
+use crate::encoding::{
+    EciAssignment, EncodeRequest, EncodedSegment, EncodingError, EncodingMode,
+    encode as encode_data,
+};
 use crate::matrix::{MaskId, ModuleMatrix};
 use crate::selection::{SelectionError, select_mask};
-use crate::tables::{DataMode, ErrorCorrection};
+use crate::tables::ErrorCorrection;
 use std::error::Error;
 use std::fmt;
 
@@ -15,7 +18,8 @@ use std::fmt;
 pub struct EncodedQr {
     version: Version,
     ecc: ErrorCorrection,
-    mode: DataMode,
+    mode: EncodingMode,
+    segments: Vec<EncodedSegment>,
     eci_assignment: Option<EciAssignment>,
     mask: MaskId,
     data_bits_used: u32,
@@ -36,8 +40,13 @@ impl EncodedQr {
     }
 
     #[must_use]
-    pub const fn mode(&self) -> DataMode {
+    pub const fn mode(&self) -> EncodingMode {
         self.mode
+    }
+
+    #[must_use]
+    pub fn segments(&self) -> &[EncodedSegment] {
+        &self.segments
     }
 
     #[must_use]
@@ -84,6 +93,7 @@ pub fn encode(request: EncodeRequest<'_>) -> Result<EncodedQr, EncodeError> {
         version: encoded.version(),
         ecc: encoded.ecc(),
         mode: encoded.mode(),
+        segments: encoded.segments().to_vec(),
         eci_assignment: encoded.eci_assignment(),
         mask,
         data_bits_used: encoded.data_bits_used(),

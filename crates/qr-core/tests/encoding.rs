@@ -1,6 +1,6 @@
 use proptest::prelude::*;
 use qr_core::Version;
-use qr_core::encoding::{EciAssignment, EncodeRequest, EncodingError, encode};
+use qr_core::encoding::{EciAssignment, EncodeRequest, EncodingError, EncodingMode, encode};
 use qr_core::tables::{DataMode, ErrorCorrection};
 
 #[test]
@@ -14,7 +14,7 @@ fn minimum_version_raises_a_small_payload_without_changing_its_encoding_policy()
     .expect("small payload fits the requested range");
 
     assert_eq!(encoded.version().number(), 6);
-    assert_eq!(encoded.mode(), DataMode::Byte);
+    assert_eq!(encoded.mode(), EncodingMode::Single(DataMode::Byte));
     assert_eq!(encoded.eci_assignment(), None);
     assert_eq!(encoded.data_bits_used(), 76);
     assert!(encoded.minimum_version_increased_selection());
@@ -83,7 +83,7 @@ fn numeric_payload_uses_the_first_fitting_version_and_exact_padded_codewords() {
     ))
     .expect("numeric payload fits");
 
-    assert_eq!(encoded.mode(), DataMode::Numeric);
+    assert_eq!(encoded.mode(), EncodingMode::Single(DataMode::Numeric));
     assert_eq!(encoded.version().number(), 1);
     assert_eq!(encoded.eci_assignment(), None);
     assert_eq!(encoded.data_bits_used(), 41);
@@ -175,9 +175,205 @@ fn whole_payload_mode_selection_and_eci_match_oracle_codewords() {
             Version::new(40).expect("Version 40 is valid"),
         ))
         .expect("test payload fits");
-        assert_eq!(encoded.mode(), expected_mode);
+        assert_eq!(encoded.mode(), EncodingMode::Single(expected_mode));
         assert_eq!(encoded.eci_assignment(), expected_eci);
         assert_eq!(encoded.data_codewords(), expected_codewords);
+    }
+}
+
+#[test]
+fn mixed_ascii_payload_uses_typed_minimum_bit_segments() {
+    let encoded = encode(EncodeRequest::first_fit(
+        "HELLOworld1234567890",
+        ErrorCorrection::Low,
+        Version::new(40).expect("Version 40 is valid"),
+    ))
+    .expect("mixed payload fits");
+
+    assert_eq!(encoded.mode(), EncodingMode::Mixed);
+    assert_eq!(
+        encoded
+            .segments()
+            .iter()
+            .map(|segment| (
+                segment.mode(),
+                segment.character_count(),
+                segment.byte_count(),
+            ))
+            .collect::<Vec<_>>(),
+        [(DataMode::Byte, 10, 10), (DataMode::Numeric, 10, 10),]
+    );
+    assert_eq!(encoded.eci_assignment(), None);
+    assert_eq!(encoded.data_bits_used(), 140);
+    // Explicit segments independently encoded with pinned qrcodegen 1.8.0.
+    assert_eq!(
+        encoded.data_codewords(),
+        [
+            64, 164, 132, 84, 196, 196, 247, 118, 247, 38, 198, 65, 2, 135, 183, 35, 21, 0, 236,
+        ]
+    );
+}
+
+#[test]
+fn mixed_utf8_payload_emits_one_eci_before_its_first_byte_segment() {
+    let encoded = encode(EncodeRequest::first_fit(
+        "HELLOé1234567890",
+        ErrorCorrection::Low,
+        Version::new(40).expect("Version 40 is valid"),
+    ))
+    .expect("mixed UTF-8 payload fits");
+
+    assert_eq!(encoded.mode(), EncodingMode::Mixed);
+    assert_eq!(encoded.eci_assignment(), Some(EciAssignment::Utf8));
+    assert_eq!(
+        encoded
+            .segments()
+            .iter()
+            .map(|segment| (
+                segment.mode(),
+                segment.character_count(),
+                segment.byte_count()
+            ))
+            .collect::<Vec<_>>(),
+        [(DataMode::Byte, 7, 7), (DataMode::Numeric, 10, 10),]
+    );
+    assert_eq!(encoded.data_bits_used(), 128);
+    // Explicit ECI + Byte + Numeric segments from pinned qrcodegen 1.8.0.
+    assert_eq!(
+        encoded.data_codewords(),
+        [
+            113, 164, 7, 72, 69, 76, 76, 79, 195, 169, 16, 40, 123, 114, 49, 80, 0, 236, 17,
+        ]
+    );
+}
+
+#[test]
+fn segmentation_reoptimizes_at_character_count_width_transitions() {
+    for (payload, before, after, before_modes, after_modes) in [
+        (
+            "AAAAAAa1",
+            9,
+            10,
+            vec![DataMode::Alphanumeric, DataMode::Byte],
+            vec![DataMode::Byte],
+        ),
+        (
+            "Aa1111",
+            26,
+            27,
+            vec![DataMode::Byte, DataMode::Numeric],
+            vec![DataMode::Byte],
+        ),
+    ] {
+        let encode_at = |number| {
+            let version = Version::new(number).expect("transition version is valid");
+            encode(EncodeRequest::with_version_range(
+                payload,
+                ErrorCorrection::Low,
+                version,
+                version,
+            ))
+            .expect("small payload fits the fixed version")
+        };
+        let before = encode_at(before);
+        let after = encode_at(after);
+
+        assert_eq!(
+            before
+                .segments()
+                .iter()
+                .map(|segment| segment.mode())
+                .collect::<Vec<_>>(),
+            before_modes
+        );
+        assert_eq!(
+            after
+                .segments()
+                .iter()
+                .map(|segment| segment.mode())
+                .collect::<Vec<_>>(),
+            after_modes
+        );
+    }
+}
+
+#[test]
+fn mixed_segments_cover_exact_fit_and_one_over_for_every_ecc_level() {
+    let version_one = Version::new(1).expect("Version 1 is valid");
+    for (ecc, byte_count, digit_count) in [
+        (ErrorCorrection::Low, 2, 33),
+        (ErrorCorrection::Medium, 1, 28),
+        (ErrorCorrection::Quartile, 1, 21),
+        (ErrorCorrection::High, 2, 9),
+    ] {
+        let exact_payload = format!("{}{}", "a".repeat(byte_count), "1".repeat(digit_count));
+        let exact = encode(EncodeRequest::first_fit(&exact_payload, ecc, version_one))
+            .expect("fixture exactly fills Version 1");
+        assert_eq!(exact.mode(), EncodingMode::Mixed);
+        assert_eq!(exact.data_bits_used(), exact.data_bits_capacity());
+
+        let one_over = format!("{exact_payload}1");
+        assert!(matches!(
+            encode(EncodeRequest::first_fit(&one_over, ecc, version_one)),
+            Err(EncodingError::PayloadTooLargeForProfile { required, maximum })
+                if required.number() == 2 && maximum == version_one
+        ));
+    }
+}
+
+#[test]
+fn mixed_utf8_eci_segments_cover_exact_fit_and_one_over_for_every_ecc_level() {
+    let version_one = Version::new(1).expect("Version 1 is valid");
+    for (ecc, ascii_byte_count, digit_count, expected_bits) in [
+        (ErrorCorrection::Low, 1, 27, 152),
+        (ErrorCorrection::Medium, 0, 22, 128),
+        (ErrorCorrection::Quartile, 0, 15, 104),
+        (ErrorCorrection::High, 0, 5, 71),
+    ] {
+        let exact_payload = format!(
+            "é{}{}",
+            "a".repeat(ascii_byte_count),
+            "1".repeat(digit_count)
+        );
+        let exact = encode(EncodeRequest::first_fit(&exact_payload, ecc, version_one))
+            .expect("mixed UTF-8 fixture exactly fills Version 1");
+        assert_eq!(exact.mode(), EncodingMode::Mixed);
+        assert_eq!(exact.eci_assignment(), Some(EciAssignment::Utf8));
+        assert_eq!(exact.data_bits_used(), expected_bits);
+
+        let one_over = format!("{exact_payload}1");
+        assert!(matches!(
+            encode(EncodeRequest::first_fit(&one_over, ecc, version_one)),
+            Err(EncodingError::PayloadTooLargeForProfile { required, maximum })
+                if required.number() == 2 && maximum == version_one
+        ));
+    }
+}
+
+#[test]
+fn mixed_segments_cover_fixed_and_adaptive_profile_ceiling_boundaries() {
+    for (version_number, ecc, byte_count, digit_count) in [
+        (6, ErrorCorrection::Medium, 1, 249),
+        (8, ErrorCorrection::Medium, 2, 357),
+        (12, ErrorCorrection::Medium, 3, 678),
+        (13, ErrorCorrection::Medium, 2, 786),
+        (6, ErrorCorrection::High, 3, 129),
+        (11, ErrorCorrection::High, 3, 318),
+    ] {
+        let maximum = Version::new(version_number).expect("profile ceiling is valid");
+        let exact_payload = format!("{}{}", "a".repeat(byte_count), "1".repeat(digit_count));
+        let exact = encode(EncodeRequest::first_fit(&exact_payload, ecc, maximum))
+            .expect("fixture exactly fills its profile ceiling");
+        assert_eq!(exact.version(), maximum);
+        assert_eq!(exact.mode(), EncodingMode::Mixed);
+        assert_eq!(exact.data_bits_used(), exact.data_bits_capacity());
+
+        let one_over = format!("{exact_payload}1");
+        assert!(matches!(
+            encode(EncodeRequest::first_fit(&one_over, ecc, maximum)),
+            Err(EncodingError::PayloadTooLargeForProfile { required, maximum: rejected })
+                if required.number() == version_number + 1 && rejected == maximum
+        ));
     }
 }
 
@@ -190,7 +386,7 @@ fn whitespace_and_line_breaks_are_encoded_without_trimming_or_normalization() {
     ))
     .expect("preserved payload fits");
 
-    assert_eq!(encoded.mode(), DataMode::Byte);
+    assert_eq!(encoded.mode(), EncodingMode::Single(DataMode::Byte));
     assert_eq!(
         encoded.data_codewords(),
         [
@@ -201,7 +397,7 @@ fn whitespace_and_line_breaks_are_encoded_without_trimming_or_normalization() {
 }
 
 #[test]
-fn complete_alphanumeric_alphabet_is_selected_as_one_segment() {
+fn complete_alphanumeric_alphabet_is_preserved_across_optimal_segments() {
     let encoded = encode(EncodeRequest::first_fit(
         "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:",
         ErrorCorrection::Low,
@@ -209,7 +405,21 @@ fn complete_alphanumeric_alphabet_is_selected_as_one_segment() {
     ))
     .expect("alphanumeric alphabet fits");
 
-    assert_eq!(encoded.mode(), DataMode::Alphanumeric);
+    assert_eq!(encoded.mode(), EncodingMode::Mixed);
+    assert!(
+        encoded
+            .segments()
+            .iter()
+            .all(|segment| segment.mode() != DataMode::Byte)
+    );
+    assert_eq!(
+        encoded
+            .segments()
+            .iter()
+            .map(|segment| segment.byte_count())
+            .sum::<u32>(),
+        45
+    );
     assert_eq!(encoded.eci_assignment(), None);
 }
 
@@ -400,6 +610,56 @@ fn version_forty_and_input_limit_boundaries_return_typed_results() {
 }
 
 #[test]
+fn mixed_segments_cover_version_forty_capacity_and_input_limits() {
+    let maximum = Version::new(40).expect("Version 40 is valid");
+    let exact_payload = format!("{}{}", "a".repeat(2_135), "1".repeat(1_959));
+    let exact = encode(EncodeRequest::first_fit(
+        &exact_payload,
+        ErrorCorrection::Low,
+        maximum,
+    ))
+    .expect("mixed payload exactly fills Version 40-L");
+    assert_eq!(exact.version(), maximum);
+    assert_eq!(exact.mode(), EncodingMode::Mixed);
+    assert_eq!(exact.data_bits_used(), exact.data_bits_capacity());
+
+    let one_over_qr = format!("{exact_payload}1");
+    assert_eq!(one_over_qr.len(), 4_095);
+    assert_eq!(
+        encode(EncodeRequest::first_fit(
+            &one_over_qr,
+            ErrorCorrection::Low,
+            maximum
+        )),
+        Err(EncodingError::PayloadTooLargeForQr)
+    );
+
+    let at_input_limit = format!("{}{}", "a".repeat(2_135), "1".repeat(1_961));
+    assert_eq!(at_input_limit.len(), 4_096);
+    assert_eq!(
+        encode(EncodeRequest::first_fit(
+            &at_input_limit,
+            ErrorCorrection::Low,
+            maximum
+        )),
+        Err(EncodingError::PayloadTooLargeForQr)
+    );
+
+    let over_input_limit = format!("{at_input_limit}1");
+    assert!(matches!(
+        encode(EncodeRequest::first_fit(
+            &over_input_limit,
+            ErrorCorrection::Low,
+            maximum
+        )),
+        Err(EncodingError::InputLimitExceeded {
+            byte_length: 4_097,
+            maximum: 4_096
+        })
+    ));
+}
+
+#[test]
 fn empty_payload_is_a_typed_error() {
     assert_eq!(
         encode(EncodeRequest::first_fit(
@@ -438,41 +698,74 @@ fn payload_strategy() -> impl Strategy<Value = String> {
     ]
 }
 
-fn independent_used_bits(text: &str, encoded: &qr_core::encoding::EncodedData) -> u32 {
-    let count = u32::try_from(text.len()).expect("generated payload is small");
+fn independent_used_bits(encoded: &qr_core::encoding::EncodedData) -> u32 {
     let band = match encoded.version().number() {
         1..=9 => 0,
         10..=26 => 1,
         _ => 2,
-    };
-    let (count_width, payload_bits) = match encoded.mode() {
-        DataMode::Numeric => (
-            [10, 12, 14]
-                .get(band)
-                .copied()
-                .expect("version band exists"),
-            (count / 3) * 10
-                + match count % 3 {
-                    0 => 0,
-                    1 => 4,
-                    _ => 7,
-                },
-        ),
-        DataMode::Alphanumeric => (
-            [9, 11, 13].get(band).copied().expect("version band exists"),
-            (count / 2) * 11 + if count % 2 == 0 { 0 } else { 6 },
-        ),
-        DataMode::Byte => (
-            [8, 16, 16].get(band).copied().expect("version band exists"),
-            count * 8,
-        ),
-        DataMode::Kanji => panic!("release-one encoder never selects Kanji"),
     };
     let eci_bits = if encoded.eci_assignment().is_some() {
         12
     } else {
         0
     };
+    encoded.segments().iter().fold(eci_bits, |bits, segment| {
+        let count = segment.character_count();
+        let (count_width, payload_bits) = match segment.mode() {
+            DataMode::Numeric => (
+                [10, 12, 14][band],
+                (count / 3) * 10
+                    + match count % 3 {
+                        0 => 0,
+                        1 => 4,
+                        _ => 7,
+                    },
+            ),
+            DataMode::Alphanumeric => (
+                [9, 11, 13][band],
+                (count / 2) * 11 + if count % 2 == 0 { 0 } else { 6 },
+            ),
+            DataMode::Byte => ([8, 16, 16][band], count * 8),
+            DataMode::Kanji => unreachable!("encoder never selects Kanji"),
+        };
+        bits + 4 + count_width + payload_bits
+    })
+}
+
+fn whole_payload_used_bits(text: &str, version: Version) -> u32 {
+    let bytes = text.as_bytes();
+    let band = match version.number() {
+        1..=9 => 0,
+        10..=26 => 1,
+        _ => 2,
+    };
+    let (count_width, payload_bits) = if bytes.iter().all(u8::is_ascii_digit) {
+        let count = u32::try_from(bytes.len()).expect("generated payload is small");
+        (
+            [10, 12, 14][band],
+            (count / 3) * 10
+                + match count % 3 {
+                    0 => 0,
+                    1 => 4,
+                    _ => 7,
+                },
+        )
+    } else if bytes
+        .iter()
+        .all(|byte| b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:".contains(byte))
+    {
+        let count = u32::try_from(bytes.len()).expect("generated payload is small");
+        (
+            [9, 11, 13][band],
+            (count / 2) * 11 + if count % 2 == 0 { 0 } else { 6 },
+        )
+    } else {
+        (
+            [8, 16, 16][band],
+            u32::try_from(bytes.len() * 8).expect("generated payload is small"),
+        )
+    };
+    let eci_bits = if text.is_ascii() { 0 } else { 12 };
     eci_bits + 4 + count_width + payload_bits
 }
 
@@ -492,7 +785,8 @@ proptest! {
 
         if let Ok(encoded) = &first {
             prop_assert!(encoded.version() <= maximum);
-            prop_assert_eq!(encoded.data_bits_used(), independent_used_bits(&text, encoded));
+            prop_assert_eq!(encoded.data_bits_used(), independent_used_bits(encoded));
+            prop_assert!(encoded.data_bits_used() <= whole_payload_used_bits(&text, encoded.version()));
             prop_assert_eq!(
                 encoded.data_codewords().len() * 8,
                 usize::try_from(encoded.data_bits_capacity()).expect("QR capacity fits usize")
@@ -524,11 +818,12 @@ proptest! {
         let original = encode(EncodeRequest::first_fit(&text, ecc, maximum));
         if let Ok(original) = original {
             let suffix = match (original.mode(), original.eci_assignment()) {
-                (DataMode::Numeric, _) => "1",
-                (DataMode::Alphanumeric, _) => "A",
-                (DataMode::Byte, Some(EciAssignment::Utf8)) => "é",
-                (DataMode::Byte, None) => "a",
-                (DataMode::Kanji, _) => unreachable!("release-one mode policy"),
+                (EncodingMode::Single(DataMode::Numeric), _) => "1",
+                (EncodingMode::Single(DataMode::Alphanumeric), _) => "A",
+                (EncodingMode::Single(DataMode::Byte), Some(EciAssignment::Utf8)) => "é",
+                (EncodingMode::Single(DataMode::Byte), None) => "a",
+                (EncodingMode::Single(DataMode::Kanji), _) => unreachable!("encoding policy"),
+                (EncodingMode::Mixed, _) => return Ok(()),
             };
             let appended = format!("{text}{suffix}");
             if appended.len() <= 4_096

@@ -42,10 +42,10 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.readUInt32BE(20)).toBe(300);
   // These hashes pin the default branded rounded-module Inline artifacts.
   expect(await sha256(svg)).toBe(
-    "218dbff7ed6e683088ce2e600d5b67c7570f358f0dd72dfd2efb337d0e344c6c",
+    "42e06fc03b3961344d1ac890de93a47c63fa0b020a742be600a14ce59d966598",
   );
   expect(await sha256(png)).toBe(
-    "6d317cfa95254e5c86c4243c20f8e1220962042c879feb74d34285861cf91395",
+    "86cfac3bcf061f0b7c744e3abb5918134153e9a70ef368c669eae86bd0492efc",
   );
 });
 
@@ -151,10 +151,10 @@ test("downloads and decodes deterministic Adaptive Version 40 artifacts", async 
   expect(png.readUInt32BE(16)).toBe(1_110);
   expect(png.readUInt32BE(20)).toBe(1_110);
   expect(await sha256(svg)).toBe(
-    "e6546e2da8c610f896ab5f639634923173ac8a775cbb3e9e9fc0b95acbd70fa5",
+    "13f93d47f419c88c6ae23167d346ded1896dab987488ecfe4582f5f21f7573f5",
   );
   expect(await sha256(png)).toBe(
-    "69e6587286fcd49c5f45c5556b19c33ecbbf7e1ad2bfeb743d02bee8a849c8f8",
+    "08a579af8d94164c6be39e9c4e8be4f49c55af702849bd8c0afdf0cd6469023a",
   );
 
   const source = resolve("tests/oracles/zxing-cpp");

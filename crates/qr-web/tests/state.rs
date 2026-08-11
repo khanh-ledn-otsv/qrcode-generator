@@ -1,6 +1,6 @@
 use qr_core::encoding::EciAssignment;
 use qr_core::tables::{DataMode, ErrorCorrection};
-use qr_core::{EncodeRequest, encode};
+use qr_core::{EncodeRequest, EncodingMode, encode};
 use qr_render::{ContrastRatio, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{
     ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview, link_capacity_guide,
@@ -28,14 +28,18 @@ fn rounded_one_modules_are_always_used() {
     let request = state.set_payload("exact payload".to_owned()).unwrap();
     let preview = evaluate_preview(&request).unwrap();
 
-    assert!(preview.svg().contains("a0.375 0.375"));
+    assert!(preview.svg().contains("a0.450 0.450"));
 }
 
 #[test]
 fn logo_default_transition_preserves_payload_mode_and_eci_and_matches_each_encoding() {
-    for (payload, expected_eci) in [
-        ("ASCII byte payload", None),
-        ("café 🚢", Some(EciAssignment::Utf8)),
+    for (payload, expected_mode, expected_eci) in [
+        ("ASCII byte payload", EncodingMode::Mixed, None),
+        (
+            "café 🚢",
+            EncodingMode::Single(DataMode::Byte),
+            Some(EciAssignment::Utf8),
+        ),
     ] {
         let mut state = WorkflowState::new(ProfileId::Content);
         let branded_request = state.set_payload(payload.to_owned()).unwrap();
@@ -45,8 +49,8 @@ fn logo_default_transition_preserves_payload_mode_and_eci_and_matches_each_encod
 
         assert_eq!(branded_request.payload(), payload);
         assert_eq!(unbranded_request.payload(), payload);
-        assert_eq!(branded.diagnostics().mode(), DataMode::Byte);
-        assert_eq!(unbranded.diagnostics().mode(), DataMode::Byte);
+        assert_eq!(branded.diagnostics().mode(), expected_mode);
+        assert_eq!(unbranded.diagnostics().mode(), expected_mode);
         assert_eq!(branded.diagnostics().eci_assignment(), expected_eci);
         assert_eq!(unbranded.diagnostics().eci_assignment(), expected_eci);
         assert_eq!(branded.diagnostics().ecc(), ErrorCorrection::High);
@@ -85,6 +89,18 @@ fn payload_entry_preserves_text_and_reports_character_and_byte_counts() {
     assert_eq!(state.payload(), "  café\n");
     assert_eq!(state.character_count(), 7);
     assert_eq!(state.byte_count(), 8);
+}
+
+#[test]
+fn mixed_mode_preview_is_reported_without_a_misleading_single_mode() {
+    let mut state = state_without_logo(ProfileId::Content);
+    let request = state
+        .set_payload("HELLOworld1234567890".to_owned())
+        .expect("revision is available");
+    let preview = evaluate_preview(&request).expect("mixed payload fits");
+
+    assert_eq!(preview.diagnostics().mode(), EncodingMode::Mixed);
+    assert!(preview.accessible_label().contains("Mixed mode"));
 }
 
 #[test]
@@ -206,7 +222,7 @@ fn ready_preview_exposes_safe_artifacts_complete_diagnostics_and_accessible_text
     assert!(png.bytes().starts_with(b"\x89PNG\r\n\x1a\n"));
 
     let diagnostics = preview.diagnostics();
-    assert_eq!(diagnostics.mode(), DataMode::Byte);
+    assert_eq!(diagnostics.mode(), EncodingMode::Single(DataMode::Byte));
     assert!(diagnostics.mask().number() <= 7);
     assert_eq!(diagnostics.quiet_zone_modules(), 4);
     assert_eq!(diagnostics.module_scale(), 10);

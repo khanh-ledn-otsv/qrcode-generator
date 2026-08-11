@@ -9,11 +9,11 @@ use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, Version, render_
 use sha2::{Digest, Sha256};
 
 const APPROVED_SVG_SHA256: [&str; 5] = [
-    "daf2fe0172d65378561edcba4eb9abeedb8dd5cf14e32b46e015dbf440f3c2e7",
-    "ff2c1833c8cb26708c7f853fed3d36879da20b27dddcf90f922900e1f51d5159",
-    "5848c124f328020c11affa058b40e00a3b1d2da3273bb8b999b80bec28d1ffe2",
-    "e2f684d53ed6f928fdc93bdcc96764699aed0943f594d6d1f44c02be5744c3b9",
-    "b7fb7e4af12a280a887c769a1e1d9b374875b8294544f51be69b5f3717ac98e2",
+    "252464e4aebd927f1b49d9fed491a4f166d5c54ddec0059f9bef249f08f7da6e",
+    "34f1337c7cff58418f524c4dc148f491d5e9b684a9da235ef71f9596d27c88d7",
+    "667ab7321ce239dc46a0f482d8929222e171841bd8de42b75de5856737b364ba",
+    "a4b8a18eee28ae6654608e777052a3ddf552d76efd1be1f0e11be39ce3305af6",
+    "91db53628c8dd731982393a521f8e3839614f9ec75f203126ba466c6100c8413",
 ];
 
 #[test]
@@ -54,7 +54,7 @@ fn safe_svg_has_exact_sizing_structure_and_deterministic_bytes() {
     assert_eq!(first.as_bytes(), second.as_bytes());
     assert_eq!(
         sha256_hex(first.as_bytes()),
-        "91c4016a9262eacf7be60268d7cb81159c118c0a2588237f19d5f5530839b7fa"
+        "fc4eb0af5a5143d3636f8f9b7a3f27998afc1b1156b274479ec61c16d4a25b38"
     );
     assert!(!first.contains(payload));
 
@@ -109,7 +109,7 @@ fn rounded_one_svg_retains_compact_dots_and_square_finders() {
     let encoded = encoded_qr("ROUNDED ONE MODULES");
     let options = RenderOptions::safe(SUPPORTED_PROFILES[1]).unwrap();
     let svg = render_svg(&RenderModel::new(&encoded, options).unwrap()).unwrap();
-    assert!(svg.contains("a0.375 0.375"));
+    assert!(svg.contains("a0.450 0.450"));
     assert!(svg.contains("M4 4h1v1h-1z"));
     assert!(svg.contains("fill=\"#ffffff\""));
 }
@@ -257,11 +257,11 @@ fn dark_module_coordinates(path: &str) -> Vec<(u32, u32)> {
                 (x.parse().unwrap(), y.parse().unwrap())
             } else {
                 let coordinates = command
-                    .strip_suffix("a0.375 0.375 0 1 0 0.750 0a0.375 0.375 0 1 0-0.750 0z")
+                    .strip_suffix("a0.450 0.450 0 1 0 0.900 0a0.450 0.450 0 1 0-0.900 0z")
                     .unwrap();
                 let (left, center_y) = coordinates.split_once(' ').unwrap();
                 (
-                    left.strip_suffix(".125").unwrap().parse().unwrap(),
+                    left.strip_suffix(".050").unwrap().parse().unwrap(),
                     center_y.strip_suffix(".500").unwrap().parse().unwrap(),
                 )
             }

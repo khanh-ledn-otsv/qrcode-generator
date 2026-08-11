@@ -183,11 +183,16 @@ Unit-test:
 - ASCII Byte and UTF-8 Byte byte counts;
 - ECI assignment 26 indicator and payload;
 - character-count widths at version transitions 9→10 and 26→27;
+- version-aware minimum-bit Numeric/Alphanumeric/Byte segmentation;
+- stable equal-bit tie resolution and typed mixed-segment diagnostics;
+- one ECI 26 control segment before the first UTF-8 Byte segment in a mixed plan;
 - exactly-fit and one-bit/character-over boundaries.
 
 Property examples:
 
-- encoded bit length equals the independently calculated formula for the selected mode;
+- encoded bit length equals the independently calculated sum for all selected segments;
+- optimized bit length never exceeds the prior whole-payload policy;
+- mixed ASCII and UTF-8 matrices decode to the exact original bytes and expose the expected ECI metadata;
 - appending a same-mode character never reduces required bits;
 - emitted data codewords always exactly fill the selected version's data capacity;
 - a successful encode never exceeds the configured maximum version.
@@ -309,7 +314,7 @@ Parse every generated SVG and assert:
 - quiet zone remains unpainted by QR modules and branding;
 - no frame, label, stroke, or path exists outside the QR symbol geometry;
 - paths stay inside their cells and within checked bounds;
-- every non-finder visible module uses the fixed centered 0.75-module rounded
+- every non-finder visible module uses the fixed centered 0.90-module rounded
   glyph, the three finder regions use full-cell square glyphs, and separator
   modules remain blank;
 - the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with unchanged geometry, the reviewed `180 180 640 240` presentation box, and no external reference;
