@@ -46,6 +46,6 @@ case "${QR_PLAYWRIGHT_INSTALL_MODE:-browser-only}" in
     ;;
 esac
 
-"${repository_root}/scripts/setup-decoders.sh"
+"${repository_root}/scripts/setup-decoders.sh" "${QR_DECODER_SETUP_MODE:-all}"
 
 echo "Setup complete. Run 'pnpm run verify'."

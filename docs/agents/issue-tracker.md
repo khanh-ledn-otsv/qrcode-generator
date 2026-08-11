@@ -1,5 +1,13 @@
 # Issue tracker: Local Markdown
 
+## Agent metadata
+
+- **Purpose:** locate and update repository-local issue/spec records.
+- **Read when:** the user references a ticket/spec or a skill asks to publish or
+  fetch an issue.
+- **Authority:** `.scratch/<feature>/` is the issue store; GitHub/Jira mutation
+  is out of scope unless explicitly requested and available.
+
 Issues and specs for this repo live as Markdown files in `.scratch/`.
 
 ## Conventions

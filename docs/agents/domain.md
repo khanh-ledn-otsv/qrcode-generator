@@ -1,5 +1,14 @@
 # Domain Docs
 
+## Agent metadata
+
+- **Purpose:** locate canonical vocabulary and architectural decisions.
+- **Read when:** terminology is unclear, introducing a domain concept, or a
+  change may conflict with an ADR.
+- **Authority:** `CONTEXT.md` owns vocabulary; `docs/adr/` owns accepted ADRs.
+- **Do not create:** speculative domain documents when the project has no
+  corresponding context or ADR.
+
 This repository uses a single-context domain documentation layout.
 
 ## Before exploring, read these

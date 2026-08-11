@@ -1,5 +1,16 @@
 # Release readiness
 
+## Agent metadata
+
+- **Purpose:** final automated release certification contract.
+- **Read/run when:** the user explicitly requests release readiness, or the
+  readiness mechanism itself changed and end-to-end validation is required.
+- **Authority:** clean-build, browser, artifact, privacy, and evidence acceptance
+  criteria.
+- **Precondition:** clean worktree and all pinned tools. Do not stash, reset, or
+  discard user changes to manufacture cleanliness.
+- **Cost:** class D/multi-minute. Never use as routine confidence testing.
+
 This runbook is the repository-owned automated release gate. Manual product checks are performed separately and are not collected as evidence.
 
 ## Automated evidence
@@ -11,7 +22,13 @@ From a clean worktree, run setup and the readiness gate:
 pnpm run release:readiness
 ```
 
-The command verifies pinned tool versions, produces two release builds in separate Cargo target directories, compares every application artifact by SHA-256, runs desktop Chromium with Playwright retries disabled, and validates the 218-row dual-format approved-output matrix plus all 29 declared adverse-decoder outcomes. It writes the machine evidence and final report under `target/release-readiness/`.
+The command verifies pinned tool versions, produces two release builds in
+separate Cargo target directories, compares every application artifact by
+SHA-256, and reuses the first verified build for Chromium and release evidence
+instead of compiling it again. It runs desktop Chromium with Playwright retries
+disabled and validates the 218-row dual-format approved-output matrix plus all
+29 declared adverse-decoder outcomes. It writes the machine evidence and final
+report under `target/release-readiness/`.
 
 ## Acceptance-criterion map
 

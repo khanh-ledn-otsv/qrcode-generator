@@ -1,4 +1,7 @@
 #[allow(dead_code)]
+#[path = "support/adaptive_v40_artifact_fixture.rs"]
+mod adaptive_v40_artifact_fixture;
+#[allow(dead_code)]
 #[path = "support/styling.rs"]
 mod styling;
 #[allow(dead_code)]
@@ -9,7 +12,7 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-use qr_render::{RenderModel, render_png, render_svg};
+use qr_render::{ProfileId, RenderModel, SUPPORTED_PROFILES, render_png, render_svg};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -26,13 +29,54 @@ struct ApprovedMatrixBaselines {
 }
 
 #[test]
+fn representative_profile_and_logo_artifacts_stay_within_recorded_resource_baselines()
+-> Result<(), Box<dyn Error>> {
+    let baselines = resource_baselines()?;
+    let cases = styling::representative_decode_cases()?;
+    assert_eq!(cases.len(), styling::approved_style_tuples().len());
+
+    for case in cases {
+        let model = RenderModel::new(&case.encoded, case.options)?;
+        let svg = render_svg(&model)?;
+        let png = render_png(&model)?;
+        assert_within_baselines(
+            &baselines,
+            svg.len(),
+            png.len(),
+            model.png_placement().rgba_buffer_len(),
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn largest_approved_artifact_stays_within_recorded_resource_baselines() -> Result<(), Box<dyn Error>>
+{
+    let baselines = resource_baselines()?;
+    let (svg, png) = adaptive_v40_artifact_fixture::artifacts();
+    let adaptive = SUPPORTED_PROFILES
+        .into_iter()
+        .find(|profile| profile.id() == ProfileId::Adaptive)
+        .ok_or("Adaptive profile is compiled")?;
+    let dimensions = adaptive.png_dimensions_for(adaptive.maximum_version())?;
+    let observed_rgba = usize::try_from(dimensions.width().get())?
+        .checked_mul(usize::try_from(dimensions.height().get())?)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or("Adaptive RGBA allocation fits usize")?;
+
+    assert_within_baselines(&baselines, svg.len(), png.len(), observed_rgba);
+    assert_eq!(
+        observed_rgba,
+        baselines.approved_matrix.maximum_rgba_buffer_bytes
+    );
+    Ok(())
+}
+
+#[test]
+#[ignore = "exhaustive approved matrix runs in release evidence and extended CI"]
 fn approved_matrix_artifacts_and_allocations_stay_within_recorded_baselines()
 -> Result<(), Box<dyn Error>> {
-    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let baselines: ResourceBaselines =
-        serde_json::from_slice(&fs::read(workspace.join("tests/baselines/resources.json"))?)?;
-    assert_eq!(baselines.schema_version, 1);
-
+    let baselines = resource_baselines()?;
     let mut observed_svg = 0;
     let mut observed_png = 0;
     let mut observed_rgba = 0;
@@ -46,6 +90,24 @@ fn approved_matrix_artifacts_and_allocations_stay_within_recorded_baselines()
         observed_rgba = observed_rgba.max(model.png_placement().rgba_buffer_len());
     }
 
+    assert_within_baselines(&baselines, observed_svg, observed_png, observed_rgba);
+    Ok(())
+}
+
+fn resource_baselines() -> Result<ResourceBaselines, Box<dyn Error>> {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let baselines: ResourceBaselines =
+        serde_json::from_slice(&fs::read(workspace.join("tests/baselines/resources.json"))?)?;
+    assert_eq!(baselines.schema_version, 1);
+    Ok(baselines)
+}
+
+fn assert_within_baselines(
+    baselines: &ResourceBaselines,
+    observed_svg: usize,
+    observed_png: usize,
+    observed_rgba: usize,
+) {
     assert!(
         observed_svg <= baselines.approved_matrix.maximum_svg_bytes
             && observed_png <= baselines.approved_matrix.maximum_png_bytes
@@ -55,5 +117,4 @@ fn approved_matrix_artifacts_and_allocations_stay_within_recorded_baselines()
         baselines.approved_matrix.maximum_png_bytes,
         baselines.approved_matrix.maximum_rgba_buffer_bytes,
     );
-    Ok(())
 }

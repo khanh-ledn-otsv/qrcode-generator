@@ -1,178 +1,221 @@
-# Repository Instructions
+# Agent Execution Contract
 
-## Scope
+## Scope and precedence
 
-These instructions apply to the entire repository.
+This file applies to the entire repository and is the primary agent router.
 
-This is a client-side QR code generator built with Rust 2024, Leptos, WebAssembly, Trunk, and Tailwind CSS. Keep payload processing and artifact generation entirely in the browser.
+Use this precedence order:
 
-Before changing architecture, QR encoding, rendering, dependencies, or test policy, read:
+1. User request.
+2. This file.
+3. The task-specific authoritative document named in the documentation router.
+4. Existing code and tests.
 
-- `docs/DEVELOPMENT_PLAN.md`
-- `docs/TESTING_STRATEGY.md`
+If two repository documents conflict, stop and report the conflict. Do not
+silently choose one. When implementation changes an accepted decision, update
+the authoritative document in the same change.
 
-Treat those documents as authoritative. Update them when an implementation decision changes their assumptions.
+## Product invariants: never violate
 
-## Architecture
+- Keep all payload processing and artifact generation in the browser.
+- Preserve exact user input. Never trim, normalize, rewrite, log, or transmit a
+  QR payload.
+- Add no production network request, external font, analytics, or telemetry.
+- Preserve dependency direction: `qr-web -> qr-render -> qr-core`; direct
+  `qr-web -> qr-core` is allowed. Browser APIs belong only in `qr-web`.
+- Keep encoding separate from rendering. Rendering must not change ECC,
+  version, mask, or encoded modules.
+- Treat ISO/IEC 18004:2024 as normative. Cite the applicable clause/table topic
+  beside transcribed standard data. Oracle implementations are test evidence,
+  never production code or copy sources.
+- Preserve deterministic SVG/PNG bytes. Exclude timestamps, randomness,
+  unstable ordering, and environment-dependent metadata.
+- Do not panic on user-controlled input. Prefer typed errors, checked
+  arithmetic, bounds-checked access, and focused modules. Do not add project
+  `unsafe` without an explicit documented justification.
+- Preserve semantic HTML, keyboard operation, visible focus, and associated
+  validation messages.
+- Preserve unrelated work in the worktree.
 
-- Preserve the planned dependency direction: `qr-web -> qr-render -> qr-core`, with `qr-web -> qr-core` also allowed.
-- Keep browser APIs out of `qr-core` and `qr-render`.
-- Keep encoding separate from rendering; rendering must not alter ECC, version, mask, or encoded modules.
-- Treat ISO/IEC 18004:2024 as the normative QR source. Cite the relevant clause or table beside transcribed standard data.
-- Use independent QR implementations only as development or test oracles. Do not copy them into production code.
+## Documentation router
 
-## Implementation Rules
+Read only the rows activated by the task. Do not load every document by
+default.
 
-- Preserve user input exactly. Do not trim, normalize, rewrite, log, or transmit QR payloads.
-- Do not add production network requests, external fonts, analytics, or telemetry.
-- Prefer focused modules, typed errors, checked arithmetic, and bounds-checked access.
-- Do not panic on user-controlled input. Avoid `unwrap`, `expect`, and unchecked indexing on user-facing paths.
-- Do not add `unsafe` project code without an explicit documented justification.
-- Keep generated SVG and PNG output deterministic; exclude timestamps, randomness, unstable ordering, and environment-dependent metadata.
-- Preserve semantic HTML, keyboard operation, visible focus, and associated validation messages.
-- Keep changes scoped and preserve unrelated work already present in the worktree.
+| Task changes or questions | Read before acting | Authority |
+|---|---|---|
+| architecture, dependency direction, QR behavior, profiles, product policy | `docs/DEVELOPMENT_PLAN.md` | accepted product and architecture decisions |
+| test design, fixtures, or verification policy | `docs/agents/verification.md`, then relevant section of `docs/TESTING_STRATEGY.md` | executable test routing, then test-design rationale |
+| release evidence, decoders, coverage, mutation, fuzzing, Miri | `docs/RELEASE_HARDENING.md` | specialized-gate triggers and commands |
+| final release certification | `docs/RELEASE_READINESS.md` | clean-worktree release gate |
+| oracle provenance or QR public-source evidence | `docs/research/qr-public-source-provenance.md`, `tests/oracles/README.md` | source/oracle policy |
+| bundled logo asset or placement | `assets/README.md`, `docs/generated/logo-placement-policy.md` | asset provenance and generated placement contract |
+| issue/spec work under `.scratch/` | `docs/agents/issue-tracker.md` | local issue workflow |
+| domain terms or ADR conflict | `docs/agents/domain.md`; then `CONTEXT.md`/`docs/adr/` if present | domain vocabulary and decisions |
+
+`docs/generated/*` is generated evidence. Modify its generator, then regenerate;
+never hand-edit generated output.
+
+## Agent workflow
+
+1. Inspect `git status --short`. Treat existing changes as user-owned.
+2. Read the minimum authoritative documentation selected above.
+3. Inspect the smallest relevant source/test surface. Use `rg` for text and
+   filenames; use the structural-navigation skills when syntax relationships
+   matter.
+4. Implement the smallest coherent change. Add or update tests for behavioral
+   changes and bug fixes.
+5. Select exactly one routine covering gate from the verification router.
+6. Add a specialized gate only when its trigger table applies.
+7. On failure, preserve the failure, iterate with the narrowest failing command,
+   then rerun the required covering gate once.
+8. Report behavior changed, checks run, checks skipped, and reasons.
+
+## Verification: optimization objective
+
+Minimize feedback time without reducing coverage of the changed behavior.
+
+- Run the smallest gate that covers the final change, not the largest available
+  gate.
+- Do not run multiple routine gates “for confidence.” If `verify` passes, do not
+  rerun its component commands.
+- Do not rerun a passed gate after documentation-only edits. Validate only the
+  later documentation or routing edits.
+- Never run a slow specialized suite merely because it exists.
+- User requests for a named suite, full release validation, or exhaustive
+  testing override the default cost controls.
+
+### Cost classes
+
+Use cost as a guardrail, not as a substitute for coverage.
+
+| Class | Expected warm duration | Default agent policy |
+|---|---:|---|
+| A: instant | under 10 seconds | run when relevant |
+| B: routine | 10–90 seconds | run one covering gate after final edits |
+| C: extended | 1–8 minutes | run only when a specialized trigger applies |
+| D: campaign | over 8 minutes | run only when explicitly requested, during release work, or when the changed mechanism cannot be validated more narrowly |
+
+Durations are approximate. A cold toolchain/cache may be slower without
+changing a command's class.
+
+### Routine path router
+
+Prefer an explicit gate when the impact is known. Otherwise run
+`pnpm run verify:changed`; it applies the same path routing conservatively.
+
+| Final changed surface | Required routine check | Class |
+|---|---|---:|
+| prose-only `*.md`, no command/path/policy change | `git diff --check`; validate edited links/paths | A |
+| AGENTS/test-policy documentation | `pnpm run verify:meta` | A |
+| `.github/**`, verification selectors, or shell routing only | `pnpm run verify:meta` plus affected selector cases | A |
+| `tests/support/**`, Ruff/ty config only | `pnpm run verify:python` | B |
+| isolated `qr-core` source/tests | `pnpm run verify:core` | B |
+| isolated `qr-render` source/tests | `pnpm run verify:render` | B |
+| isolated `qr-web`, HTML, CSS, e2e, Playwright config | `pnpm run verify:web` | B |
+| package-script-only change | run the changed script's narrow test plus `pnpm run verify:meta` | A/B |
+| production dependency/lockfile, workspace Cargo config, Trunk config, rust toolchain, shared fixture contract, WASM boundary, multiple product crates, or unknown path | `pnpm run verify` | B |
+
+Escalate an otherwise isolated change to `pnpm run verify` when it changes QR
+encoding semantics, public cross-crate types, deterministic artifact bytes,
+shared fixtures, or native/WASM equivalence.
+
+### Routine command coverage
+
+| Command | Included coverage | Do not add separately |
+|---|---|---|
+| `pnpm run verify:meta` | selector/doc-validation lint and tests, documentation links/metadata, and shell syntax | product tests unless changed commands/runtime require them |
+| `pnpm run verify:python` | Ruff, Ruff format, ty, Python unit tests | separate Python lint/test commands |
+| `pnpm run verify:core` | Rust format, qr-core Clippy, all routine qr-core tests | workspace/web/render checks |
+| `pnpm run verify:render` | Rust format, qr-render Clippy/native tests, WASM PNG renderer test | full web/browser gate |
+| `pnpm run verify:web` | Rust format, web lint/format, qr-web Clippy/native/WASM tests, release build, Chromium | separate build or e2e rerun |
+| `pnpm run verify` | all routine formatting, linting, native/Python/WASM tests, release build, Chromium | any routine component rerun |
+
+### Specialized trigger router
+
+These commands are additional to one routine gate, not substitutes for it.
+
+| Changed behavior | Additional command | Class | Run rule |
+|---|---|---:|---|
+| approved profile/logo matrix, resource ceilings, approved-combination generator | `pnpm run test:approved` | C | required |
+| PNG/SVG bytes, rasterization, logo decode geometry, decoder adapter, artifact-evidence collector | narrow affected ignored decoder test; use `pnpm run release:evidence` only if the complete evidence pipeline changed | C | required narrow check; full evidence only when pipeline-wide |
+| `scripts/release-evidence.sh` reuse/input/output behavior | `bash scripts/release-evidence.sh --dist dist` after a verified build | C | required if existing-dist behavior or evidence hashes changed |
+| `scripts/release-readiness.sh` or readiness collectors/validators | narrow script/collector tests first; `pnpm run release:readiness` only from a clean worktree | C/D | full gate only when clean and the end-to-end contract changed |
+| dependency versions or audit policy | `pnpm run release:dependencies` | C | release/security task or explicit request; routine dependency changes still require `verify` |
+| coverage script/threshold/exclusion | `pnpm run release:coverage` | C/D | required for coverage-policy changes |
+| mutation config or critical core/geometry semantics | `pnpm run release:mutation` | D | explicit mutation/release work only |
+| fuzz target/parser or bug found by fuzzing | single affected `cargo fuzz run ...` with a bounded diagnostic budget | D | targeted only; full campaigns explicit/release only |
+| `unsafe`, memory-layout assumptions, or Miri policy | narrow `cargo +nightly miri test ...` | D | required when applicable; full Miri suite explicit/release only |
+| final release certification | `pnpm run release:readiness` | D | explicit release request only; requires clean worktree |
+
+Do not run `test:approved`, decoder campaigns, release evidence, readiness,
+coverage, mutation, fuzzing, or Miri for unrelated changes. Hosted extended
+decoder CI remains the normal exhaustive backstop for matching core/render/
+artifact/oracle paths.
+
+### Failure loop
+
+- Capture the first failing command and preserve its output.
+- Diagnose with the narrowest command or single test target.
+- Never weaken, ignore, delete, or regenerate a failing test to obtain green.
+- After the fix, rerun the original required covering gate once.
+- If the failure is environmental, verify the environment, report the exact
+  skipped check, and do not substitute an unrelated suite.
+
+## Tool and cache rules
+
+- Before Node-backed commands, run `node --version`; it must be `v24.*`. Use
+  `fnm exec --using=.nvmrc <command>` when the active shell is not Node 24.
+- Use the `packageManager`-pinned pnpm. Commit `pnpm-lock.yaml`; never create an
+  npm lockfile.
+- Prefer repository `pnpm` scripts. They own pinned flags and orchestration.
+- Set `NO_COLOR=true` on direct Trunk commands. Prefer `pnpm run build` and
+  `pnpm run dev`.
+- Use Oxlint/Oxfmt for JS/TS and Ruff/ty through the locked `tests/oracles` uv
+  project for Python.
+- Local sccache is optional: `RUSTC_WRAPPER=sccache`. CI owns the pinned shared
+  backend and statistics.
+- Keep Cargo on the default workspace `target/`. Do not set
+  `CARGO_TARGET_DIR`, run `cargo clean`, or delete build caches during routine
+  work. Only release-readiness isolation may override the target directory.
+- Do not set `CI=true` locally unless reproducing hosted serialization.
 
 ## Dependencies
 
-- Add the smallest dependency needed and separate production dependencies from test-only tooling.
-- When adding or updating a dependency or development tool, try the latest stable version compatible with the project's toolchain and other constraints first. Fall back to an older version only after a concrete compatibility, build, or test failure demonstrates that the latest compatible candidate cannot be used; document the failure and selected fallback.
-- Pin versions as required by the development plan; do not use wildcards or floating Git revisions.
-- Do not add production QR encoders, Reed-Solomon libraries, general image stacks, SVG rasterizers, or scene renderers unless the development plan is deliberately revised.
-- Keep browser-only crates and features scoped to `qr-web` after the workspace migration.
+- Add the smallest dependency and keep test-only tooling out of production
+  dependencies.
+- Try the latest stable compatible version first. Use an older version only
+  after a concrete build/test incompatibility; record the failure and fallback.
+- Pin versions; no wildcards or floating Git revisions.
+- Do not add a production QR encoder, Reed–Solomon library, general image stack,
+  SVG rasterizer, or scene renderer unless `docs/DEVELOPMENT_PLAN.md` is
+  deliberately revised.
+- Keep browser-only crates/features scoped to `qr-web`.
 
-## Development Tooling
+## Tests and fixtures
 
-- Use the `.nvmrc`-declared Node.js v24 runtime and the
-  `packageManager`-pinned pnpm version. Commit `pnpm-lock.yaml`; do not create an
-  npm lockfile.
-- Before running `pnpm`, Playwright, Trunk, or another Node-backed command,
-  check `node --version`. A package-manager engine warning is not an acceptable
-  substitute for using Node.js v24. If the active shell is not on v24, activate
-  `.nvmrc` with the available version manager. In this workspace, the canonical
-  non-interactive fallback is:
+- Test public behavior and invariants. The production encoder is never its own
+  correctness oracle.
+- Cover exact-fit and one-over capacity, malformed input, deterministic output,
+  and function-module protection when relevant.
+- Keep fixtures synthetic, non-sensitive, and provenance-recorded.
+- Never regenerate goldens implicitly. Explicit generation must leave reviewable
+  changes and follow `tests/oracles/README.md`.
 
-  ```sh
-  fnm exec --using=.nvmrc node --version
-  fnm exec --using=.nvmrc pnpm run verify
-  ```
+## Structural navigation
 
-  The first command must report `v24.*`. When `fnm` is unavailable, use the
-  installed version manager's equivalent and verify the version before
-  continuing.
-- Prefer repository `pnpm` scripts over spelling out their tool commands. They
-  carry the pinned options and keep local and CI behavior aligned.
-- Set `NO_COLOR=true` on every direct agent-run Trunk command. Prefer
-  `pnpm run build` for the optimized release build and `pnpm run dev` for the
-  development server; those scripts already set `NO_COLOR=true`.
-- Use Oxlint for JavaScript/TypeScript linting and Oxfmt for formatting.
-- Use Ruff for Python linting and formatting, and ty for Python type checking.
-  Run both through the locked `tests/oracles` uv project.
-
-## Verification
-
-Choose verification from the behavior and dependency surface changed. Do not
-run the complete gate merely because it exists, and do not rerun unrelated
-checks after a focused gate succeeds. For an automatic conservative choice,
-use:
-
-```sh
-pnpm run verify:changed
-```
-
-The selector inspects the working-tree paths, chooses a focused gate, and falls
-back to the full gate for unknown or cross-crate changes. Use the smallest
-explicit gate when the impact is already known:
-
-```sh
-pnpm run verify:core    # qr-core-only changes
-pnpm run verify:render  # qr-render changes, including its WASM renderer test
-pnpm run verify:web     # qr-web, HTML, CSS, and ordinary web changes
-pnpm run verify:python  # tests/support Python-only changes
-pnpm run verify:meta    # workflow/routing-script-only changes
-```
-
-Run the complete repository gate only when the change can affect multiple
-crates or the shared build/runtime contract, including production dependency or
-lockfile changes, Cargo/Trunk configuration, QR core/render behavior, WASM
-boundaries, release behavior, or an unknown path:
-
-```sh
-pnpm run verify
-```
-
-Workflow documentation, CI path filters, and verification-routing script edits
-do not automatically require every product test. Run `verify:meta`, exercise
-the affected selector cases, and run a product gate only if those edits change
-that product gate's commands or runtime assumptions. If a complete gate already
-passed and subsequent edits are limited to documentation, workflow YAML, or
-verification routing, validate only those later edits rather than rerunning the
-complete gate.
-
-`pnpm run verify` is the authoritative routine gate. It already runs Rust
-formatting, native and WASM checks, warnings-as-errors Clippy, native/Python/WASM
-tests, the optimized release build, and Chromium tests. Do not rerun those same
-commands separately after a successful complete gate unless diagnosing a
-failure or satisfying a more specialized release check.
-
-When a direct Trunk build is genuinely needed, use the repository's colorless
-form:
-
-```sh
-NO_COLOR=true trunk build --release
-```
-
-Keep routine Cargo commands on the default workspace `target/` layout so local
-incremental compilation and the hosted Rust cache remain effective. Do not set
-`CARGO_TARGET_DIR`, run `cargo clean`, or delete cached build outputs before
-routine verification unless a documented release script deliberately requires
-an isolated target directory.
-
-Do not set `CI=true` for normal local verification: the optimized local gate
-parallelizes independent work. Set it only when intentionally reproducing the
-hosted CI execution mode, which serializes resource-heavy test lanes.
-
-If a gate fails, preserve the failure, diagnose it, and rerun the narrowest
-failing command while iterating. Run the required covering gate again after the
-fix. If required tooling is unavailable, report the skipped check and reason.
-
-Do not run release evidence, extended decoder campaigns, coverage, mutation,
-fuzzing, or Miri unless the change touches the behavior those suites cover or
-the user explicitly requests them. Hosted extended decoder CI is path-filtered
-to core, render, artifact, oracle, and release-evidence inputs.
-
-## Tests and Fixtures
-
-- Add tests for behavior changes and bug fixes.
-- Test public behavior and invariants; do not use the production encoder as its own correctness oracle.
-- Cover exact-fit and one-over capacity boundaries, malformed input, deterministic output, and function-module protection when relevant.
-- Keep fixtures synthetic and non-sensitive, with recorded provenance.
-- Never regenerate golden fixtures implicitly during tests.
-- Do not weaken or skip a failing test to make a change pass; fix the cause or document an intentional policy change.
+- Use `rg`/`rg --files` for plain text and filenames.
+- For an unfamiliar code surface, consider the `ast-grep-outline` skill before
+  reading whole files.
+- For syntax/relationship queries, load the `ast-grep` skill. Test non-trivial
+  rules on a minimal example; use `stopBy: end` and `--debug-query` when needed.
 
 ## Handoff
 
-Summarize changed behavior, list verification performed, and identify any checks that could not run.
+Always report:
 
-## Agent skills
-
-### Structural code navigation
-
-- When exploring unfamiliar source or planning a focused edit, consider loading
-  the `ast-grep-outline` skill and running `ast-grep outline` before reading entire
-  files. Use its line-numbered structure to narrow subsequent source reads.
-- Use `rg` for filenames and plain-text searches. When the question depends on
-  syntax or relationships between code constructs, load the `ast-grep` skill
-  and prefer an AST-aware `ast-grep run` or `ast-grep scan` query.
-- Test non-trivial ast-grep rules against a minimal example before scanning the
-  repository. Follow the skill guidance for relational rules, including
-  `stopBy: end`, and use `--debug-query` when the parsed structure is unclear.
-- After modifying several source files, consider `ast-grep outline` on the
-  changed files to review the resulting public surface and module structure.
-
-### Issue tracker
-
-Issues are tracked as local Markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-This repository uses a single-context domain documentation layout. See `docs/agents/domain.md`.
+- changed behavior;
+- verification commands and results;
+- specialized checks intentionally not run and why;
+- any environmental limitation;
+- generated/deleted material and recoverability when applicable.

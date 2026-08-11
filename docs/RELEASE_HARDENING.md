@@ -1,13 +1,25 @@
 # Release hardening
 
+## Agent metadata
+
+- **Purpose:** command/evidence contract for specialized hardening suites.
+- **Read when:** a specialized trigger in `AGENTS.md` applies or the user asks
+  for release/decoder/coverage/mutation/fuzz/Miri evidence.
+- **Authority:** specialized command semantics and evidence outputs.
+- **Default:** do not run this runbook end to end. Select one triggered row;
+  final certification uses `RELEASE_READINESS.md`.
+- **Cost warning:** decoder/evidence suites take minutes; mutation, fuzz, and
+  Miri are campaigns. Tool installation is required only for the selected row.
+
 This runbook turns the approved output surface into reproducible local release
-evidence. Run it from a clean checkout with Node.js 24 from `.nvmrc`, pnpm
-11.20.0, Rust 1.97.1, and the locked oracle environment.
+evidence. Use Node.js 24 from `.nvmrc`, pnpm 11.20.0, Rust 1.97.1, and the
+locked oracle environment. Require a clean worktree only when the selected
+command says so; never alter user changes to create one.
 
 ## Tool setup
 
-Run `./scripts/setup.sh` first. The extended gates additionally require these
-pinned tools:
+Run `./scripts/setup.sh` only when the selected gate needs decoder/tool setup.
+Install only the pinned tool required by the selected row:
 
 ```sh
 rustup component add llvm-tools-preview
@@ -40,11 +52,8 @@ artifact decodes.
 
 ## Routine and extended local gates
 
-The complete routine gate remains:
-
-```sh
-pnpm run verify
-```
+Choose the routine gate first via [`agents/verification.md`](agents/verification.md).
+The following rows are specialized additions, never a default checklist.
 
 The following commands expose the hardening seams individually:
 
@@ -107,11 +116,14 @@ tests. Chromium repeats both downloads and independently decodes the PNG; the
 all-version rasterized-SVG campaign supplies the SVG decode evidence. A
 separate request-interception workflow generates and downloads the Version 40
 PNG without a runtime network request. Recorded artifact ceilings are
-1,070,097 SVG bytes, 52,889 PNG bytes, and 4,928,400 bytes for the direct RGBA
+1,070,097 SVG bytes, 73,762 PNG bytes, and 4,928,400 bytes for the direct RGBA
 buffer.
 
 Approved matrix artifact and allocation ceilings live in
-`tests/baselines/resources.json` and are exercised in ordinary native tests.
+`tests/baselines/resources.json`. Ordinary native tests exercise every
+renderable profile/logo tuple plus the largest Adaptive Version 40 boundary;
+release evidence and extended CI exercise every approved matrix row against
+the same ceilings.
 
 Use [`RELEASE_READINESS.md`](RELEASE_READINESS.md) for the final clean-build,
 browser, artifact, and privacy gate. Manual product checks remain outside the

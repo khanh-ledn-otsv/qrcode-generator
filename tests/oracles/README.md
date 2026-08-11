@@ -1,5 +1,17 @@
 # Development-only QR oracles
 
+## Agent metadata
+
+- **Purpose:** pinned oracle identities and explicit fixture verification/
+  regeneration protocol.
+- **Read when:** touching `tests/oracles`, fixture manifests/goldens, QR tables,
+  oracle adapters, or decoder pins.
+- **Authority:** oracle environment and fixture mutation workflow.
+- **Default safe action:** select only the relevant `--check` verifier.
+- **Mutation warning:** `--write` changes committed evidence and is allowed only
+  when the task explicitly requires fixture regeneration. Review the complete
+  diff; tests must never regenerate implicitly.
+
 These tools never link into a production crate. The uv project and committed
 lockfile pin the two generators and their artifact hashes. Create or synchronize
 the isolated environment without changing the lockfile:
@@ -29,6 +41,9 @@ ephemeral executable supplied by `uv tool run cmake`; the verified decoder pin
 is the ZXing source commit and reported reader version.
 
 ## Fixture workflow
+
+Do not run every command in this file as a checklist. Select the verifier for
+the changed fixture family; `AGENTS.md` determines the covering routine gate.
 
 Normal tests only validate the strict manifest, hashes, matrix dimensions, and
 recorded dual-oracle agreement:

@@ -1,5 +1,29 @@
 # QR Code Generator — Development-Ready Plan
 
+## Agent metadata
+
+- **Purpose:** accepted product behavior, architecture, dependency, and delivery
+  decisions.
+- **Read when:** changing QR semantics, rendering policy, architecture, public
+  boundaries, dependencies, branding, or release assumptions.
+- **Authority:** normative repository decision record. Update the affected
+  section in the same change when implementation changes an accepted decision.
+- **Execution warning:** this file does not select test commands. Use
+  `docs/agents/verification.md`.
+
+### Retrieval index
+
+| Change topic | Read |
+|---|---|
+| standards, byte/ECI, segmentation, ECC | §§2.1–2.4 and §3 |
+| PNG, branding, logo safety | §§2.5–2.7 |
+| crate boundaries, APIs, errors | §4 |
+| dependency choice | §5 |
+| fixtures and independent oracles | §6 |
+| delivery scope/status | §§7, 9–11 |
+| verification architecture | §8, then `docs/agents/verification.md` |
+| cited technical sources | §12 |
+
 **Based on:** `qr-generator-spec.md`, Draft v3  
 **Repository state reviewed:** 2026-08-05  
 **Plan status:** Ready to implement under the recorded oracle policy below
@@ -11,6 +35,13 @@ The detailed test architecture, selected libraries, quality gates, fuzz/mutation
 The product direction is coherent and the repository is an appropriate Leptos 0.8 CSR scaffold. The implementation should not start by building the UI. Correctness depends first on freezing encoding behavior and building independently verified core fixtures under the provenance policy below; access to the complete normative standard is a valuable later audit input, not an implementation gate.
 
 The repository state originally reviewed contained one Leptos binary and no workspace crates, QR implementation, test suite, or approved logo. It also loaded Google Fonts at runtime, which conflicted with an offline/self-contained internal tool posture and had to be removed or replaced with a bundled asset.
+
+Hosted Rust builds use pinned `sccache` 0.17.0 with the GitHub Actions backend;
+local use is optional through `RUSTC_WRAPPER=sccache`. Development and test
+profiles keep line-table debug information. Local builds retain Cargo
+incremental compilation, while hosted jobs disable incremental artifacts in
+favor of shared compiler-result and dependency caches. These choices reduce
+link time and disk growth without changing release artifacts.
 
 Development can proceed with the decisions in this document. Physical validation is performed manually outside the repository and is not collected as release evidence.
 
@@ -168,12 +199,14 @@ is enabled by default and can be disabled; transparent output is excluded.
   six-module upward source offset for Versions 7–11. The source remains exactly
   13 modules wide; retaining the 15×7 knockout does not trigger a nearer
   placement or a smaller logo.
-  The focused committed experiment in
-  [`generated/adaptive-branded-placement-policy.json`](generated/adaptive-branded-placement-policy.json)
-  records 10–13-module candidates above, centered, and below: all 112
-  function-safe native-PNG/rasterized-SVG artifacts decoded, while every
-  centered Version 10 candidate was rejected before decoding for protected
-  alignment-module overlap.
+  The retained executable evidence in
+  [`../crates/qr-render/tests/logo_geometry.rs`](../crates/qr-render/tests/logo_geometry.rs)
+  and [`../crates/qr-render/tests/logo_decode.rs`](../crates/qr-render/tests/logo_decode.rs)
+  rejects centered Version 10 placement before decoding when it intersects a
+  protected alignment module, and verifies the selected function-safe
+  placement through independent native-PNG/rasterized-SVG decoding. The
+  generated selected-geometry table is
+  [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - Versions 1–5 remain below the branded minimum. Versions 12–40 return a typed
   unsafe-logo-geometry rejection until separately approved decode evidence is
   committed; users can disable the logo without changing the payload. Logo
@@ -477,13 +510,15 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, and adverse-image checks performed during release hardening.
 
 Repository-owned hosted correctness automation selects a conservative focused
-gate for each push to `main`: web-only and Python-support-only changes use their
-own covering gates, while core, render, dependency, shared-configuration, and
-unknown changes use the complete routine gate. Extended decoder campaigns run
+gate for each push to `main`: isolated core, render, web, and Python-support
+changes use their own covering gates, while mixed, dependency,
+shared-configuration, and unknown changes use the complete routine gate.
+Extended decoder campaigns run
 in a separate path-filtered workflow only when core, render, artifact, oracle,
-or release-evidence inputs change. Pages publishing is
-limited to site and build-input changes and only builds, uploads, and deploys
-the site; all workflows retain manual dispatch. Caches are keyed by the
+or release-evidence inputs change. Pages publishing is limited to site and
+build-input changes and only repackages the covering job's verified artifact
+with the Pages base path before upload/deployment; both workflows retain manual
+dispatch. Caches are keyed by the
 controlling lockfiles, toolchain/tool versions, runner OS, and architecture;
 restored tools and decoder checkouts are verified before use.
 

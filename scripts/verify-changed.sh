@@ -54,6 +54,12 @@ case "${scope}" in
   python)
     exec pnpm run verify:python
     ;;
+  core)
+    exec pnpm run verify:core
+    ;;
+  render)
+    exec pnpm run verify:render
+    ;;
   web)
     exec pnpm run verify:web
     ;;

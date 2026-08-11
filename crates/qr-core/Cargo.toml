@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+autotests = false
 
 [lib]
 path = "src/lib.rs"
@@ -11,3 +12,19 @@ path = "src/lib.rs"
 [dev-dependencies]
 proptest = "=1.11.0"
 tempfile = "=3.27.0"
+
+[[test]]
+name = "core-integration"
+path = "tests/core_integration.rs"
+
+[[test]]
+name = "fuzz_regressions"
+path = "tests/fuzz_regressions.rs"
+
+[[test]]
+name = "independent_decode"
+path = "tests/independent_decode.rs"
+
+[[test]]
+name = "tables"
+path = "tests/tables.rs"

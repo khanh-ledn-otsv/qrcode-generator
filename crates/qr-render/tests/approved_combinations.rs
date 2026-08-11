@@ -46,6 +46,7 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
 }
 
 #[test]
+#[ignore = "exhaustive approved matrix runs in release evidence and extended CI"]
 fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
     let records = styling::approved_combination_records().expect("matrix generation succeeds");
     let policy = matrix_policy();

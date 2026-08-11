@@ -1,5 +1,31 @@
 # QR Code Generator — Testing Strategy
 
+## Agent metadata
+
+- **Purpose:** required test design, invariants, fixture policy, oracle
+  independence, and release evidence coverage.
+- **Read when:** adding/changing tests, fixtures, QR behavior, rendering behavior,
+  browser behavior, or a test-policy mechanism.
+- **Authority:** coverage and test-design requirements. `AGENTS.md` and
+  `docs/agents/verification.md` exclusively decide which commands an agent runs.
+- **Execution warning:** descriptions of extended/release suites are not an
+  instruction to run them. Run one routine gate plus only triggered specialized
+  gates.
+
+### Retrieval index
+
+| Change topic | Read |
+|---|---|
+| tools and repository layout | §§2–3 |
+| fixtures/oracle provenance | §4 |
+| core encoding | §5 |
+| rendering, profiles, branding | §6 |
+| web/WASM/privacy | §7 |
+| property/fuzz/mutation/coverage/resources | §§8–11 |
+| suite definitions and failure policy | §§12–13 |
+| feature review checklist | §14 |
+| implementation order/references | §§15–16 |
+
 **Companion to:** `DEVELOPMENT_PLAN.md`  
 **Status:** Development-ready  
 **Primary objective:** Demonstrate standards correctness, deterministic rendering, scan reliability, browser behavior, and resilience to hostile input without trusting the implementation under test as its own oracle.
@@ -40,6 +66,7 @@ Pin `proptest` to the reviewed 1.11.x line initially. Pin all other crate versio
 
 | Tool | Purpose | Policy |
 |---|---|---|
+| `sccache` 0.17.0 | Compiler-result cache | Required in hosted Rust jobs through the official GitHub Actions backend, with cache statistics reported after each job. Optional locally through `RUSTC_WRAPPER=sccache`; keep local Cargo incremental compilation enabled. Hosted jobs disable incremental artifacts and share compiler results plus dependency artifacts across workflows. |
 | `cargo-llvm-cov` | Line and region coverage | Report per crate and per file. Stable branch coverage is not assumed. Generated tables and test support code are excluded transparently. |
 | `cargo-mutants` | Mutation testing | Required for `qr-core` and critical geometry code. Every surviving mutation is triaged; exclusions require a reason in config. |
 | `cargo-fuzz` | Coverage-guided libFuzzer targets | Run manually with documented budgets. Crashes, panics, hangs, excessive allocation, and invariant failures are defects. Minimized regression inputs are committed. |
@@ -128,6 +155,11 @@ fuzz/
 ```
 
 Test support code must be reusable but must not contain a second hand-written copy of production QR rules. Expected results come from committed provenance fixtures, independent tools, legally usable standards material, or simple invariants.
+
+Ordinary `qr-core` integration modules share one `core-integration` harness to
+avoid repeatedly linking the same crate graph. Long-running and explicitly
+invoked targets (`fuzz_regressions`, `independent_decode`, and `tables`) remain
+separate so their documented commands and scheduling stay stable.
 
 ## 4. Fixture provenance
 
@@ -362,6 +394,15 @@ For each approved tuple of profile and logo state:
 
 The generated coverage test must fail if a new approved enum variant is not included in the matrix.
 
+Routine native tests keep a fast selectable-surface check, render one
+representative artifact for every renderable profile/logo tuple, and render the
+largest Adaptive Version 40 boundary against the recorded artifact/allocation
+ceilings. The complete 218-row generated combination and resource-baseline
+passes are ignored by ordinary `cargo test` and run through
+`pnpm run test:approved:exhaustive` as part of release evidence and the
+path-filtered extended decoder workflow. This preserves the full release gate
+without charging unrelated routine changes for exhaustive matrix generation.
+
 The versioned coverage contract is
 [`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
 which is consumed by both the Rust generator test and Python readiness validator.
@@ -576,6 +617,10 @@ Test defensive resource limits explicitly:
 
 ## 12. Local and release test suites
 
+This section defines suite contents. Agent command selection and current cost
+classes live in [`agents/verification.md`](agents/verification.md); that router
+takes precedence over prose examples here.
+
 ### Routine local verification
 
 - formatting and warnings-as-errors Clippy;
@@ -589,8 +634,8 @@ Test defensive resource limits explicitly:
 Rust, web, and Python lanes concurrently. Cargo-heavy native/WASM commands stay
 in one serialized lane, the optimized Trunk artifact is built once, and
 Playwright serves that existing artifact. The orchestrator does not override
-`CARGO_TARGET_DIR`, so local incremental compilation and the hosted Rust cache
-retain the standard workspace target layout. When `CI=true`, the compiled,
+`CARGO_TARGET_DIR`, so local incremental compilation and the hosted shared Rust
+caches retain the standard workspace target layout. When `CI=true`, the compiled,
 Python, and browser test lanes run serially to avoid resource-contention flakes
 on smaller hosted runners; they still reuse the one optimized build. The
 `verify:core`, `verify:render`, and `verify:web` commands provide focused local
@@ -619,17 +664,17 @@ Manual product checks are performed separately by the owner and are not collecte
 The repository-owned local command surface and machine-readable evidence layout
 for these suites is now specified in [`RELEASE_HARDENING.md`](RELEASE_HARDENING.md).
 The `Correctness` hosted workflow classifies changed paths on pushes to `main`.
-Web-only and Python-support-only pushes run their focused covering gates;
-core, render, dependency, shared-configuration, mixed, and unknown changes run
+Isolated core, render, web, and Python-support pushes run their focused covering
+gates; dependency, shared-configuration, mixed, and unknown changes run
 `pnpm run verify`. The complete pinned ZXing-C++ plus representative quirc
 decoder campaigns live in a separate workflow limited to matching core,
 render, artifact, oracle, and release-evidence inputs. Pages publishing is
-likewise limited to site and build-input changes and only builds, uploads, and
-deploys the site; correctness
-verification remains the responsibility of the separate workflow. Both
-correctness workflows and Pages retain manual dispatch. Successful jobs never
-rewrite committed goldens or evidence; extended failures upload logs and
-generated failure evidence.
+limited to site and build-input changes, runs only after the covering
+`Correctness` gate succeeds, and repackages that job's verified release
+artifacts with the Pages base path before upload and deployment. Both hosted
+workflows retain manual dispatch. Successful jobs never rewrite committed
+goldens or evidence; extended failures upload logs and generated failure
+evidence.
 
 ## 13. Flake and failure policy
 

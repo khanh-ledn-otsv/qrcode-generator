@@ -1,5 +1,16 @@
 # Public-source provenance for QR Model 2 implementation
 
+## Agent metadata
+
+- **Purpose:** source authority, oracle independence, and evidence labels for QR
+  implementation work without a complete licensed standard copy.
+- **Read when:** implementing or reviewing QR tables/algorithms, changing oracle
+  pins, or recording standards provenance.
+- **Authority:** provenance policy only. ISO/IEC 18004:2024 remains normative;
+  cited public sources corroborate but do not replace it.
+- **Mutation rule:** record exact version, source file/symbol, and independence
+  caveat when adding evidence. Never copy oracle implementation into production.
+
 **Recorded:** 2026-08-06  
 **Scope:** QR Model 2 encoding rules needed by tickets 06–10 when a complete licensed ISO/IEC 18004:2024 copy is unavailable.
 

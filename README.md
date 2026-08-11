@@ -1,105 +1,74 @@
-# QR Code Generator
+# Agent Repository Index
 
-A client-side QR code generator built with Rust, Leptos, WebAssembly, Trunk,
-and Tailwind CSS. Payload processing and artifact generation stay in the
-browser.
+## Agent metadata
 
-## Workspace
+- **Purpose:** fast repository orientation and entry-point lookup.
+- **Read when:** entering the repository or locating a command/document.
+- **Authority:** `AGENTS.md` owns execution rules; linked documents own their
+  declared technical domains.
+- **Do not use for:** deciding which tests to run. Use
+  `docs/agents/verification.md`.
 
-- `qr-core` contains browser-independent QR encoding logic.
-- `qr-render` contains browser-independent deterministic artifact rendering.
-- `qr-web` contains the Leptos application and browser integrations.
-- `fixture-tool` is a development-only manifest, golden-diff, and independent
-  decoder harness. It is not a dependency of any production crate.
+## Product boundary
 
-Dependencies flow from `qr-web` to `qr-render` and `qr-core`, and from
-`qr-render` to `qr-core`.
+Client-side QR generator: Rust 2024, Leptos, WebAssembly, Trunk, and Tailwind.
+Payload processing and artifact generation stay in the browser.
 
-## Run locally
+```text
+qr-web -> qr-render -> qr-core
+   \-----------------> qr-core
+```
 
-Use Node.js v24 (declared in `.nvmrc`), pnpm 11.20.0, and `uv` for the
-development-only Python environment.
+| Path | Agent meaning |
+|---|---|
+| `crates/qr-core` | browser-independent encoding |
+| `crates/qr-render` | browser-independent deterministic SVG/PNG rendering |
+| `crates/qr-web` | Leptos UI and browser integration |
+| `crates/fixture-tool` | development-only fixture/diff/decoder harness |
+| `tests/oracles` | locked Python oracle environment |
+| `scripts` | repository command implementations and orchestration |
+
+## Environment and entry points
+
+- Node: `.nvmrc` (`v24`); verify before any Node-backed command.
+- Package manager: exact `packageManager` value in `package.json`.
+- Rust: `rust-toolchain.toml`.
+- Python: locked uv project under `tests/oracles`.
+- Local sccache: optional `RUSTC_WRAPPER=sccache`, version `0.17.0`.
+- Hosted sccache integration: `mozilla-actions/sccache-action@v0.0.11`, using
+  the pinned compiler-cache version above.
 
 ```sh
 ./scripts/setup.sh
 pnpm run dev
 ```
 
-The root `Trunk.toml` targets `crates/qr-web/index.html`, so Trunk commands run
-from the workspace root while the Leptos HTML and styles remain inside `qr-web`.
-Trunk builds the Rust application to WebAssembly and compiles Tailwind CSS automatically.
+`setup.sh` accepts `QR_DECODER_SETUP_MODE=zxing` or
+`QR_DECODER_SETUP_MODE=quirc` to avoid building an unused oracle. The default
+builds both. Trunk runs from the repository root; `Trunk.toml` targets
+`crates/qr-web/index.html`.
 
-## Deploy to GitHub Pages
+For verification, run exactly the gate selected by `AGENTS.md` and
+[`docs/agents/verification.md`](docs/agents/verification.md). Do not infer a
+test plan from the number of scripts in `package.json`.
 
-The `Deploy GitHub Pages` workflow builds and publishes the static site after
-pushes to `main` that change site or build inputs, and it can also be started
-manually. Before the first
-deployment, open the repository's **Settings → Pages** and select **GitHub
-Actions** as the source.
+## Hosted flow
 
-The workflow uses the base path reported by GitHub Pages, so it supports
-project sites such as `https://owner.github.io/repository/`, user or
-organization sites at the domain root, and configured custom domains without a
-repository-name edit.
+`Correctness` selects a covering gate for each relevant push. On an eligible
+`main` push it publishes the already verified release artifact to Pages with
+the configured base path; it does not repeat the Rust release build. Extended
+decoder CI is separately path-filtered. Both workflows support manual dispatch.
 
-## Verify
+## Document retrieval map
 
-Run the complete repository gate with one command:
-
-```sh
-pnpm run verify
-```
-
-For the normal agent and pre-push path, let the repository choose the smallest
-covering gate from the current changes:
-
-```sh
-pnpm run verify:changed
-```
-
-The complete gate runs independent Rust, web, and Python lanes concurrently,
-keeps Cargo-heavy commands serialized, and reuses its single release build for
-the Chromium tests. It uses the standard Cargo target directories, including
-in CI, so incremental and hosted Rust caches continue to apply. Hosted CI runs
-the compiled, Python, and browser test lanes serially to avoid resource
-contention on smaller runners while still reusing the single release build.
-
-For a faster edit loop, run the gate closest to the code being changed:
-
-```sh
-pnpm run verify:core
-pnpm run verify:render
-pnpm run verify:web
-pnpm run verify:python
-pnpm run verify:meta
-```
-
-Use the full gate for cross-crate, dependency, shared build/runtime, or unknown
-changes. Focused gates are the expected handoff checks for isolated changes.
-
-Use `pnpm run check` for static checks and the release build, `pnpm run test`
-for all native, Python, WASM, and browser tests, and `pnpm run format` to apply
-Rust, TypeScript, and Python formatters.
-
-Committed QR fixtures are verified without regeneration during `cargo test`.
-The explicit dual-oracle generation and ZXing-C++ decode workflow is documented
-in [`tests/oracles/README.md`](tests/oracles/README.md).
-
-Replay the committed core robustness regressions and run the payload-silent
-native diagnostic example with:
-
-```sh
-cargo test -p qr-core --test fuzz_regressions
-cargo fuzz run encode_utf8 -- -runs=10000
-printf %s 'synthetic diagnostic input' | cargo run -p qr-core --example diagnostics
-```
-
-Extended coverage, mutation, fuzz, Miri, dependency, performance, adverse-image,
-compressed-bundle, and release-evidence commands are documented in
-[`docs/RELEASE_HARDENING.md`](docs/RELEASE_HARDENING.md).
-
-## Documentation
-
-- [Development plan](docs/DEVELOPMENT_PLAN.md)
-- [Testing strategy](docs/TESTING_STRATEGY.md)
-- [Release hardening](docs/RELEASE_HARDENING.md)
+| Need | Read |
+|---|---|
+| execution constraints and test selection | [`AGENTS.md`](AGENTS.md), [`docs/agents/verification.md`](docs/agents/verification.md) |
+| accepted product/architecture decisions | [`docs/DEVELOPMENT_PLAN.md`](docs/DEVELOPMENT_PLAN.md) |
+| test-design rationale and required coverage | [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) |
+| specialized release/decoder/coverage commands | [`docs/RELEASE_HARDENING.md`](docs/RELEASE_HARDENING.md) |
+| final clean release certification | [`docs/RELEASE_READINESS.md`](docs/RELEASE_READINESS.md) |
+| fixture/oracle mutation protocol | [`tests/oracles/README.md`](tests/oracles/README.md) |
+| QR source authority/provenance | [`docs/research/qr-public-source-provenance.md`](docs/research/qr-public-source-provenance.md) |
+| bundled logo provenance and generated geometry | [`assets/README.md`](assets/README.md), [`docs/generated/logo-placement-policy.md`](docs/generated/logo-placement-policy.md) |
+| local issue/domain workflows | [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md), [`docs/agents/domain.md`](docs/agents/domain.md) |

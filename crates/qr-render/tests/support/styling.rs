@@ -367,6 +367,14 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
     Ok(prepared)
 }
 
+pub fn representative_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>> {
+    let mut prepared = Vec::new();
+    for tuple in approved_style_tuples() {
+        prepared.push(prepare_decode_case(tuple, short_url_case())?);
+    }
+    Ok(prepared)
+}
+
 fn matrix_cases(tuple: ApprovedStyleTuple) -> Result<Vec<DecodeCase>, Box<dyn Error>> {
     let mut cases = required_payload_cases(tuple.profile, tuple.ecc())?;
     for version in 1..=tuple.profile.maximum_version().number() {
@@ -442,14 +450,7 @@ pub fn required_payload_cases(
 ) -> Result<Vec<DecodeCase>, Box<dyn Error>> {
     let dense_url = dense_url_at_profile_ceiling(profile, ecc)?;
     Ok(vec![
-        DecodeCase {
-            kind: MatrixCaseKind::RequiredPayload,
-            class: PayloadClass::ShortUrl,
-            label: PayloadClass::ShortUrl.label().to_owned(),
-            text: "https://example.test/a".to_owned(),
-            eci_assignment: None,
-            expected_version: None,
-        },
+        short_url_case(),
         DecodeCase {
             kind: MatrixCaseKind::RequiredPayload,
             class: PayloadClass::DenseUrl,
@@ -491,6 +492,17 @@ pub fn required_payload_cases(
             expected_version: None,
         },
     ])
+}
+
+fn short_url_case() -> DecodeCase {
+    DecodeCase {
+        kind: MatrixCaseKind::RequiredPayload,
+        class: PayloadClass::ShortUrl,
+        label: PayloadClass::ShortUrl.label().to_owned(),
+        text: "https://example.test/a".to_owned(),
+        eci_assignment: None,
+        expected_version: None,
+    }
 }
 
 fn dense_url_at_profile_ceiling(

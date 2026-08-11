@@ -1,0 +1,10 @@
+mod bch;
+mod bit_buffer;
+mod codeword_stream;
+mod encoder;
+mod encoding;
+mod error_surfaces;
+mod mask_selection;
+mod matrix;
+mod placement;
+mod reed_solomon;
