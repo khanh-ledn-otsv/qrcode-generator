@@ -35,6 +35,13 @@ impl WorkerRequest {
         serde_json::to_string(self)
     }
 
+    #[must_use]
+    pub fn revision_from_json(json: &str) -> Option<u64> {
+        serde_json::from_str::<Self>(json)
+            .ok()
+            .map(|request| request.revision)
+    }
+
     fn into_preview_request(self) -> Result<PreviewRequest, ProtocolError> {
         Ok(PreviewRequest {
             revision: Revision(self.revision),
@@ -74,13 +81,44 @@ impl WorkerResponse {
     pub fn from_message_parts(json: &str, png: Vec<u8>) -> Result<Self, ProtocolError> {
         let mut response: Self = serde_json::from_str(json)?;
         match &mut response.result {
-            WorkerResult::Ready(preview) => preview.png = png,
+            WorkerResult::Ready(preview) if is_png(&png) => preview.png = png,
+            WorkerResult::Ready(_) => return Err(ProtocolError::InvalidMessage),
             WorkerResult::Failed(_) if !png.is_empty() => {
                 return Err(ProtocolError::InvalidMessage);
             }
             WorkerResult::Failed(_) => {}
         }
+        response.validate()?;
         Ok(response)
+    }
+
+    #[must_use]
+    pub const fn revision(&self) -> Revision {
+        Revision(self.revision)
+    }
+
+    #[must_use]
+    pub const fn revision_number(&self) -> u64 {
+        self.revision
+    }
+
+    #[must_use]
+    pub fn revision_from_json(json: &str) -> Option<Revision> {
+        #[derive(Deserialize)]
+        struct RevisionOnly {
+            revision: u64,
+        }
+
+        serde_json::from_str::<RevisionOnly>(json)
+            .ok()
+            .map(|value| Revision(value.revision))
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        match &self.result {
+            WorkerResult::Ready(preview) => preview.validate(),
+            WorkerResult::Failed(_) => Ok(()),
+        }
     }
 
     pub fn into_preview_result(self) -> (Revision, Result<Preview, WorkflowFailure>) {
@@ -135,6 +173,33 @@ impl WirePreview {
             diagnostics: self.diagnostics.into_diagnostics()?,
         })
     }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        if !valid_svg(&self.svg, self.diagnostics.svg_side_pixels)
+            || !valid_png(&self.png, self.diagnostics.png_side_pixels)
+        {
+            return Err(ProtocolError::InvalidMessage);
+        }
+        self.diagnostics.validate()
+    }
+}
+
+fn is_png(bytes: &[u8]) -> bool {
+    bytes.starts_with(b"\x89PNG\r\n\x1a\n")
+}
+
+fn valid_png(bytes: &[u8], side: u32) -> bool {
+    bytes.len() >= 45
+        && is_png(bytes)
+        && bytes.get(8..16) == Some(&[0, 0, 0, 13, b'I', b'H', b'D', b'R'])
+        && bytes.get(16..20) == Some(side.to_be_bytes().as_slice())
+        && bytes.get(20..24) == Some(side.to_be_bytes().as_slice())
+        && bytes.ends_with(&[0, 0, 0, 0, b'I', b'E', b'N', b'D', 0xae, 0x42, 0x60, 0x82])
+}
+
+fn valid_svg(svg: &str, side: u32) -> bool {
+    let prefix = format!("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{side}\"");
+    svg.starts_with(&prefix) && svg.ends_with("</svg>")
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -296,6 +361,65 @@ impl WireDiagnostics {
             },
             logo_placement: self.logo_placement.map(Into::into),
         })
+    }
+
+    fn validate(&self) -> Result<(), ProtocolError> {
+        let selected =
+            Version::new(self.selected_version).map_err(|_| ProtocolError::InvalidMessage)?;
+        let minimum =
+            Version::new(self.minimum_version).map_err(|_| ProtocolError::InvalidMessage)?;
+        let maximum =
+            Version::new(self.maximum_version).map_err(|_| ProtocolError::InvalidMessage)?;
+        let valid_mode = matches!((self.mode, self.single_mode), (0, Some(0..=3)) | (1, None));
+        let valid_logo = matches!(self.logo_style, 0..=1)
+            && (self.logo_style == 1) == self.logo_placement.is_some();
+        let profile = profile_from_number(self.profile).ok_or(ProtocolError::InvalidMessage)?;
+        let compiled_profile =
+            super::supported_profile(profile).ok_or(ProtocolError::InvalidMessage)?;
+        let expected_svg = compiled_profile
+            .svg_dimensions_for(selected)
+            .map_err(|_| ProtocolError::InvalidMessage)?
+            .width()
+            .get();
+        let geometry = compiled_profile
+            .geometry(selected)
+            .map_err(|_| ProtocolError::InvalidMessage)?;
+        let expected_data_codewords = qr_core::tables::lookup(
+            selected,
+            ecc_from_number(self.ecc).ok_or(ProtocolError::InvalidMessage)?,
+        )
+        .map_err(|_| ProtocolError::InvalidMessage)?
+        .data_codewords();
+        let valid_dimensions = self.matrix_modules == selected.symbol_size()
+            && self
+                .rendered_symbol_side_pixels
+                .checked_add(self.outer_padding_per_side.saturating_mul(2))
+                == Some(self.png_side_pixels)
+            && self.svg_side_pixels == expected_svg
+            && self.png_side_pixels == geometry.canvas_dimensions().width().get()
+            && self.quiet_zone_modules == geometry.symbol().quiet_zone_modules_per_side().get()
+            && self.module_scale == geometry.module_scale().get()
+            && self.rendered_symbol_side_pixels
+                == geometry.rendered_symbol_dimensions().width().get()
+            && self.outer_padding_per_side == geometry.outer_padding().left.get();
+        if ecc_from_number(self.ecc).is_none()
+            || MaskId::new(self.mask).is_err()
+            || minimum > selected
+            || selected > maximum
+            || !valid_mode
+            || !matches!(self.safety, 0..=1)
+            || !valid_logo
+            || self.used_data_bits > self.available_data_bits
+            || self.available_data_bits != u32::from(expected_data_codewords) * 8
+            || self.data_codewords != expected_data_codewords
+            || self.maximum_version != compiled_profile.maximum_version().number()
+            || self.contrast_hundredths != 604
+            || self.safety != self.logo_style
+            || !valid_dimensions
+        {
+            return Err(ProtocolError::InvalidMessage);
+        }
+        Ok(())
     }
 }
 

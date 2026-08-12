@@ -68,19 +68,27 @@ Resolved on 2026-08-12. Trunk now packages a dedicated local
 keeps debounce and revision authority on the main thread, and sends the exact
 payload plus compiled workflow choices as JSON. The worker runs the unchanged
 encoding/rendering path and returns JSON metadata plus PNG bytes through a
-transferable buffer; malformed messages and startup/runtime/dispatch failures
-leave an actionable internal-error state.
+transferable buffer. Replies are revision-scoped and validated before they can
+become exportable; malformed messages and startup/runtime/dispatch failures
+leave an actionable internal-error state. A readiness handshake safely queues
+the first request while a new or replacement WASM worker initializes, and page
+disposal explicitly terminates the worker. A revision-scoped 30-second liveness
+guard prevents a silent bootstrap or runtime from leaving the UI pending
+indefinitely without imposing a normal machine-speed threshold.
 
 Before implementation, a reproducible Chromium probe using an unbranded dense
 Adaptive Version 39 request (`"A1a"` repeated 700 times) recorded a 215 ms long
 task and a 222.5 ms maximum 1 ms timer gap. The same probe after worker
 integration recorded no long task, no gap above 16 ms, and a 14.2 ms maximum
-gap. The retained browser test additionally uses the project's mixed-mode
-representative, proves an animation frame and a newer input complete while the
-large request is outstanding, and proves the single worker is reused.
+gap. The retained browser tests force an out-of-order result, prove input,
+focus, and an animation frame proceed while the first response is outstanding,
+and cover a stale malformed reply, silent-worker recovery, repeated generation,
+single-worker reuse, and worker termination during page disposal.
 
 Verification completed with Node.js v24.18.0:
 
-- `pnpm run verify` — passed, including all 22 desktop Chromium tests.
+- `pnpm run verify` — passed, including all 26 desktop Chromium tests.
 - Direct-versus-worker protocol tests cover branded, UTF-8, mixed-mode, and
-  unbranded Version 40 requests with byte-identical SVG and PNG artifacts.
+  unbranded Version 40 requests with byte-identical SVG and PNG artifacts;
+  actual browser Worker downloads additionally pin native UTF-8 and mixed-mode
+  hashes.

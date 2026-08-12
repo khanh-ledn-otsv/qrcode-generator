@@ -79,3 +79,39 @@ fn worker_artifacts_match_direct_evaluation_across_approved_request_shapes() {
         );
     }
 }
+
+#[test]
+fn malformed_ready_responses_never_become_exportable_previews() {
+    let mut state = WorkflowState::new(ProfileId::Inline);
+    let request = state
+        .set_payload("valid payload".to_owned())
+        .expect("payload starts a preview");
+    let request_json = WorkerRequest::from_preview(&request)
+        .to_json()
+        .expect("request serializes");
+    let (metadata, png) = WorkerResponse::evaluate_json(&request_json)
+        .expect("worker evaluates request")
+        .into_message_parts()
+        .expect("response separates bytes");
+
+    assert!(WorkerResponse::from_message_parts(&metadata, Vec::new()).is_err());
+    assert!(WorkerResponse::from_message_parts(&metadata, b"\x89PNG\r\n\x1a\n".to_vec(),).is_err());
+
+    let mut invalid_svg: serde_json::Value =
+        serde_json::from_str(&metadata).expect("metadata is JSON");
+    invalid_svg["result"]["value"]["svg"] = "<svg></svg>".into();
+    let invalid_svg = serde_json::to_string(&invalid_svg).expect("JSON serializes");
+    assert!(WorkerResponse::from_message_parts(&invalid_svg, png.clone()).is_err());
+
+    let mut invalid_enum: serde_json::Value =
+        serde_json::from_str(&metadata).expect("metadata is JSON");
+    invalid_enum["result"]["value"]["diagnostics"]["safety"] = 2.into();
+    let invalid_enum = serde_json::to_string(&invalid_enum).expect("JSON serializes");
+    assert!(WorkerResponse::from_message_parts(&invalid_enum, png.clone()).is_err());
+
+    let mut invalid_geometry: serde_json::Value =
+        serde_json::from_str(&metadata).expect("metadata is JSON");
+    invalid_geometry["result"]["value"]["diagnostics"]["matrix_modules"] = 1.into();
+    let invalid_geometry = serde_json::to_string(&invalid_geometry).expect("JSON serializes");
+    assert!(WorkerResponse::from_message_parts(&invalid_geometry, png).is_err());
+}

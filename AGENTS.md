@@ -164,6 +164,13 @@ artifact/oracle paths.
 
 ## Tool and cache rules
 
+- Use the globally installed `find-docs` skill (Context7) whenever work depends
+  on current library, framework, SDK, API, CLI, or cloud-service documentation,
+  including version-specific syntax, configuration, setup, migration, and
+  library-specific debugging. Prefer Context7 over generic web search for that
+  material. Repository-authoritative documents and product invariants still
+  take precedence, and Context7 queries must not contain payloads, credentials,
+  proprietary code, or other sensitive information.
 - Before Node-backed commands, run `node --version`; it must be `v24.*`. Use
   `fnm exec --using=.nvmrc <command>` when the active shell is not Node 24.
 - Use the `packageManager`-pinned pnpm. Commit `pnpm-lock.yaml`; never create an

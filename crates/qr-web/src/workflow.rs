@@ -137,6 +137,20 @@ pub const fn link_capacity_guide() -> [LinkCapacityGuideRow; 5] {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Revision(u64);
 
+impl Revision {
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn from_wire_number(value: f64) -> Option<Self> {
+        if value.is_finite()
+            && value.fract() == 0.0
+            && (0.0..=9_007_199_254_740_991.0).contains(&value)
+        {
+            Some(Self(value as u64))
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PreviewRequest {
     revision: Revision,

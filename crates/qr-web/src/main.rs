@@ -29,7 +29,13 @@ fn App() -> impl IntoView {
                 _ = value.complete_preview(revision, result);
             });
         },
-        move || state.update(WorkflowState::reject_internal_failure),
+        move |revision| {
+            if let Some(revision) = revision {
+                state.update(|value| {
+                    _ = value.complete_preview(revision, Err(WorkflowFailure::Internal));
+                });
+            }
+        },
     )
     .ok();
     preview_worker.update_value(|slot| *slot = worker);
@@ -690,5 +696,27 @@ fn safety_label(safety: OutputSafety) -> &'static str {
 }
 
 fn main() {
-    leptos::mount::mount_to_body(App);
+    use std::{cell::RefCell, rc::Rc};
+
+    use leptos::wasm_bindgen::closure::Closure;
+
+    let Some(body) = leptos::prelude::document().body() else {
+        return;
+    };
+    let app = Rc::new(RefCell::new(Some(leptos::mount::mount_to(body, App))));
+    let app_on_pagehide = Rc::clone(&app);
+    let pagehide = Closure::<dyn FnMut(Event)>::new(move |event: Event| {
+        let persisted = event
+            .dyn_ref::<leptos::web_sys::PageTransitionEvent>()
+            .is_some_and(leptos::web_sys::PageTransitionEvent::persisted);
+        if !persisted {
+            _ = app_on_pagehide.borrow_mut().take();
+        }
+    });
+    if leptos::prelude::window()
+        .add_event_listener_with_callback("pagehide", pagehide.as_ref().unchecked_ref())
+        .is_ok()
+    {
+        pagehide.forget();
+    }
 }
