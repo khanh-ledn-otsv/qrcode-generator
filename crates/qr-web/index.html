@@ -19,6 +19,15 @@
       data-bin="qr-web"
       data-wasm-opt="z"
     />
+    <link
+      data-trunk
+      rel="rust"
+      href="Cargo.toml"
+      data-bin="qr-preview-worker"
+      data-type="worker"
+      data-loader-shim
+      data-wasm-opt="z"
+    />
     <link data-trunk rel="tailwind-css" href="input.css" />
     <title>QR Code Generator</title>
   </head>

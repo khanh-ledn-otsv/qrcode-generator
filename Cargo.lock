@@ -1431,6 +1431,8 @@ dependencies = [
  "leptos",
  "qr-core",
  "qr-render",
+ "serde",
+ "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

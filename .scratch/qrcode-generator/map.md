@@ -133,15 +133,12 @@
   production ISO/IEC 18004:2024 citation now points to retained evidence and
   labels its exact clause mapping pending audit; licensed-text confirmation
   remains a separate future review rather than an unrecorded assumption.
+- [Ticket 39](issues/39-offload-preview-generation-to-web-worker.md): One
+  lifecycle-owned dedicated worker now runs encoding and deterministic SVG/PNG
+  generation in a separate WASM instance. Revisioned JSON metadata and a
+  transferable PNG buffer preserve exact payloads and artifact bytes while
+  keeping large preview work off the browser main thread.
 
 ## Notes
 
 - Implementation tickets are tracked under `issues/`.
-
-## Open tasks
-
-- [Ticket 39](issues/39-offload-preview-generation-to-web-worker.md): Move
-  encoding and deterministic SVG/PNG preview generation into a lifecycle-owned
-  browser Web Worker so large QR requests do not block main-thread input,
-  focus, or paint while preserving exact payloads, stale-result protection,
-  offline behavior, and artifact bytes.

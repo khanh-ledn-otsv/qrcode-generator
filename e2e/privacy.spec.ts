@@ -10,6 +10,11 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   const requests: string[] = [];
   page.on("request", (request) => requests.push(request.url()));
   await page.goto("/");
+  await expect
+    .poll(() =>
+      requests.some((requestUrl) => new URL(requestUrl).pathname === "/qr-preview-worker_bg.wasm"),
+    )
+    .toBe(true);
   const initialUrl = page.url();
   const initialTitle = await page.title();
   const initialHistoryLength = await page.evaluate(() => history.length);
@@ -20,7 +25,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
       const request = new URL(requestUrl);
       expect(request.origin).toBe(localOrigin);
       expect(request.pathname).toMatch(
-        /^(?:\/$|\/favicon\.ico$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$)/,
+        /^(?:\/$|\/favicon\.ico$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$|\/qr-preview-worker(?:_loader|_bg)?\.(?:js|wasm)$)/,
       );
       return request.pathname;
     }),

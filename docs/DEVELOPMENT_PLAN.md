@@ -377,6 +377,30 @@ Use typed errors and checked arithmetic. At minimum:
 
 User errors return to Leptos as validation state. Internal invariant errors disable export and show a generic failure without logging payload data. No user-controlled path uses `unwrap`, unchecked indexing, or panics across WASM.
 
+### 4.3 Preview worker boundary
+
+The browser UI owns one lifecycle-scoped dedicated Web Worker for preview
+generation. The main thread preserves form state, the 250 ms debounce, and the
+authoritative revision check; after the debounce it sends the exact payload,
+profile, logo choice, and revision to the worker. The worker's separate WASM
+instance runs the existing `evaluate_preview` path, including encoding,
+render-model construction, and deterministic SVG/PNG generation. QR behavior
+is not duplicated in JavaScript.
+
+Messages use an explicit version-local Rust protocol. Requests and response
+metadata are JSON; PNG bytes use a transferable `ArrayBuffer` so they are not
+expanded into JSON or retained in the worker after delivery. The main thread
+reconstructs the existing typed preview and accepts it only when its revision
+is still current. Malformed messages, worker startup/runtime errors, and failed
+dispatches leave the workflow in the existing payload-free internal-error
+state rather than pending indefinitely.
+
+Trunk builds the worker as the local `qr-preview-worker` binary and emits its
+loader and WASM beside the application. Worker creation happens once per app
+owner, uses no remote resource, and termination on owner cleanup releases its
+callbacks and WASM instance. All Worker and messaging APIs remain in `qr-web`;
+the `qr-web -> qr-render -> qr-core` dependency direction is unchanged.
+
 ## 5. Recommended dependencies
 
 Keep versions exact in the workspace manifest and update dependencies deliberately.
@@ -385,7 +409,8 @@ Keep versions exact in the workspace manifest and update dependencies deliberate
 
 - `leptos = =0.8.20` with `csr` for the web crate.
 - `wasm-bindgen`, `web-sys`, and `js-sys` only in `qr-web` for Blob/URL/download integration.
-- `serde` only if configuration serialization is actually needed; compiled Rust constants are preferred for the five profiles.
+- `serde`/`serde_json` in `qr-web` for the explicit local worker-message
+  protocol; compiled Rust constants remain preferred for the five profiles.
 - `thiserror` for typed errors if its WASM size is acceptable; otherwise implement `Display` manually.
 - `png` 0.18.x in `qr-render`, with only required features.
 - A small timer utility for debounce only if Leptos/browser APIs do not already provide the needed lifecycle-safe timeout.

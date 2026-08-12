@@ -57,10 +57,10 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
     let placement = diagnostics
         .logo_placement()
         .expect("version 6 has reviewed logo geometry");
-    assert_eq!(placement.source_bounds().left_ten_thousandths(), 140_000);
-    assert_eq!(placement.source_bounds().top_ten_thousandths(), 180_625);
-    assert_eq!(placement.source_bounds().width_ten_thousandths(), 130_000);
-    assert_eq!(placement.source_bounds().height_ten_thousandths(), 48_750);
+    assert_eq!(placement.source_left_ten_thousandths(), 140_000);
+    assert_eq!(placement.source_top_ten_thousandths(), 180_625);
+    assert_eq!(placement.source_width_ten_thousandths(), 130_000);
+    assert_eq!(placement.source_height_ten_thousandths(), 48_750);
     assert_eq!(placement.obscured_data_modules(), 105);
     assert_eq!(placement.obscured_remainder_modules(), 0);
     assert!(state.exports_enabled());
@@ -98,10 +98,10 @@ fn adaptive_long_url_selects_version_ten_and_exports_on_wasm() {
     assert_eq!(diagnostics.rendered_symbol_side_pixels(), 390);
     assert_eq!(diagnostics.outer_padding_per_side(), 0);
     let placement = diagnostics.logo_placement().expect("adaptive placement");
-    assert_eq!(placement.source_bounds().left_ten_thousandths(), 220_000);
-    assert_eq!(placement.source_bounds().top_ten_thousandths(), 200_625);
-    assert_eq!(placement.knockout_bounds().left().get(), 21);
-    assert_eq!(placement.knockout_bounds().top().get(), 19);
+    assert_eq!(placement.source_left_ten_thousandths(), 220_000);
+    assert_eq!(placement.source_top_ten_thousandths(), 200_625);
+    assert_eq!(placement.knockout_left(), 21);
+    assert_eq!(placement.knockout_top(), 19);
     assert!(state.exports_enabled());
 }
 

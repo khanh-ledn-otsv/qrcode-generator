@@ -373,10 +373,10 @@ fn adaptive_preserves_the_long_url_and_exports_version_ten_at_ecc_h() {
     let placement = diagnostics
         .logo_placement()
         .expect("adaptive logo placement");
-    assert_eq!(placement.source_bounds().left_ten_thousandths(), 220_000);
-    assert_eq!(placement.source_bounds().top_ten_thousandths(), 200_625);
-    assert_eq!(placement.knockout_bounds().left().get(), 21);
-    assert_eq!(placement.knockout_bounds().top().get(), 19);
+    assert_eq!(placement.source_left_ten_thousandths(), 220_000);
+    assert_eq!(placement.source_top_ten_thousandths(), 200_625);
+    assert_eq!(placement.knockout_left(), 21);
+    assert_eq!(placement.knockout_top(), 19);
     assert!(state.exports_enabled());
 }
 

@@ -5,12 +5,14 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, EncodingMode, Version, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, ContrastRatio, LogoPlacement, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
-    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, render_png, render_svg,
+    BRANDED_LOGO_VERSION, ContrastRatio, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, OutputProfile,
+    OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
+    render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
+
+pub mod worker_protocol;
 
 const CONTROL_CHARACTER_CAUTION: &str =
     "This payload contains control characters. Confirm that they are intentional.";
@@ -155,6 +157,16 @@ impl PreviewRequest {
     }
 
     #[must_use]
+    pub const fn profile_id(&self) -> ProfileId {
+        self.profile_id
+    }
+
+    #[must_use]
+    pub const fn logo_enabled(&self) -> bool {
+        self.logo_enabled
+    }
+
+    #[must_use]
     pub const fn ecc(&self) -> ErrorCorrection {
         if self.logo_enabled {
             ErrorCorrection::High
@@ -175,6 +187,7 @@ impl PreviewRequest {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Diagnostics {
+    profile_id: ProfileId,
     mode: EncodingMode,
     eci_assignment: Option<EciAssignment>,
     ecc: ErrorCorrection,
@@ -197,10 +210,95 @@ pub struct Diagnostics {
     safety: OutputSafety,
     contrast_ratio: ContrastRatio,
     logo_style: LogoStyle,
-    logo_placement: Option<LogoPlacement>,
+    logo_placement: Option<LogoDiagnostics>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct LogoDiagnostics {
+    source_left: u32,
+    source_top: u32,
+    source_width: u32,
+    source_height: u32,
+    knockout_left: u32,
+    knockout_top: u32,
+    knockout_width: u32,
+    knockout_height: u32,
+    protected_clearance: u32,
+    obscured_data_modules: u32,
+    obscured_remainder_modules: u32,
+}
+
+impl LogoDiagnostics {
+    fn from_placement(placement: qr_render::LogoPlacement) -> Self {
+        let source = placement.source_bounds();
+        let knockout = placement.knockout_bounds();
+        Self {
+            source_left: source.left_ten_thousandths(),
+            source_top: source.top_ten_thousandths(),
+            source_width: source.width_ten_thousandths(),
+            source_height: source.height_ten_thousandths(),
+            knockout_left: knockout.left().get(),
+            knockout_top: knockout.top().get(),
+            knockout_width: knockout.width().get(),
+            knockout_height: knockout.height().get(),
+            protected_clearance: placement.protected_clearance(),
+            obscured_data_modules: placement.obscured_data_modules(),
+            obscured_remainder_modules: placement.obscured_remainder_modules(),
+        }
+    }
+
+    #[must_use]
+    pub const fn source_left_ten_thousandths(self) -> u32 {
+        self.source_left
+    }
+    #[must_use]
+    pub const fn source_top_ten_thousandths(self) -> u32 {
+        self.source_top
+    }
+    #[must_use]
+    pub const fn source_width_ten_thousandths(self) -> u32 {
+        self.source_width
+    }
+    #[must_use]
+    pub const fn source_height_ten_thousandths(self) -> u32 {
+        self.source_height
+    }
+    #[must_use]
+    pub const fn knockout_left(self) -> u32 {
+        self.knockout_left
+    }
+    #[must_use]
+    pub const fn knockout_top(self) -> u32 {
+        self.knockout_top
+    }
+    #[must_use]
+    pub const fn knockout_width(self) -> u32 {
+        self.knockout_width
+    }
+    #[must_use]
+    pub const fn knockout_height(self) -> u32 {
+        self.knockout_height
+    }
+    #[must_use]
+    pub const fn protected_clearance(self) -> u32 {
+        self.protected_clearance
+    }
+    #[must_use]
+    pub const fn obscured_data_modules(self) -> u32 {
+        self.obscured_data_modules
+    }
+    #[must_use]
+    pub const fn obscured_remainder_modules(self) -> u32 {
+        self.obscured_remainder_modules
+    }
 }
 
 impl Diagnostics {
+    #[must_use]
+    pub const fn profile_id(self) -> ProfileId {
+        self.profile_id
+    }
+
     #[must_use]
     pub const fn mode(self) -> EncodingMode {
         self.mode
@@ -322,7 +420,7 @@ impl Diagnostics {
     }
 
     #[must_use]
-    pub const fn logo_placement(self) -> Option<LogoPlacement> {
+    pub const fn logo_placement(self) -> Option<LogoDiagnostics> {
         self.logo_placement
     }
 }
@@ -715,6 +813,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         svg,
         png,
         diagnostics: Diagnostics {
+            profile_id: profile.id(),
             mode: encoded.mode(),
             eci_assignment: encoded.eci_assignment(),
             ecc: encoded.ecc(),
@@ -738,7 +837,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             safety: options.safety(),
             contrast_ratio: options.contrast_ratio(),
             logo_style: options.logo_style(),
-            logo_placement: model.logo_placement(),
+            logo_placement: model.logo_placement().map(LogoDiagnostics::from_placement),
         },
     })
 }

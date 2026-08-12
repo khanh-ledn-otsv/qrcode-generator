@@ -483,6 +483,8 @@ Run browser tests for:
 - exact downloaded byte content returned by adapters;
 - DOM/browser error conversion without panic;
 - debounce timers and disposal;
+- exact worker request/result round trips, typed failures, and byte-identical
+  direct-versus-worker SVG/PNG artifacts;
 - repeated generation without leaked object URLs or unbounded retained buffers.
 
 Run these locally in headless desktop Chromium.
@@ -509,6 +511,11 @@ Test through the user-visible UI:
   standard square finders;
 - keyboard-only operation and visible focus;
 - rapid typing/debounce with latest-value wins;
+- a large mixed-mode Adaptive request is dispatched to the dedicated worker,
+  a subsequent input update and animation frame run while that work is
+  outstanding, and the stale result cannot replace the newer revision;
+- malformed worker results produce the associated internal-failure state and
+  never leave exports pending;
 - SVG and PNG downloads, filenames, dimensions, hashes, and independent decode;
 - reload and back/forward behavior if state persistence is added.
 

@@ -6,23 +6,37 @@ use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, Inp
 use qr_render::{LogoStyle, OutputSafety, ProfileId, SUPPORTED_PROFILES};
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
+use qr_web::preview_worker::PreviewWorker;
 use qr_web::workflow::{
-    ArtifactKind, PreviewRequest, WorkflowFailure, WorkflowState, ecc_label, evaluate_preview,
-    link_capacity_guide, mode_label, profile_presentation, textarea_display_utf16_length,
-    version_label,
+    ArtifactKind, PreviewRequest, WorkflowFailure, WorkflowState, ecc_label, link_capacity_guide,
+    mode_label, profile_presentation, textarea_display_utf16_length, version_label,
 };
 
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 type DebounceSignal = RwSignal<DebounceTimer>;
+type PreviewWorkerStore = StoredValue<Option<PreviewWorker>, LocalStorage>;
 
 #[component]
 fn App() -> impl IntoView {
     let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
     let pending_timer = RwSignal::new(DebounceTimer::default());
     let pending_edit_start = RwSignal::new(None::<u32>);
+    let preview_worker = StoredValue::new_local(None);
+    let worker = PreviewWorker::new(
+        move |response| {
+            let (revision, result) = response.into_preview_result();
+            state.update(|value| {
+                _ = value.complete_preview(revision, result);
+            });
+        },
+        move || state.update(WorkflowState::reject_internal_failure),
+    )
+    .ok();
+    preview_worker.update_value(|slot| *slot = worker);
 
     Owner::on_cleanup(move || {
         pending_timer.update(DebounceTimer::cancel);
+        preview_worker.update_value(|slot| *slot = None);
     });
 
     let profile_options = SUPPORTED_PROFILES.map(|profile| {
@@ -38,7 +52,7 @@ fn App() -> impl IntoView {
                     prop:checked=move || state.with(|value| value.profile_id() == profile_id)
                     on:change=move |_| {
                         if let Some(Ok(request)) = state.try_update(|value| value.select_profile(profile_id)) {
-                            schedule_preview(state, pending_timer, request);
+                            schedule_preview(state, pending_timer, preview_worker, request);
                         }
                     }
                 />
@@ -274,6 +288,7 @@ fn App() -> impl IntoView {
                                         apply_raw_textarea_insertion(
                                             state,
                                             pending_timer,
+                                            preview_worker,
                                             target,
                                             start,
                                             end,
@@ -313,7 +328,7 @@ fn App() -> impl IntoView {
                                 match state.try_update(|value| {
                                     value.set_display_payload_at(target.value(), edit_start)
                                 }) {
-                                    Some(Ok(request)) => schedule_preview(state, pending_timer, request),
+                                    Some(Ok(request)) => schedule_preview(state, pending_timer, preview_worker, request),
                                     Some(Err(_)) | None => {
                                         target.set_value(&state.with(WorkflowState::textarea_value));
                                     }
@@ -335,6 +350,7 @@ fn App() -> impl IntoView {
                                     apply_raw_textarea_insertion(
                                         state,
                                         pending_timer,
+                                        preview_worker,
                                         target,
                                         start,
                                         end,
@@ -376,7 +392,7 @@ fn App() -> impl IntoView {
                                     prop:checked=move || state.with(WorkflowState::logo_enabled)
                                     on:change=move |event| {
                                         if let Some(Ok(request)) = state.try_update(|current| current.set_logo_enabled(event_target_checked(&event))) {
-                                            schedule_preview(state, pending_timer, request);
+                                            schedule_preview(state, pending_timer, preview_worker, request);
                                         }
                                     }
                                 />
@@ -497,16 +513,26 @@ where
 fn schedule_preview(
     state: RwSignal<WorkflowState>,
     pending_timer: DebounceSignal,
+    preview_worker: PreviewWorkerStore,
     request: PreviewRequest,
 ) {
     pending_timer.update(DebounceTimer::cancel);
     let revision = request.revision();
     match set_timeout_with_handle(
         move || {
-            let result = evaluate_preview(&request);
-            state.update(|value| {
-                _ = value.complete_preview(revision, result);
-            });
+            let dispatched = preview_worker
+                .try_with_value(|worker| {
+                    worker
+                        .as_ref()
+                        .ok_or(qr_web::preview_worker::PreviewWorkerError::Startup)?
+                        .dispatch(&request)
+                })
+                .is_some_and(|result| result.is_ok());
+            if !dispatched {
+                state.update(|value| {
+                    _ = value.complete_preview(revision, Err(WorkflowFailure::Internal));
+                });
+            }
         },
         PREVIEW_DEBOUNCE,
     ) {
@@ -520,6 +546,7 @@ fn schedule_preview(
 fn apply_raw_textarea_insertion(
     state: RwSignal<WorkflowState>,
     pending_timer: DebounceSignal,
+    preview_worker: PreviewWorkerStore,
     target: &HtmlTextAreaElement,
     start: u32,
     end: u32,
@@ -533,7 +560,7 @@ fn apply_raw_textarea_insertion(
         {
             _ = target.set_selection_range(caret, caret);
         }
-        schedule_preview(state, pending_timer, request);
+        schedule_preview(state, pending_timer, preview_worker, request);
     }
 }
 
@@ -605,7 +632,7 @@ fn format_capacity(bytes: usize) -> String {
     format!("{amount} characters / bytes")
 }
 
-fn logo_label(style: LogoStyle, placement: Option<qr_render::LogoPlacement>) -> String {
+fn logo_label(style: LogoStyle, placement: Option<qr_web::workflow::LogoDiagnostics>) -> String {
     match (style, placement) {
         (LogoStyle::None, _) => "None".to_owned(),
         (LogoStyle::Bundled, Some(placement)) => format!(
@@ -617,22 +644,20 @@ fn logo_label(style: LogoStyle, placement: Option<qr_render::LogoPlacement>) -> 
     }
 }
 
-fn logo_bounds_label(placement: Option<qr_render::LogoPlacement>) -> String {
+fn logo_bounds_label(placement: Option<qr_web::workflow::LogoDiagnostics>) -> String {
     let Some(placement) = placement else {
         return "None".to_owned();
     };
-    let source = placement.source_bounds();
-    let knockout = placement.knockout_bounds();
     format!(
         "source ({}, {}) {} × {} modules · knockout ({}, {}) {} × {} modules · {} module protected clearance",
-        module_decimal(source.left_ten_thousandths()),
-        module_decimal(source.top_ten_thousandths()),
-        module_decimal(source.width_ten_thousandths()),
-        module_decimal(source.height_ten_thousandths()),
-        knockout.left().get(),
-        knockout.top().get(),
-        knockout.width().get(),
-        knockout.height().get(),
+        module_decimal(placement.source_left_ten_thousandths()),
+        module_decimal(placement.source_top_ten_thousandths()),
+        module_decimal(placement.source_width_ten_thousandths()),
+        module_decimal(placement.source_height_ten_thousandths()),
+        placement.knockout_left(),
+        placement.knockout_top(),
+        placement.knockout_width(),
+        placement.knockout_height(),
         placement.protected_clearance(),
     )
 }

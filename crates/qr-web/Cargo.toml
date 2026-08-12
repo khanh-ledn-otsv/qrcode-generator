@@ -14,8 +14,14 @@ js-sys.workspace = true
 leptos.workspace = true
 qr-core.workspace = true
 qr-render.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
 wasm-bindgen.workspace = true
-web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "ClipboardEvent", "DataTransfer", "Document", "DragEvent", "Element", "Event", "HtmlAnchorElement", "HtmlElement", "HtmlTextAreaElement", "InputEvent", "Node", "Response", "Url", "Window"] }
+web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "ClipboardEvent", "DataTransfer", "DedicatedWorkerGlobalScope", "Document", "DragEvent", "Element", "ErrorEvent", "Event", "HtmlAnchorElement", "HtmlElement", "HtmlTextAreaElement", "InputEvent", "MessageEvent", "Node", "Response", "Url", "Window", "Worker"] }
+
+[[bin]]
+name = "qr-preview-worker"
+path = "src/worker_main.rs"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
 wasm-bindgen-futures.workspace = true
