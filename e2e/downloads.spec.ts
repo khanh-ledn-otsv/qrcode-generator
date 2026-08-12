@@ -3,14 +3,68 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { SAFE_PAYLOAD, enterPayload, selectProfile, sha256 } from "./helpers";
+import { expectDecodedPayload } from "./zxing";
 
 const ZXING_COMMIT = "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825";
 const ZXING_VERSION = "ZXingReader version 3.0.2";
 const LONG_ONE_URL =
   "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
+
+async function rasterizeDownloadedSvg(
+  page: Page,
+  svgPath: string,
+  rasterPath: string,
+  sidePixels: number,
+): Promise<void> {
+  const svg = await readFile(svgPath, "utf8");
+  await page.evaluate(
+    async ({ source, rasterSidePixels }) => {
+      const url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
+      const image = document.createElement("img");
+      image.dataset.testid = "downloaded-svg-raster";
+      image.src = url;
+      image.width = rasterSidePixels;
+      image.height = rasterSidePixels;
+      image.style.position = "fixed";
+      image.style.inset = "0 auto auto 0";
+      image.style.zIndex = "2147483647";
+      document.body.append(image);
+      await image.decode();
+    },
+    { source: svg, rasterSidePixels: sidePixels },
+  );
+  await page.getByTestId("downloaded-svg-raster").screenshot({ path: rasterPath });
+  await page.evaluate(() => {
+    const image = document.querySelector<HTMLImageElement>('[data-testid="downloaded-svg-raster"]');
+    if (image !== null) {
+      URL.revokeObjectURL(image.src);
+      image.remove();
+    }
+  });
+}
+
+async function downloadAndDecodeArtifacts(
+  page: Page,
+  reader: string,
+  payload: string,
+  svgRasterPath: string,
+  svgRasterSidePixels: number,
+): Promise<void> {
+  const [pngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
+  const [svgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-svg").click(),
+  ]);
+  expectDecodedPayload(reader, await pngDownload.path(), payload);
+  await rasterizeDownloadedSvg(page, await svgDownload.path(), svgRasterPath, svgRasterSidePixels);
+  expectDecodedPayload(reader, svgRasterPath, payload);
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
@@ -49,10 +103,9 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   );
 });
 
-test("downloaded PNG independently decodes with the pinned reader", async ({ page }) => {
-  const decodePayload = "hello";
-  await enterPayload(page, decodePayload);
-  await selectProfile(page, "Inline");
+test("downloaded PNGs and SVGs independently decode common payload formats", async ({
+  page,
+}, testInfo) => {
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");
   expect(
@@ -68,18 +121,66 @@ test("downloaded PNG independently decodes with the pinned reader", async ({ pag
   const version = spawnSync(reader, ["-version"], { encoding: "utf8" });
   expect(version.status, version.stderr).toBe(0);
   expect(version.stdout.trim()).toBe(ZXING_VERSION);
+  await selectProfile(page, "Inline");
 
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-png").click(),
-  ]);
-  const result = spawnSync(
-    reader,
-    ["-formats", "QRCode", "-single", "-bytes", await download.path()],
-    { encoding: "utf8" },
-  );
-  expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout.trim()).toBe(decodePayload);
+  const cases = [
+    { name: "short number", payload: "1234567890" },
+    { name: "number with leading zeroes", payload: "00012345678901234567890" },
+    {
+      name: "long number",
+      payload: "31415926535897932384626433832795028841971693993751",
+    },
+    { name: "alphanumeric text", payload: "MEET AT GATE 7 AT 09:30" },
+    { name: "plain text", payload: "Bring ID, badge, and ticket #42." },
+    { name: "text with boundary spaces", payload: "  keep these spaces  " },
+    { name: "mixed encoding text", payload: "HELLOworld1234567890" },
+    { name: "UTF-8 text", payload: "café 世界 🚀" },
+    {
+      name: "markup-like text",
+      payload: 'safe/<script>alert("payload")</script>',
+    },
+    { name: "short HTTPS link", payload: "https://example.test/a" },
+    {
+      name: "HTTPS link with query and fragment",
+      payload: "https://example.test/a?x=1&y=two#details",
+    },
+    {
+      name: "HTTPS link with encoded characters",
+      payload: "https://example.test/a%20b?next=%2Fhome",
+    },
+    {
+      name: "email link",
+      payload: "mailto:support@example.test?subject=QR%20code",
+    },
+  ] as const;
+
+  // Each case traverses the UI, preview worker, download adapter, and independent decoder.
+  /* oxlint-disable no-await-in-loop */
+  for (const [index, scenario] of cases.entries()) {
+    await test.step(scenario.name, async () => {
+      await enterPayload(page, scenario.payload);
+      const svgRaster = testInfo.outputPath(`common-payload-${index}-svg.png`);
+      await downloadAndDecodeArtifacts(page, reader, scenario.payload, svgRaster, 300);
+    });
+  }
+  /* oxlint-enable no-await-in-loop */
+});
+
+test("downloads and independently decodes multiline text", async ({ page }, testInfo) => {
+  await selectProfile(page, "Inline");
+  const payload = "line one\nline two\n";
+  const input = page.getByLabel("Text to encode");
+  await input.fill("line one");
+  await input.press("Enter");
+  await input.pressSequentially("line two");
+  await input.press("Enter");
+  await expect(input).toHaveValue(payload);
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+
+  const source = resolve("tests/oracles/zxing-cpp");
+  const reader = resolve(source, "build/example/ZXingReader");
+  const svgRaster = testInfo.outputPath("multiline-svg.png");
+  await downloadAndDecodeArtifacts(page, reader, payload, svgRaster, 300);
 });
 
 test("downloads and decodes the deterministic Adaptive Version 10 artifacts", async ({ page }) => {
@@ -112,13 +213,7 @@ test("downloads and decodes the deterministic Adaptive Version 10 artifacts", as
 
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");
-  const result = spawnSync(
-    reader,
-    ["-formats", "QRCode", "-single", "-bytes", await pngDownload.path()],
-    { encoding: "utf8" },
-  );
-  expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout.trim()).toBe(LONG_ONE_URL);
+  expectDecodedPayload(reader, await pngDownload.path(), LONG_ONE_URL);
 });
 
 test("downloads and decodes deterministic Adaptive Version 40 artifacts", async ({ page }) => {
@@ -159,11 +254,5 @@ test("downloads and decodes deterministic Adaptive Version 40 artifacts", async 
 
   const source = resolve("tests/oracles/zxing-cpp");
   const reader = resolve(source, "build/example/ZXingReader");
-  const result = spawnSync(
-    reader,
-    ["-formats", "QRCode", "-single", "-bytes", await pngDownload.path()],
-    { encoding: "utf8", maxBuffer: 16 * 1024 },
-  );
-  expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout.trim()).toBe(payload);
+  expectDecodedPayload(reader, await pngDownload.path(), payload);
 });
