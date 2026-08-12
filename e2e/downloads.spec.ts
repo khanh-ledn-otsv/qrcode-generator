@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
 import { SAFE_PAYLOAD, enterPayload, selectProfile, sha256 } from "./helpers";
-import { expectDecodedPayload } from "./zxing";
+import { expectDecodedPayload, expectDecodedPayloadBytes } from "./zxing";
 
 const ZXING_COMMIT = "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825";
 const ZXING_VERSION = "ZXingReader version 3.0.2";
@@ -72,6 +72,13 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("downloads fixed filenames and exact deterministic SVG and PNG bytes", async ({ page }) => {
+  await test.step("decoder comparison preserves exact boundary bytes", () => {
+    const payload = "  line one\nline two\n";
+    expectDecodedPayloadBytes(Buffer.from(payload, "utf8"), payload);
+    expect(() => expectDecodedPayloadBytes(Buffer.from(" padded "), "padded ")).toThrow();
+    expect(() => expectDecodedPayloadBytes(Buffer.from("padded \n"), "padded ")).toThrow();
+  });
+
   await selectProfile(page, "Inline");
   const [svgDownload] = await Promise.all([
     page.waitForEvent("download"),

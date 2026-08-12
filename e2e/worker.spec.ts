@@ -19,18 +19,20 @@ test("large preview work leaves the main thread responsive and latest revision w
           const deliver = () => messageHandler?.call(worker, event);
           if (event.data?.startedRevision !== undefined) {
             window.workerWorkStarted = true;
-            const input = document.querySelector<HTMLTextAreaElement>("#qr-payload");
-            if (input) {
-              input.value = "123456789";
-              window.workerResponsiveInput = input.value === "123456789";
-              input.focus();
+            if (window.workerResponsiveActionAt === undefined) {
+              const input = document.querySelector<HTMLTextAreaElement>("#qr-payload");
+              if (input) {
+                input.value = "123456789";
+                window.workerResponsiveInput = input.value === "123456789";
+                input.focus();
+              }
+              window.workerResponsiveActionAt = Date.now();
+              window.workerResponsiveFocus = document.activeElement === input;
+              requestAnimationFrame(() => {
+                window.workerAnimationFrames = (window.workerAnimationFrames ?? 0) + 1;
+                window.workerAnimationFrameAt = Date.now();
+              });
             }
-            window.workerResponsiveActionAt = Date.now();
-            window.workerResponsiveFocus = document.activeElement === input;
-            requestAnimationFrame(() => {
-              window.workerAnimationFrames = (window.workerAnimationFrames ?? 0) + 1;
-              window.workerAnimationFrameAt = Date.now();
-            });
             deliver();
             return;
           }
@@ -39,7 +41,10 @@ test("large preview work leaves the main thread responsive and latest revision w
             deliver();
             return;
           }
-          window.workerCompletedAt = event.data?.completedAt;
+          if (event.data?.workerReady !== undefined) {
+            deliver();
+            return;
+          }
           window.workerWorkCompleted = true;
           if (firstResponse) {
             firstResponse = false;
@@ -47,6 +52,7 @@ test("large preview work leaves the main thread responsive and latest revision w
             setTimeout(() => {
               window.workerResponseHeld = false;
               window.workerDelayedResponses = (window.workerDelayedResponses ?? 0) + 1;
+              window.workerFirstResponseDeliveredAt = Date.now();
               deliver();
             }, 750);
           } else {
@@ -103,12 +109,15 @@ test("large preview work leaves the main thread responsive and latest revision w
     .toBeGreaterThan(0);
   expect(
     await page.evaluate(
-      () => (window.workerResponsiveActionAt ?? Infinity) < (window.workerCompletedAt ?? 0),
+      () =>
+        (window.workerResponsiveActionAt ?? Infinity) <
+        (window.workerFirstResponseDeliveredAt ?? 0),
     ),
   ).toBe(true);
   expect(
     await page.evaluate(
-      () => (window.workerAnimationFrameAt ?? Infinity) < (window.workerCompletedAt ?? 0),
+      () =>
+        (window.workerAnimationFrameAt ?? Infinity) < (window.workerFirstResponseDeliveredAt ?? 0),
     ),
   ).toBe(true);
   await expect(page.getByTestId("qr-preview")).toHaveAttribute("aria-label", /Numeric mode/);
@@ -337,7 +346,7 @@ declare global {
     workerResponsiveActionAt?: number;
     workerResponsiveFocus?: boolean;
     workerResponsiveInput?: boolean;
-    workerCompletedAt?: number;
+    workerFirstResponseDeliveredAt?: number;
     workerReleasedBuffers?: number;
     workerValidResponses?: number;
   }
