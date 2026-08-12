@@ -138,18 +138,10 @@
 
 - Implementation tickets are tracked under `issues/`.
 
-## Deferred review tasks
+## Open tasks
 
-- [Ticket 33](issues/33-bound-preview-resource-work.md): Reject oversized input
-  before request cloning, measure dense mixed-mode Chromium previews, and avoid
-  unnecessary main-thread PNG work only if the measurement justifies it.
-- [Ticket 34](issues/34-complete-coverage-and-mutation-gates.md): Triage the
-  three surviving BCH mutations and bind passing coverage/mutation summaries
-  to release-readiness evidence; all current quantitative thresholds pass.
-- [Ticket 35](issues/35-improve-capacity-and-recovery-guidance.md): Avoid
-  suggesting Adaptive when the exact payload/logo policy cannot succeed while
-  retaining honest bit-based capacity diagnostics instead of an unstable
-  character estimate.
-- [Ticket 38](issues/38-close-hosted-verification-trigger-gaps.md): Ensure
-  policy/documentation changes reach hosted verification and decide whether
-  pre-merge pull-request correctness is part of the repository workflow.
+- [Ticket 39](issues/39-offload-preview-generation-to-web-worker.md): Move
+  encoding and deterministic SVG/PNG preview generation into a lifecycle-owned
+  browser Web Worker so large QR requests do not block main-thread input,
+  focus, or paint while preserving exact payloads, stale-result protection,
+  offline behavior, and artifact bytes.
