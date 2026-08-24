@@ -9,35 +9,35 @@ selected variant.
 
 **Type:** task
 
-**Status:** open
+**Status:** resolved
 
-- [ ] For each variant, first-fit the exact payload using the variant's allowed
+- [x] For each variant, first-fit the exact payload using the variant's allowed
   QR version range, ECC policy, foreground theme, and logo setting. Do not trim,
   normalize, shorten, rewrite, URL-parse, log, or transmit the payload.
-- [ ] Use the researched Digital ranges as provisional candidates only: Small
+- [x] Use the researched Digital ranges as provisional candidates only: Small
   starts at Version 5, Standard candidates are Versions 5-8, Primary CTA
   candidates are Versions 5-12, and Hero / Campaign candidates are Versions
   8-12. Adjust these ranges if module pitch, logo safety, or decoder evidence
   shows they are too narrow or too ambitious.
-- [ ] Define and document the Print variant version policies explicitly before
+- [x] Define and document the Print variant version policies explicitly before
   implementation, using the same scan-readability and physical-size rationale as
   the Digital variants. Do not infer undocumented print ranges in production,
   and do not copy Digital ranges when the 150 dpi physical size produces a
   materially different module pitch.
-- [ ] For every candidate range, calculate the module pitch from final artifact
+- [x] For every candidate range, calculate the module pitch from final artifact
   width divided by `4v + 25` modules, including the four-module quiet zone. Use
   that pitch, rounded-dot readability, logo obstruction, and decoder evidence to
   decide the maximum version for each fixed size.
-- [ ] Preserve the existing ECC transition semantics unless deliberately revised
+- [x] Preserve the existing ECC transition semantics unless deliberately revised
   in the authoritative product plan: no-logo output uses ordinary ECC capacity;
   logo output uses the reviewed high-ECC branded path.
-- [ ] If the exact payload does not fit any allowed version for the chosen
+- [x] If the exact payload does not fit any allowed version for the chosen
   variant and logo policy, return the existing typed capacity/profile failure
   with selected variant, attempted version range, ECC, and payload capacity
   diagnostics.
-- [ ] Ensure version selection remains in `qr-core`/workflow ownership and that
+- [x] Ensure version selection remains in `qr-core`/workflow ownership and that
   `qr-render` only consumes an immutable encoded matrix.
-- [ ] Cover exact-fit and one-over boundaries for every variant, both approved
+- [x] Cover exact-fit and one-over boundaries for every variant, both approved
   foreground themes, and logo on/off states.
 
 ## Product intent
@@ -56,3 +56,42 @@ must not change ECC, version, mask, or encoded modules after the workflow has
 selected them.
 
 ## Comments
+
+## Answer
+
+The evidence-backed version-selection machinery Ticket 42 asked for was already
+in place from Ticket 41's `OutputProfile` version ranges and the branded/decode
+campaigns from Tickets 27–30: each variant first-fits the exact payload inside
+its own compiled minimum/maximum version, preserves ECC M/H transition
+semantics, keeps `qr-core`/workflow owning version selection while `qr-render`
+only consumes the immutable encoded matrix, and returns typed
+`WorkflowFailure::OverCapacity` / `UnsafeLogoGeometry` failures instead of
+changing the payload. What was missing was the explicit written confirmation
+that each ceiling is a validated result rather than a copied guess.
+
+This ticket added that confirmation to
+[`docs/DEVELOPMENT_PLAN.md`](../../../../docs/DEVELOPMENT_PLAN.md): a table
+recording the actual `CanvasGeometry` module scale (PNG px/module) at each
+variant's minimum and maximum version, and which constraint is binding at the
+ceiling. Small, Standard, Business card, and Flyer / Brochure are bound by the
+six-pixel-per-module pitch floor (confirmed by probing one version past each
+ceiling and observing `MaximumVersionScaleBelowSix`); Primary CTA, Hero /
+Campaign, and Poster / Package still clear the pitch floor at Version 13, so
+their Version 12 ceiling is bound instead by the approved decoder-evidence
+campaign recorded in
+[`docs/generated/logo-placement-policy.md`](../../../../docs/generated/logo-placement-policy.md)
+and `tests/approved-output-matrix-policy.json`. This also confirms Print
+variants were not a copy of Digital ranges: Business card and Flyer / Brochure
+reach the same Version 12 ceiling as Primary CTA for an independently
+confirmed, physically-smaller-canvas reason.
+
+Boundary-coverage was one genuine gap: exact-fit/one-over version and payload
+boundaries were already covered per variant and per logo state in
+`crates/qr-render/tests/profile_geometry.rs` and
+`crates/qr-web/tests/state.rs`, but no test pinned that the boundary is
+identical across both approved foreground themes. Added
+`version_ceiling_boundary_is_identical_across_both_foreground_themes` in
+`crates/qr-web/tests/state.rs` to close that gap.
+
+`pnpm run verify:changed` (native/WASM tests, Clippy, release build, and the
+full Chromium e2e suite) passes with these changes.

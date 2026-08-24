@@ -441,6 +441,33 @@ fn fixed_variant_rejects_payloads_above_its_version_ceiling() {
 }
 
 #[test]
+fn version_ceiling_boundary_is_identical_across_both_foreground_themes() {
+    for theme in [ForegroundTheme::Magenta, ForegroundTheme::Black] {
+        let mut state = state_without_logo(ProfileId::PosterPackage);
+        state
+            .set_foreground_theme(theme)
+            .expect("theme selection produces a request");
+
+        let exact = state
+            .set_payload("a".repeat(287))
+            .expect("revision is available");
+        let preview = evaluate_preview(&exact).expect("Version 12 ECC-M byte boundary fits");
+        assert_eq!(preview.diagnostics().selected_version().number(), 12);
+        assert_eq!(preview.diagnostics().foreground_theme(), theme);
+
+        let one_over = state
+            .set_payload("a".repeat(288))
+            .expect("revision is available");
+        assert_eq!(
+            evaluate_preview(&one_over),
+            Err(WorkflowFailure::OverCapacity {
+                maximum_version: qr_core::Version::new(12).unwrap(),
+            })
+        );
+    }
+}
+
+#[test]
 fn profile_changes_refit_without_changing_safe_ecc() {
     let mut state = state_without_logo(ProfileId::Standard);
     let payload_request = state

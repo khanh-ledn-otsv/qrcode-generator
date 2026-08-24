@@ -148,9 +148,12 @@
   while final version ranges must be validated rather than copied directly from
   the researched screenshot.
 - [Ticket 42](issues/42-allow-profile-version-selection-with-typed-failures.md):
-  Let each approved variant select the needed QR version within an evidence-backed
-  version policy, using module pitch and decoder results to confirm or adjust the
-  researched ranges while preserving exact payloads and typed failures.
+  Documented, in `docs/DEVELOPMENT_PLAN.md`, which of the module-pitch floor or
+  the decoder-evidence campaign binds each variant's Version 12 ceiling,
+  confirming Print ranges were independently validated rather than copied from
+  Digital; added foreground-theme boundary-parity test coverage. Version
+  selection, ECC transition semantics, and typed capacity/geometry failures
+  were already in place from Tickets 27–30 and 41.
 - [Ticket 43](issues/43-place-logo-upward-or-fallback-to-no-logo.md): Keep the
   ONE logo horizontally centered, search upward only when placement needs to
   move, and fall back to no-logo output before showing the normal typed capacity

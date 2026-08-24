@@ -247,6 +247,37 @@ PNG pixels per module at its maximum version after quiet-zone and logo rules.
 Decorative export borders, frames, labels, and strokes remain excluded; fixed
 PNG canvas surplus is background-only.
 
+**Version-range confirmation (Ticket 42):** each fixed range's ceiling is
+confirmed, not copied, by evaluating both binding constraints below and taking
+the smaller of the two. PNG pixels-per-module figures are the actual
+`CanvasGeometry` module scale (PNG side ÷ `4v + 25`, adjusted to the nearest
+value that keeps centered, symmetric outer padding):
+
+| Variant | Version range | Module scale at min/max version (PNG px) | Binding constraint at the ceiling |
+|---|---|---|---|
+| Small | 5–6 | 6 / 6 | Module pitch: Version 7 (52 modules) would drop the 100 px SVG / 300 px PNG canvas below the 6 px/module floor. |
+| Standard | 5–8 | 8 / 6 | Module pitch: Version 8 is the last version at or above 6 px/module for the 120 px SVG / 360 px PNG canvas. |
+| Primary CTA | 5–12 | 10 / 6 | Decoder evidence: pitch alone would still clear 6 px/module through Version 13, but the approved branded/decode campaign (Tickets 27–30) stops at Version 12. |
+| Hero / Campaign | 8–12 | 10 / 8 | Decoder evidence: pitch alone would still clear 6 px/module through Version 13; the campaign ceiling of Version 12 is binding first. |
+| Business card | 5–12 | 8 / 6 | Module pitch: the 148 px SVG / 444 px PNG canvas is smaller than Primary CTA's, so pitch (not decoder evidence) reaches the 6 px/module floor exactly at Version 12; Version 13 would fall below it. |
+| Flyer / Brochure | 5–12 | 11 / 7 | Module pitch: the 177 px SVG / 531 px PNG canvas also reaches the floor at Version 12 by pitch alone (Version 13 falls below 6 px/module), independently of the decoder-evidence ceiling. |
+| Poster / Package | 5–12 | 14 / 8 | Decoder evidence: the 236 px SVG / 708 px PNG canvas still clears 6 px/module through Version 13 by pitch; the campaign ceiling of Version 12 is binding first. |
+
+Print variants are not a copy of the Digital ranges: Business card and Flyer /
+Brochure are physically smaller than Primary CTA and Hero / Campaign, so their
+150 dpi pixel conversion reaches the pitch floor at the same Version 12
+ceiling for a different, independently confirmed reason (module pitch, not
+decoder-campaign evidence). Poster / Package is large enough that, like
+Primary CTA and Hero / Campaign, pitch is not the binding constraint; all
+three share the Version 12 ceiling only because that is the approved
+decoder-evidence limit recorded in
+[`generated/logo-placement-policy.md`](generated/logo-placement-policy.md) and
+`tests/approved-output-matrix-policy.json`. `crates/qr-render/tests/profile_geometry.rs`
+covers exact-fit and one-over version/geometry boundaries for every profile,
+and `crates/qr-web/tests/state.rs` covers exact-fit and one-over payload
+boundaries for every profile with the logo enabled and disabled, across both
+approved foreground themes.
+
 ## 3. Specification corrections required
 
 These are implementation interpretations until merged back into the product specification.
