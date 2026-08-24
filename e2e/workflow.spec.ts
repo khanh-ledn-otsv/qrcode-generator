@@ -143,17 +143,19 @@ test("Adaptive preview keeps rounded modules visible at its declared size", asyn
   expect(visiblePixelsOutsideLargeArtwork).toBeGreaterThan(200);
 });
 
-test("uses one opaque white rounded ONE appearance", async ({ page }) => {
+test("uses approved foreground themes with one opaque white rounded ONE appearance", async ({
+  page,
+}) => {
   await enterPayload(page, "approved color workflow");
 
   const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
   await expect(logo).toBeChecked();
   await page.getByText("ONE lettermark", { exact: true }).click();
   await expect(logo).not.toBeChecked();
-  await expect(page.getByRole("group", { name: "Foreground color" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Foreground color" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Background treatment" })).toHaveCount(0);
 
-  await expect.poll(() => diagnostic(page, "Foreground")).toBe("#BD0F72");
+  await expect.poll(() => diagnostic(page, "Foreground")).toBe("ONE magenta #BD0F72");
   await expect.poll(() => diagnostic(page, "Background")).toBe("Opaque white");
   await expect.poll(() => diagnostic(page, "Modules")).toBe("Rounded ONE");
   await expect.poll(() => diagnostic(page, "Contrast")).toBe("6.04:1");
@@ -161,6 +163,13 @@ test("uses one opaque white rounded ONE appearance", async ({ page }) => {
   await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
     "fill",
     "#bd0f72",
+  );
+  await page.getByText("Black", { exact: true }).click();
+  await expect.poll(() => diagnostic(page, "Foreground")).toBe("Black #000000");
+  await expect.poll(() => diagnostic(page, "Contrast")).toBe("21.00:1");
+  await expect(page.getByTestId("qr-preview").locator("path").first()).toHaveAttribute(
+    "fill",
+    "#000000",
   );
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("qr-preview").locator("rect").first()).toHaveAttribute(

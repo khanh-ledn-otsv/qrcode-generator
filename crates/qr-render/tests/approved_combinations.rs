@@ -10,7 +10,8 @@ use std::fs;
 use std::path::Path;
 
 use qr_render::{
-    APPROVED_LOGO_STYLES, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, SUPPORTED_PROFILES,
+    APPROVED_FOREGROUND_THEMES, APPROVED_LOGO_STYLES, ForegroundTheme, LogoStyle,
+    MAXIMUM_ADAPTIVE_LOGO_VERSION, SUPPORTED_PROFILES,
 };
 
 fn matrix_policy() -> serde_json::Value {
@@ -28,9 +29,18 @@ fn approved_configuration_lists_cover_the_complete_selectable_surface() {
     let dimensions = &policy["tuple_dimensions"];
     assert_eq!(dimensions["profiles"], SUPPORTED_PROFILES.len());
     assert_eq!(dimensions["logo_states"], APPROVED_LOGO_STYLES.len());
+    assert_eq!(
+        dimensions["foreground_themes"],
+        APPROVED_FOREGROUND_THEMES.len()
+    );
     assert_eq!(APPROVED_LOGO_STYLES, [LogoStyle::None, LogoStyle::Bundled]);
+    assert_eq!(
+        APPROVED_FOREGROUND_THEMES,
+        [ForegroundTheme::Magenta, ForegroundTheme::Black]
+    );
 
-    let raw_tuple_count = SUPPORTED_PROFILES.len() * APPROVED_LOGO_STYLES.len();
+    let raw_tuple_count =
+        SUPPORTED_PROFILES.len() * APPROVED_LOGO_STYLES.len() * APPROVED_FOREGROUND_THEMES.len();
     assert_eq!(
         raw_tuple_count,
         dimensions

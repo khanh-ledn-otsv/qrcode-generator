@@ -4,7 +4,7 @@ use qr_core::encoding::EciAssignment;
 use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodingMode, Version};
-use qr_render::{ContrastRatio, LogoStyle, OutputSafety, ProfileId};
+use qr_render::{ContrastRatio, ForegroundTheme, LogoStyle, OutputSafety, ProfileId};
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -17,6 +17,7 @@ pub struct WorkerRequest {
     revision: u64,
     payload: String,
     profile: u8,
+    foreground_theme: u8,
     logo_enabled: bool,
 }
 
@@ -27,6 +28,7 @@ impl WorkerRequest {
             revision: request.revision.0,
             payload: request.payload.clone(),
             profile: profile_number(request.profile_id),
+            foreground_theme: foreground_theme_number(request.foreground_theme),
             logo_enabled: request.logo_enabled,
         }
     }
@@ -47,6 +49,8 @@ impl WorkerRequest {
             revision: Revision(self.revision),
             payload: self.payload,
             profile_id: profile_from_number(self.profile).ok_or(ProtocolError::InvalidMessage)?,
+            foreground_theme: foreground_theme_from_number(self.foreground_theme)
+                .ok_or(ProtocolError::InvalidMessage)?,
             logo_enabled: self.logo_enabled,
         })
     }
@@ -224,6 +228,7 @@ struct WireDiagnostics {
     rendered_symbol_side_pixels: u32,
     outer_padding_per_side: u32,
     profile: u8,
+    foreground_theme: u8,
     safety: u8,
     contrast_hundredths: u16,
     logo_style: u8,
@@ -308,6 +313,7 @@ impl WireDiagnostics {
             rendered_symbol_side_pixels: value.rendered_symbol_side_pixels,
             outer_padding_per_side: value.outer_padding_per_side,
             profile: profile_number(value.profile_id),
+            foreground_theme: foreground_theme_number(value.foreground_theme),
             safety: matches!(value.safety, OutputSafety::Caution).into(),
             contrast_hundredths: value.contrast_ratio.hundredths(),
             logo_style: matches!(value.logo_style, LogoStyle::Bundled).into(),
@@ -348,6 +354,8 @@ impl WireDiagnostics {
             rendered_symbol_side_pixels: self.rendered_symbol_side_pixels,
             outer_padding_per_side: self.outer_padding_per_side,
             print_guidance: profile_presentation(profile).guidance(),
+            foreground_theme: foreground_theme_from_number(self.foreground_theme)
+                .ok_or(WorkflowFailure::Internal)?,
             safety: if self.safety == 0 {
                 OutputSafety::Safe
             } else {
@@ -413,13 +421,40 @@ impl WireDiagnostics {
             || self.available_data_bits != u32::from(expected_data_codewords) * 8
             || self.data_codewords != expected_data_codewords
             || self.maximum_version != compiled_profile.maximum_version().number()
-            || self.contrast_hundredths != 604
+            || foreground_theme_from_number(self.foreground_theme).is_none()
+            || self.contrast_hundredths
+                != expected_contrast_hundredths(
+                    foreground_theme_from_number(self.foreground_theme)
+                        .ok_or(ProtocolError::InvalidMessage)?,
+                )
             || self.safety != self.logo_style
             || !valid_dimensions
         {
             return Err(ProtocolError::InvalidMessage);
         }
         Ok(())
+    }
+}
+
+const fn foreground_theme_number(theme: ForegroundTheme) -> u8 {
+    match theme {
+        ForegroundTheme::Magenta => 0,
+        ForegroundTheme::Black => 1,
+    }
+}
+
+const fn foreground_theme_from_number(number: u8) -> Option<ForegroundTheme> {
+    match number {
+        0 => Some(ForegroundTheme::Magenta),
+        1 => Some(ForegroundTheme::Black),
+        _ => None,
+    }
+}
+
+const fn expected_contrast_hundredths(theme: ForegroundTheme) -> u16 {
+    match theme {
+        ForegroundTheme::Magenta => 604,
+        ForegroundTheme::Black => 2100,
     }
 }
 

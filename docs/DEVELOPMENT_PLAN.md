@@ -121,9 +121,9 @@ The bundled logo is enabled by default and is the only release-1 choice that cha
 Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rust `png` crate. Do not use Canvas, browser SVG screenshots, or a general scene renderer for production PNG export.
 
 - Standard output uses deterministic 8×8 coverage for centered 0.90-module
-  dots in `#BD0F72` outside the square finder regions on opaque white. Logo
-  knockout cells are exact opaque-white rectangles. The complete image is
-  never resized.
+  dots in the selected approved foreground outside the square finder regions
+  on opaque white. Logo knockout cells are exact opaque-white rectangles. The
+  complete image is never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
 - Fixed profiles retain their compiled dimensions and 3× PNG relationship.
   Adaptive uses the selected matrix plus the four-module quiet zone to derive a
@@ -147,7 +147,9 @@ and extended on 2026-08-10 by Ticket 30. The production renderer always uses
 Rounded ONE modules with the unchanged fixed-profile Version 6 placement and
 the decode-backed adaptive placements.
 
-- `#BD0F72` is the only QR foreground, on opaque white by default. There is no black-output preset or hidden release-1 configuration path.
+- Two QR foreground themes are approved on opaque white: ONE magenta `#BD0F72`
+  and black `#000000`. ONE magenta remains the default. Black is a first-class
+  selectable preset, not a hidden path or arbitrary color picker.
 - Rounded ONE uses centered 0.90-module dots for non-finder modules while
   keeping standard square finders. Separator modules remain blank. Encoded
   values and coordinates are unchanged.
@@ -157,10 +159,11 @@ the decode-backed adaptive placements.
 - Finder styling: standard square only.
 
 **Launch decisions accepted by the project owner on 2026-08-07 and revised by
-Ticket 32:** release 1 uses only the magenta ONE foreground, an opaque-white
-background, rounded ONE modules with standard square finders, the 4.5:1
-contrast threshold, and the bundled ONE lettermark described below. The logo
-is enabled by default and can be disabled; transparent output is excluded.
+Tickets 32 and 40:** release 1 uses approved ONE magenta and black foreground
+themes, an opaque-white background, rounded ONE modules with standard square
+finders, the 4.5:1 contrast threshold, and the bundled ONE lettermark described
+below. The logo is enabled by default and can be disabled; transparent output
+is excluded.
 
 ### 2.7 Logo safety
 
@@ -213,7 +216,12 @@ is enabled by default and can be disabled; transparent output is excluded.
   output stays classified as a caution on every valid profile/version row.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
-- The renderer compile-time embeds the sanitized project-owned ONE lettermark at `assets/RGB-one-lettermark-magenta.svg`. No upload, arbitrary SVG, white-logo variant, or runtime logo request is accepted in release 1.
+- The renderer compile-time embeds the sanitized project-owned ONE lettermark at
+  `assets/RGB-one-lettermark-magenta.svg`. Renderers preserve the sanitized
+  geometry and recolor that body only to the selected approved foreground, so
+  magenta QR output uses a magenta logo and black QR output uses a black logo.
+  No upload, arbitrary SVG, white-logo variant, or runtime logo request is
+  accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
 - Logo mode requires an opaque white background and knockout.
 - The bundled logo is enabled by default. Users may turn it off to select ECC M,
@@ -228,11 +236,12 @@ is enabled by default and can be disabled; transparent output is excluded.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
-Release evidence exhausts the selectable surface with 218 generated scenarios:
-60 required-payload rows and 158 exact-version rows. Native PNG and independently
-rasterized SVG artifacts share one scenario identity and record deterministic
-hashes, safety, decode outcome, and fixed/adaptive logo geometry. The resulting policy
-has 145 accepted rows and 73 typed expected rejections. Deterministic adverse
+Release evidence exhausts the selectable surface with 436 generated scenarios:
+120 required-payload rows and 316 exact-version rows across profile, logo state,
+and foreground theme. Native PNG and independently rasterized SVG artifacts
+share one scenario identity and record deterministic hashes, safety, decode
+outcome, foreground theme, and fixed/adaptive logo geometry. The resulting policy
+has 290 accepted rows and 146 typed expected rejections. Deterministic adverse
 evidence separately records 29 outcomes across explicit safe opaque-Print,
 centered-logo-caution, and Adaptive-Version-10 and Version-11 long-URL caution
 pass envelopes; it does not imply that every payload density passes every

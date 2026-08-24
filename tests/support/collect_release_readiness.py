@@ -32,7 +32,7 @@ CRITICAL_WORKFLOW_TESTS = {
     "disposing the page with pending debounce work initializes cleanly",
     "profile controls work by keyboard",
     "shows the opaque preview at its real SVG size",
-    "uses one opaque white rounded ONE appearance",
+    "uses approved foreground themes with one opaque white rounded ONE appearance",
     "logo mode is enabled by default and can be turned off",
     "fixed profiles recommend Adaptive when centered branding is unavailable",
     "Adaptive preserves and exports the long ONE URL at Version 10",
@@ -85,7 +85,7 @@ def _matrix_policy() -> dict[str, Any]:
 
 def _expected_matrix_keys(policy: dict[str, Any]) -> set[tuple[object, ...]]:
     dimensions = _mapping(policy.get("tuple_dimensions"), "approved matrix dimensions")
-    dimension_names = ("profiles", "logo_states")
+    dimension_names = ("profiles", "logo_states", "foreground_themes")
     counts: list[int] = []
     for name in dimension_names:
         count = dimensions.get(name)
@@ -153,6 +153,7 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
         (
             row.get("profile_index"),
             row.get("logo_state_index"),
+            row.get("foreground_index"),
             row.get("case_kind"),
             row.get("payload_class"),
             row.get("case_label"),
@@ -173,6 +174,7 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
     dimension_fields = {
         "profile_index": "profiles",
         "logo_state_index": "logo_states",
+        "foreground_index": "foreground_themes",
     }
     for field, dimension in dimension_fields.items():
         count = dimensions.get(dimension)

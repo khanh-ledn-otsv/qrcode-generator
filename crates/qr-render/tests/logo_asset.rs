@@ -10,8 +10,8 @@ use std::io::Cursor;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    BUNDLED_LOGO_SVG, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
-    render_svg,
+    BUNDLED_LOGO_SVG, ForegroundTheme, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES,
+    render_png, render_svg,
 };
 
 #[test]
@@ -57,6 +57,10 @@ fn branded_artifact_hashes_pin_every_enabled_profile_on_native() {
         branded_artifact_fixture::hashes(),
         branded_artifact_fixture::SHA256
     );
+    assert_eq!(
+        branded_artifact_fixture::black_content_hashes(),
+        branded_artifact_fixture::BLACK_SHA256
+    );
 }
 
 #[test]
@@ -69,6 +73,10 @@ fn print_branded_profile_hashes_for_fixture_refresh() {
         println!("svg_sha256={svg_sha256}");
         println!("png_sha256={png_sha256}");
     }
+    println!("black_content_profile");
+    let [svg_sha256, png_sha256] = branded_artifact_fixture::black_content_hashes();
+    println!("svg_sha256={svg_sha256}");
+    println!("png_sha256={png_sha256}");
 }
 
 #[test]
@@ -196,6 +204,47 @@ fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() 
         pixels[pixels.len() - row_bytes..]
             .chunks_exact(4)
             .all(|pixel| pixel == [255, 255, 255, 255])
+    );
+}
+
+#[test]
+fn black_theme_recolors_qr_modules_and_bundled_logo_without_changing_geometry() {
+    let version_six = Version::new(6).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
+        "black logo",
+        ErrorCorrection::High,
+        version_six,
+        version_six,
+    ))
+    .unwrap();
+    let magenta_options = RenderOptions::safe(SUPPORTED_PROFILES[1])
+        .unwrap()
+        .with_logo(LogoStyle::Bundled)
+        .unwrap();
+    let black_options = magenta_options
+        .with_foreground_theme(ForegroundTheme::Black)
+        .unwrap();
+    let magenta_model = RenderModel::new(&encoded, magenta_options).unwrap();
+    let black_model = RenderModel::new(&encoded, black_options).unwrap();
+
+    assert_eq!(black_model.matrix(), magenta_model.matrix());
+    assert_eq!(black_model.logo_placement(), magenta_model.logo_placement());
+
+    let black_svg = render_svg(&black_model).unwrap();
+    assert!(black_svg.contains("fill=\"#000000\""));
+    assert!(!black_svg.contains("#bd0f72"));
+
+    let black_png = render_png(&black_model).unwrap();
+    let decoder = png::Decoder::new(Cursor::new(black_png));
+    let mut reader = decoder.read_info().unwrap();
+    let mut pixels = vec![0; reader.output_buffer_size().unwrap()];
+    let output = reader.next_frame(&mut pixels).unwrap();
+    pixels.truncate(output.buffer_size());
+    assert!(pixels.chunks_exact(4).any(|pixel| pixel == [0, 0, 0, 255]));
+    assert!(
+        !pixels
+            .chunks_exact(4)
+            .any(|pixel| pixel == [189, 15, 114, 255])
     );
 }
 

@@ -6,9 +6,9 @@ use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    ContrastRatio, GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, OutputProfile, OutputSafety,
-    ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, Version,
-    render_png, render_svg,
+    APPROVED_FOREGROUND_THEMES, ContrastRatio, ForegroundTheme, GlyphOwnership, LogoStyle,
+    MAX_RGBA_BUFFER_BYTES, OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel,
+    RenderOptions, Rgba, SUPPORTED_PROFILES, Version, render_png, render_svg,
 };
 
 #[test]
@@ -34,10 +34,19 @@ fn safe_model_preserves_the_encoded_symbol_and_approved_preset() {
 fn fixed_opaque_appearance_has_measurable_safety() {
     let profile = SUPPORTED_PROFILES[1];
     let safe = RenderOptions::safe(profile).unwrap();
+    let black = safe.with_foreground_theme(ForegroundTheme::Black).unwrap();
+    assert_eq!(
+        APPROVED_FOREGROUND_THEMES,
+        [ForegroundTheme::Magenta, ForegroundTheme::Black]
+    );
     assert_eq!(safe.foreground(), Rgba::BRAND);
+    assert_eq!(black.foreground(), Rgba::BLACK);
     assert_eq!(safe.background(), Rgba::WHITE);
+    assert_eq!(black.background(), Rgba::WHITE);
     assert_eq!(safe.safety(), OutputSafety::Safe);
+    assert_eq!(black.safety(), OutputSafety::Safe);
     assert_eq!(safe.contrast_ratio(), ContrastRatio::from_hundredths(604));
+    assert_eq!(black.contrast_ratio(), ContrastRatio::from_hundredths(2100));
 }
 
 proptest! {

@@ -3,7 +3,7 @@ use std::time::Duration;
 use leptos::prelude::*;
 use leptos::wasm_bindgen::JsCast;
 use leptos::web_sys::{ClipboardEvent, DragEvent, Event, HtmlTextAreaElement, InputEvent};
-use qr_render::{LogoStyle, OutputSafety, ProfileId, SUPPORTED_PROFILES};
+use qr_render::{ForegroundTheme, LogoStyle, OutputSafety, ProfileId, SUPPORTED_PROFILES};
 use qr_web::debounce::DebounceTimer;
 use qr_web::download::trigger_download;
 use qr_web::preview_worker::PreviewWorker;
@@ -75,6 +75,29 @@ fn App() -> impl IntoView {
                         )
                     }}
                 </span>
+            </label>
+        }
+    });
+    let foreground_options = [ForegroundTheme::Magenta, ForegroundTheme::Black].map(|theme| {
+        view! {
+            <label class=move || profile_card_class(state.with(|value| value.foreground_theme() == theme))>
+                <input
+                    class="peer sr-only"
+                    type="radio"
+                    name="foreground-theme"
+                    value=foreground_theme_value(theme)
+                    prop:checked=move || state.with(|value| value.foreground_theme() == theme)
+                    on:change=move |_| {
+                        if let Some(Ok(request)) = state.try_update(|value| value.set_foreground_theme(theme)) {
+                            schedule_preview(state, pending_timer, preview_worker, request);
+                        }
+                    }
+                />
+                <span class="flex items-center gap-2 text-sm font-bold text-slate-950">
+                    <span class=foreground_theme_swatch_class(theme) aria-hidden="true"></span>
+                    <span>{foreground_theme_label(theme)}</span>
+                </span>
+                <span class="mt-1 block text-xs leading-5 text-slate-600">{foreground_theme_guidance(theme)}</span>
             </label>
         }
     });
@@ -388,6 +411,11 @@ fn App() -> impl IntoView {
                             <div class="mt-3 grid gap-3 sm:grid-cols-2">{profile_options}</div>
                         </fieldset>
 
+                        <fieldset class="mt-8">
+                            <legend class="text-sm font-semibold text-slate-800">"Foreground color"</legend>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-2">{foreground_options}</div>
+                        </fieldset>
+
                         <fieldset class="mt-8" aria-describedby="payload-caution">
                             <legend class="text-sm font-semibold text-slate-800">"Bundled logo"</legend>
                             <label class=move || profile_card_class(state.with(WorkflowState::logo_enabled))>
@@ -447,7 +475,7 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Quiet zone" value=move || diagnostic_value(state, |details| format!("{} modules per side", details.quiet_zone_modules())) />
                                 <Diagnostic label="PNG geometry" value=move || diagnostic_value(state, |details| format!("{} px/module · {} px symbol · {} px padding", details.module_scale(), details.rendered_symbol_side_pixels(), details.outer_padding_per_side())) />
                                 <Diagnostic label="Output" value=move || diagnostic_value(state, |details| format!("{} px SVG · {} px PNG", details.svg_side_pixels(), details.png_side_pixels())) />
-                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |_| "#BD0F72".to_owned()) />
+                                <Diagnostic label="Foreground" value=move || diagnostic_value(state, |details| foreground_diagnostic_label(details.foreground_theme())) />
                                 <Diagnostic label="Background" value=move || diagnostic_value(state, |_| "Opaque white".to_owned()) />
                                 <Diagnostic label="Modules" value=move || diagnostic_value(state, |_| "Rounded ONE".to_owned()) />
                                 <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
@@ -636,6 +664,43 @@ fn format_capacity(bytes: usize) -> String {
         bytes.to_string()
     };
     format!("{amount} characters / bytes")
+}
+
+fn foreground_theme_value(theme: ForegroundTheme) -> &'static str {
+    match theme {
+        ForegroundTheme::Magenta => "magenta",
+        ForegroundTheme::Black => "black",
+    }
+}
+
+fn foreground_theme_label(theme: ForegroundTheme) -> &'static str {
+    match theme {
+        ForegroundTheme::Magenta => "ONE magenta",
+        ForegroundTheme::Black => "Black",
+    }
+}
+
+fn foreground_theme_swatch_class(theme: ForegroundTheme) -> &'static str {
+    match theme {
+        ForegroundTheme::Magenta => {
+            "h-4 w-4 rounded-full bg-brand ring-1 ring-inset ring-slate-300"
+        }
+        ForegroundTheme::Black => "h-4 w-4 rounded-full bg-black ring-1 ring-inset ring-slate-300",
+    }
+}
+
+fn foreground_theme_guidance(theme: ForegroundTheme) -> &'static str {
+    match theme {
+        ForegroundTheme::Magenta => "Brand foreground with matching logo",
+        ForegroundTheme::Black => "Black foreground with matching logo",
+    }
+}
+
+fn foreground_diagnostic_label(theme: ForegroundTheme) -> String {
+    match theme {
+        ForegroundTheme::Magenta => "ONE magenta #BD0F72".to_owned(),
+        ForegroundTheme::Black => "Black #000000".to_owned(),
+    }
 }
 
 fn logo_label(style: LogoStyle, placement: Option<qr_web::workflow::LogoDiagnostics>) -> String {

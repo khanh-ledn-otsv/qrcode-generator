@@ -1,8 +1,8 @@
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png,
-    render_svg,
+    BRANDED_LOGO_VERSION, ForegroundTheme, LogoStyle, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES, render_png, render_svg,
 };
 use sha2::{Digest, Sha256};
 
@@ -31,7 +31,20 @@ pub const SHA256: [[&str; 2]; 5] = [
     ],
 ];
 
+#[allow(dead_code)]
+pub const BLACK_SHA256: [&str; 2] = [
+    "872e6462c0e6d347d58093d5ce3655e939690cee8fb6ff1d2c3420709c36bcda",
+    "5c3eaedd8a148468c1f3c1905e3c2943709025cb27ab891257154e554d3c68e0",
+];
+
 pub fn artifacts(profile_index: usize) -> (Vec<u8>, Vec<u8>) {
+    artifacts_with_foreground(profile_index, ForegroundTheme::Magenta)
+}
+
+pub fn artifacts_with_foreground(
+    profile_index: usize,
+    foreground: ForegroundTheme,
+) -> (Vec<u8>, Vec<u8>) {
     let encoded = encode(EncodeRequest::with_version_range(
         PAYLOAD,
         ErrorCorrection::High,
@@ -44,6 +57,8 @@ pub fn artifacts(profile_index: usize) -> (Vec<u8>, Vec<u8>) {
         RenderOptions::safe(SUPPORTED_PROFILES[profile_index])
             .unwrap()
             .with_logo(LogoStyle::Bundled)
+            .unwrap()
+            .with_foreground_theme(foreground)
             .unwrap(),
     )
     .unwrap();
@@ -51,6 +66,12 @@ pub fn artifacts(profile_index: usize) -> (Vec<u8>, Vec<u8>) {
         render_svg(&model).unwrap().into_bytes(),
         render_png(&model).unwrap(),
     )
+}
+
+#[allow(dead_code)]
+pub fn black_content_hashes() -> [String; 2] {
+    let (svg, png) = artifacts_with_foreground(1, ForegroundTheme::Black);
+    [sha256_hex(&svg), sha256_hex(&png)]
 }
 
 pub fn hashes() -> [[String; 2]; 5] {

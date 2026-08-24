@@ -5,9 +5,9 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, EncodingMode, Version, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, ContrastRatio, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, OutputProfile,
-    OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
-    render_png, render_svg,
+    BRANDED_LOGO_VERSION, ContrastRatio, ForegroundTheme, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
+    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
+    SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -156,6 +156,7 @@ pub struct PreviewRequest {
     revision: Revision,
     payload: String,
     profile_id: ProfileId,
+    foreground_theme: ForegroundTheme,
     logo_enabled: bool,
 }
 
@@ -173,6 +174,11 @@ impl PreviewRequest {
     #[must_use]
     pub const fn profile_id(&self) -> ProfileId {
         self.profile_id
+    }
+
+    #[must_use]
+    pub const fn foreground_theme(&self) -> ForegroundTheme {
+        self.foreground_theme
     }
 
     #[must_use]
@@ -202,6 +208,7 @@ impl PreviewRequest {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Diagnostics {
     profile_id: ProfileId,
+    foreground_theme: ForegroundTheme,
     mode: EncodingMode,
     eci_assignment: Option<EciAssignment>,
     ecc: ErrorCorrection,
@@ -314,6 +321,11 @@ impl Diagnostics {
     }
 
     #[must_use]
+    pub const fn foreground_theme(self) -> ForegroundTheme {
+        self.foreground_theme
+    }
+
+    #[must_use]
     pub const fn mode(self) -> EncodingMode {
         self.mode
     }
@@ -410,7 +422,10 @@ impl Diagnostics {
 
     #[must_use]
     pub const fn foreground(self) -> Rgba {
-        Rgba::BRAND
+        match self.foreground_theme {
+            ForegroundTheme::Magenta => Rgba::BRAND,
+            ForegroundTheme::Black => Rgba::BLACK,
+        }
     }
 
     #[must_use]
@@ -588,6 +603,7 @@ enum PreviewState {
 pub struct WorkflowState {
     payload: TextAreaBuffer,
     profile_id: ProfileId,
+    foreground_theme: ForegroundTheme,
     logo_enabled: bool,
     revision: Revision,
     preview_state: PreviewState,
@@ -599,6 +615,7 @@ impl WorkflowState {
         Self {
             payload: TextAreaBuffer::new(String::new()),
             profile_id,
+            foreground_theme: ForegroundTheme::Magenta,
             logo_enabled: true,
             revision: Revision(0),
             preview_state: PreviewState::Invalid(WorkflowFailure::EmptyPayload),
@@ -668,6 +685,14 @@ impl WorkflowState {
         self.begin_preview()
     }
 
+    pub fn set_foreground_theme(
+        &mut self,
+        foreground_theme: ForegroundTheme,
+    ) -> Result<PreviewRequest, WorkflowFailure> {
+        self.foreground_theme = foreground_theme;
+        self.begin_preview()
+    }
+
     #[must_use]
     pub fn payload(&self) -> &str {
         self.payload.raw()
@@ -695,7 +720,15 @@ impl WorkflowState {
 
     #[must_use]
     pub const fn foreground(&self) -> Rgba {
-        Rgba::BRAND
+        match self.foreground_theme {
+            ForegroundTheme::Magenta => Rgba::BRAND,
+            ForegroundTheme::Black => Rgba::BLACK,
+        }
+    }
+
+    #[must_use]
+    pub const fn foreground_theme(&self) -> ForegroundTheme {
+        self.foreground_theme
     }
 
     #[must_use]
@@ -781,6 +814,7 @@ impl WorkflowState {
             revision: self.revision,
             payload: self.payload.raw().to_owned(),
             profile_id: self.profile_id,
+            foreground_theme: self.foreground_theme,
             logo_enabled: self.logo_enabled,
         })
     }
@@ -808,6 +842,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
                 LogoStyle::None
             })
         })
+        .and_then(|options| options.with_foreground_theme(request.foreground_theme))
         .map_err(|error| classify_render_error(error, profile))?;
     let model = RenderModel::new(&encoded, options)
         .map_err(|error| classify_render_error(error, profile))?;
@@ -828,6 +863,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         png,
         diagnostics: Diagnostics {
             profile_id: profile.id(),
+            foreground_theme: options.foreground_theme(),
             mode: encoded.mode(),
             eci_assignment: encoded.eci_assignment(),
             ecc: encoded.ecc(),

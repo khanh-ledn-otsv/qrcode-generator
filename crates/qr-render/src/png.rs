@@ -61,7 +61,14 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
         }
     }
     if let Some(logo) = model.logo_placement() {
-        render_logo(&mut pixels, dimensions, origin, scale, logo)?;
+        render_logo(
+            &mut pixels,
+            dimensions,
+            origin,
+            scale,
+            logo,
+            model.options().foreground(),
+        )?;
     }
     Ok(pixels)
 }
@@ -72,6 +79,7 @@ fn render_logo(
     matrix_origin: crate::PixelPoint,
     scale: u32,
     logo: crate::LogoPlacement,
+    foreground: Rgba,
 ) -> Result<(), RenderError> {
     let knockout = logo.knockout_bounds();
     let knockout_x = knockout
@@ -143,17 +151,17 @@ fn render_logo(
             pixels
                 .get_mut(offset..offset + 4)
                 .ok_or(RenderError::RenderFailure)?
-                .copy_from_slice(&logo_pixel(covered_samples)?);
+                .copy_from_slice(&logo_pixel(covered_samples, foreground)?);
         }
     }
     Ok(())
 }
 
-fn logo_pixel(covered_samples: u32) -> Result<[u8; 4], RenderError> {
+fn logo_pixel(covered_samples: u32, foreground: Rgba) -> Result<[u8; 4], RenderError> {
     if covered_samples == LOGO_SAMPLE_COUNT {
-        return Ok(Rgba::BRAND.channels());
+        return Ok(foreground.channels());
     }
-    let [red, green, blue, _] = Rgba::BRAND.channels();
+    let [red, green, blue, _] = foreground.channels();
     Ok([
         blend_logo_channel(red, covered_samples)?,
         blend_logo_channel(green, covered_samples)?,

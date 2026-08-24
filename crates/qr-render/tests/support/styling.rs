@@ -3,8 +3,9 @@ use std::error::Error;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{
-    APPROVED_LOGO_STYLES, BRANDED_LOGO_VERSION, LogoPlacement, LogoStyle, OutputProfile,
-    OutputSafety, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES,
+    APPROVED_FOREGROUND_THEMES, APPROVED_LOGO_STYLES, BRANDED_LOGO_VERSION, ForegroundTheme,
+    LogoPlacement, LogoStyle, OutputProfile, OutputSafety, RenderError, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES,
 };
 use sha2::{Digest, Sha256};
 
@@ -12,13 +13,17 @@ use sha2::{Digest, Sha256};
 pub struct ApprovedStyleTuple {
     pub profile_index: usize,
     pub logo_index: usize,
+    pub foreground_index: usize,
     pub profile: OutputProfile,
     pub logo: LogoStyle,
+    pub foreground: ForegroundTheme,
 }
 
 impl ApprovedStyleTuple {
     pub fn options(self) -> Result<RenderOptions, RenderError> {
-        RenderOptions::safe(self.profile)?.with_logo(self.logo)
+        RenderOptions::safe(self.profile)?
+            .with_logo(self.logo)?
+            .with_foreground_theme(self.foreground)
     }
 
     pub const fn expected_safety(self) -> OutputSafety {
@@ -36,7 +41,10 @@ impl ApprovedStyleTuple {
     }
 
     pub fn label(self) -> String {
-        format!("{}/{}", self.profile_index, self.logo_index)
+        format!(
+            "{}/{}/{}",
+            self.profile_index, self.logo_index, self.foreground_index
+        )
     }
 }
 
@@ -44,12 +52,17 @@ pub fn approved_style_tuples() -> Vec<ApprovedStyleTuple> {
     let mut tuples = Vec::new();
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for (logo_index, logo) in APPROVED_LOGO_STYLES.into_iter().enumerate() {
-            tuples.push(ApprovedStyleTuple {
-                profile_index,
-                logo_index,
-                profile,
-                logo,
-            });
+            for (foreground_index, foreground) in APPROVED_FOREGROUND_THEMES.into_iter().enumerate()
+            {
+                tuples.push(ApprovedStyleTuple {
+                    profile_index,
+                    logo_index,
+                    foreground_index,
+                    profile,
+                    logo,
+                    foreground,
+                });
+            }
         }
     }
     tuples
@@ -267,6 +280,8 @@ fn evidence_row(metadata: EvidenceMetadata<'_>, artifact: serde_json::Value) -> 
         "profile_index": tuple.profile_index,
         "profile": format!("{:?}", profile.id()),
         "logo_state_index": tuple.logo_index,
+        "foreground_index": tuple.foreground_index,
+        "foreground": format!("{:?}", tuple.foreground),
         "payload_class": payload_class.label(),
         "ecc": format!("{:?}", tuple.ecc()),
         "version": version,

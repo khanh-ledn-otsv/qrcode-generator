@@ -24,6 +24,7 @@ pub struct Rgba {
 
 impl Rgba {
     pub const BRAND: Self = Self::opaque(189, 15, 114);
+    pub const BLACK: Self = Self::opaque(0, 0, 0);
     pub const WHITE: Self = Self::opaque(255, 255, 255);
 
     #[must_use]
@@ -114,6 +115,15 @@ pub enum LogoStyle {
     Bundled,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ForegroundTheme {
+    Magenta,
+    Black,
+}
+
+pub const APPROVED_FOREGROUND_THEMES: [ForegroundTheme; 2] =
+    [ForegroundTheme::Magenta, ForegroundTheme::Black];
+
 pub const APPROVED_LOGO_STYLES: [LogoStyle; 2] = [LogoStyle::None, LogoStyle::Bundled];
 
 /// Validated rendering choices for the approved safe preset.
@@ -123,6 +133,7 @@ pub const APPROVED_LOGO_STYLES: [LogoStyle; 2] = [LogoStyle::None, LogoStyle::Bu
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RenderOptions {
     profile: OutputProfile,
+    foreground_theme: ForegroundTheme,
     logo_style: LogoStyle,
 }
 
@@ -131,6 +142,7 @@ impl RenderOptions {
         profile.validate().map_err(RenderError::InvalidProfile)?;
         Ok(Self {
             profile,
+            foreground_theme: ForegroundTheme::Magenta,
             logo_style: LogoStyle::None,
         })
     }
@@ -142,7 +154,15 @@ impl RenderOptions {
 
     #[must_use]
     pub const fn foreground(self) -> Rgba {
-        Rgba::BRAND
+        match self.foreground_theme {
+            ForegroundTheme::Magenta => Rgba::BRAND,
+            ForegroundTheme::Black => Rgba::BLACK,
+        }
+    }
+
+    #[must_use]
+    pub const fn foreground_theme(self) -> ForegroundTheme {
+        self.foreground_theme
     }
 
     #[must_use]
@@ -160,6 +180,14 @@ impl RenderOptions {
         Ok(self)
     }
 
+    pub fn with_foreground_theme(
+        mut self,
+        foreground_theme: ForegroundTheme,
+    ) -> Result<Self, RenderError> {
+        self.foreground_theme = foreground_theme;
+        Ok(self)
+    }
+
     #[must_use]
     pub const fn safety(self) -> OutputSafety {
         match self.logo_style {
@@ -170,7 +198,7 @@ impl RenderOptions {
 
     #[must_use]
     pub fn contrast_ratio(self) -> ContrastRatio {
-        ContrastRatio::between(Rgba::BRAND, Rgba::WHITE)
+        ContrastRatio::between(self.foreground(), self.background())
     }
 }
 

@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { SAFE_PAYLOAD, enterPayload, selectProfile, sha256 } from "./helpers";
+import { SAFE_PAYLOAD, diagnostic, enterPayload, selectProfile, sha256 } from "./helpers";
 import { expectDecodedPayload, expectDecodedPayloadBytes } from "./zxing";
 
 const ZXING_COMMIT = "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825";
@@ -108,6 +108,42 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(await sha256(png)).toBe(
     "86cfac3bcf061f0b7c744e3abb5918134153e9a70ef368c669eae86bd0492efc",
   );
+});
+
+test("downloads deterministic black branded SVG and PNG artifacts", async ({ page }, testInfo) => {
+  await selectProfile(page, "Content");
+  await page.getByText("Black", { exact: true }).click();
+  await expect.poll(() => diagnostic(page, "Foreground")).toBe("Black #000000");
+
+  const [svgDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-svg").click(),
+  ]);
+  const [pngDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByTestId("download-png").click(),
+  ]);
+  const svg = await readFile(await svgDownload.path());
+  const png = await readFile(await pngDownload.path());
+  const svgText = svg.toString("utf8");
+
+  expect(svgText).toContain('fill="#000000"');
+  expect(svgText).not.toContain("#bd0f72");
+  expect(png.readUInt32BE(16)).toBe(360);
+  expect(png.readUInt32BE(20)).toBe(360);
+  expect(await sha256(svg)).toBe(
+    "646fb42929a4d23b53fb3dff90dfd65d7f67ce4fd0aaf69421302c5393da58e8",
+  );
+  expect(await sha256(png)).toBe(
+    "48a353b79bbe8bd16e8b52ab485148f21593b47ba30239f371672d0540266ba4",
+  );
+
+  const source = resolve("tests/oracles/zxing-cpp");
+  const reader = resolve(source, "build/example/ZXingReader");
+  const svgRaster = testInfo.outputPath("black-branded-svg.png");
+  expectDecodedPayload(reader, await pngDownload.path(), SAFE_PAYLOAD);
+  await rasterizeDownloadedSvg(page, await svgDownload.path(), svgRaster, 360);
+  expectDecodedPayload(reader, svgRaster, SAFE_PAYLOAD);
 });
 
 test("downloaded PNGs and SVGs independently decode common payload formats", async ({

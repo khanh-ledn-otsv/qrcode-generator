@@ -85,7 +85,7 @@ pub fn render_svg(model: &RenderModel<'_>) -> Result<String, RenderError> {
     }
     svg.push_str("\"/>");
     if let Some(logo) = model.logo_placement() {
-        write_logo(&mut svg, model, logo)?;
+        write_logo(&mut svg, model, logo, &foreground)?;
     }
     svg.push_str("</svg>");
     Ok(svg)
@@ -99,6 +99,7 @@ fn write_logo(
     svg: &mut String,
     model: &RenderModel<'_>,
     logo: crate::LogoPlacement,
+    foreground: &str,
 ) -> Result<(), RenderError> {
     let origin = model.svg_placement().matrix_origin();
     let knockout = logo.knockout_bounds();
@@ -121,7 +122,7 @@ fn write_logo(
         .top_ten_thousandths()
         .checked_add(origin.y().get() * 10_000)
         .ok_or(RenderError::DimensionOverflow)?;
-    let logo_body = bundled_logo_body()?;
+    let logo_body = bundled_logo_body()?.replace("#bd0f72", foreground);
     write!(
         svg,
         "<svg data-role=\"bundled-logo\" x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" viewBox=\"180 180 640 240\" preserveAspectRatio=\"xMidYMid meet\" aria-hidden=\"true\">{logo_body}</svg>",

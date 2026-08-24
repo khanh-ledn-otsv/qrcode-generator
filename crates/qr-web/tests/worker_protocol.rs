@@ -1,4 +1,4 @@
-use qr_render::ProfileId;
+use qr_render::{ForegroundTheme, ProfileId};
 use qr_web::worker_protocol::{WorkerRequest, WorkerResponse};
 use qr_web::workflow::{ArtifactKind, WorkflowState, evaluate_preview};
 
@@ -55,6 +55,11 @@ fn worker_artifacts_match_direct_evaluation_across_approved_request_shapes() {
         state
             .set_logo_enabled(logo_enabled)
             .expect("logo transition produces a revision");
+        if profile == ProfileId::Content {
+            state
+                .set_foreground_theme(ForegroundTheme::Black)
+                .expect("theme transition produces a revision");
+        }
         let request = state
             .set_payload(payload)
             .expect("payload transition produces a revision");

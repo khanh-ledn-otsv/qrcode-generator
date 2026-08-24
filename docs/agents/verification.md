@@ -66,7 +66,7 @@ tests, Python checks/tests, one optimized build, and Chromium. A successful
 
 | Command | Observed/declared cost | Scope |
 |---|---:|---|
-| `pnpm run test:approved` | about 90 s | ordinary plus exhaustive 218-row approved/resource matrix |
+| `pnpm run test:approved` | about 90 s | ordinary plus exhaustive 436-row approved/resource matrix |
 | `pnpm run test:decode` | about 5 min warm | complete ZXing PNG/SVG/logo decode campaign |
 | `pnpm run test:quirc` | variable, usually <1 min warm | representative secondary ASCII decode |
 | `pnpm run test:adverse:decode` | about 6 s warm | ignored adverse-transform decode evidence |

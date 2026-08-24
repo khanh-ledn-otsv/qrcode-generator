@@ -57,7 +57,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
     payload_classes = policy["required_payload_classes"]
     branding = policy["branded_geometry_policy"]
     rows = []
-    dimension_order = ("profiles", "logo_states")
+    dimension_order = ("profiles", "logo_states", "foreground_themes")
     tuples = itertools.product(*(range(dimensions[name]) for name in dimension_order))
     scenarios = []
     for indices in tuples:
@@ -78,6 +78,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         (
             profile_index,
             logo_state_index,
+            foreground_index,
             case_kind,
             payload_class,
             case_label,
@@ -122,6 +123,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             "case_label": case_label,
             "profile_index": profile_index,
             "logo_state_index": logo_state_index,
+            "foreground_index": foreground_index,
             "payload_class": payload_class,
             "version": row_version,
             "safety": "caution" if decoded else None,
@@ -212,7 +214,7 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
 
     def test_critical_workflow_gate_names_the_final_branded_browser_behaviors(self) -> None:
         self.assertIn(
-            "uses one opaque white rounded ONE appearance",
+            "uses approved foreground themes with one opaque white rounded ONE appearance",
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(

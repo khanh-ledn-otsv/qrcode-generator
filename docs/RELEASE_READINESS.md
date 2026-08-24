@@ -26,7 +26,7 @@ The command verifies pinned tool versions, produces two release builds in
 separate Cargo target directories, compares every application artifact by
 SHA-256, and reuses the first verified build for Chromium and release evidence
 instead of compiling it again. It runs desktop Chromium with Playwright retries
-disabled and validates the 218-row dual-format approved-output matrix plus all
+disabled and validates the 436-row dual-format approved-output matrix plus all
 29 declared adverse-decoder outcomes. It writes the machine evidence and final
 report under `target/release-readiness/`.
 

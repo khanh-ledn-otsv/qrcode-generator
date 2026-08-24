@@ -18,9 +18,10 @@ pub use logo::{
     MAXIMUM_ADAPTIVE_LOGO_VERSION, ModuleCoordinate,
 };
 pub use model::{
-    APPROVED_LOGO_STYLES, BrandableCell, ContrastRatio, GlyphOwnership, LogoStyle,
-    MAX_RGBA_BUFFER_BYTES, ModuleDimensions, ModulePoint, OutputSafety, PixelPoint, PngPlacement,
-    RenderCell, RenderError, RenderModel, RenderOptions, Rgba, SvgPlacement, SymbolGlyph,
+    APPROVED_FOREGROUND_THEMES, APPROVED_LOGO_STYLES, BrandableCell, ContrastRatio,
+    ForegroundTheme, GlyphOwnership, LogoStyle, MAX_RGBA_BUFFER_BYTES, ModuleDimensions,
+    ModulePoint, OutputSafety, PixelPoint, PngPlacement, RenderCell, RenderError, RenderModel,
+    RenderOptions, Rgba, SvgPlacement, SymbolGlyph,
 };
 pub use png::render_png;
 pub use profile::{OutputProfile, ProfileError, ProfileId, SUPPORTED_PROFILES};

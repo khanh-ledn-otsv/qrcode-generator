@@ -334,7 +334,7 @@ Exhaustively iterate every version permitted by each profile:
 - surplus padding is opaque white and contains no artwork;
 - unsafe logo geometry is rejected before rendering.
 
-Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, 260 px SVG, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 740 px SVG, and 1110 px PNG. Chromium rasterizes the selected Adaptive SVG at its declared size and requires rounded modules outside the logo region to remain visibly magenta.
+Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, 260 px SVG, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 740 px SVG, and 1110 px PNG. Chromium rasterizes the selected Adaptive SVG at its declared size and requires rounded modules outside the logo region to use the selected approved foreground.
 
 ### 6.2 SVG artifact tests
 
@@ -349,7 +349,7 @@ Parse every generated SVG and assert:
 - every non-finder visible module uses the fixed centered 0.90-module rounded
   glyph, the three finder regions use full-cell square glyphs, and separator
   modules remain blank;
-- the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with unchanged geometry, the reviewed `180 180 640 240` presentation box, and no external reference;
+- the sanitized magenta ONE lettermark is embedded from `assets/RGB-one-lettermark-magenta.svg` with unchanged geometry, the reviewed `180 180 640 240` presentation box, no external reference, and deterministic recoloring only to the selected approved foreground;
 - logo knockout geometry is opaque white, outside the four-module quiet zone, function-safe, deterministic, and independently decoded for every enabled H-level profile/version row;
 - stable element/path ordering and normalized number formatting;
 - identical request produces identical UTF-8 bytes.
@@ -384,7 +384,7 @@ Decode the resulting pixels through ZXing-C++; do not declare success merely bec
 
 Testing every control independently is insufficient because failures interact. Build a generated list from compiled approved presets and require that every selectable tuple appears in the test report.
 
-For each approved tuple of profile and logo state:
+For each approved tuple of profile, logo state, and foreground theme:
 
 - render at least a short URL, a dense URL near the profile ceiling, Numeric, Alphanumeric, ASCII Byte, and UTF-8+ECI payload;
 - test safe baseline versions across all allowed versions;
@@ -395,9 +395,9 @@ For each approved tuple of profile and logo state:
 The generated coverage test must fail if a new approved enum variant is not included in the matrix.
 
 Routine native tests keep a fast selectable-surface check, render one
-representative artifact for every renderable profile/logo tuple, and render the
+representative artifact for every renderable profile/logo/foreground tuple, and render the
 largest Adaptive Version 40 boundary against the recorded artifact/allocation
-ceilings. The complete 218-row generated combination and resource-baseline
+ceilings. The complete 436-row generated combination and resource-baseline
 passes are ignored by ordinary `cargo test` and run through
 `pnpm run test:approved:exhaustive` as part of release evidence and the
 path-filtered extended decoder workflow. This preserves the full release gate
@@ -406,12 +406,12 @@ without charging unrelated routine changes for exhaustive matrix generation.
 The versioned coverage contract is
 [`tests/approved-output-matrix-policy.json`](../tests/approved-output-matrix-policy.json),
 which is consumed by both the Rust generator test and Python readiness validator.
-The release evidence contains 218 generated scenario rows: 60 required-payload
-rows (six payload classes for each compiled profile/logo tuple) and
-158 exact-version rows (every version admitted by each profile for both logo
-choices). Both the native PNG and independently rasterized SVG
-artifact are hashed and passed to the pinned decoder for each accepted row.
-There are 145 accepted rows and 73 expected-invalid rows. Accepted fixed-profile
+The release evidence contains 436 generated scenario rows: 120 required-payload
+rows (six payload classes for each compiled profile/logo/foreground tuple) and
+316 exact-version rows (every version admitted by each profile for both logo
+choices and both foreground themes). Both the native PNG and independently
+rasterized SVG artifact are hashed and passed to the pinned decoder for each
+accepted row. There are 290 accepted rows and 146 expected-invalid rows. Accepted fixed-profile
 logo rows record the reviewed Version 6 placement. Adaptive records the
 reviewed Version 6–11 placement for each accepted row; profiles/versions outside
 those policies record their typed rejection.

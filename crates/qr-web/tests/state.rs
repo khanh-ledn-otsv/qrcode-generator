@@ -1,7 +1,7 @@
 use qr_core::encoding::EciAssignment;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeRequest, EncodingMode, encode};
-use qr_render::{ContrastRatio, OutputSafety, ProfileId, Rgba};
+use qr_render::{ContrastRatio, ForegroundTheme, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{
     ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview, link_capacity_guide,
 };
@@ -19,7 +19,49 @@ fn branded_logo_output_is_selected_by_default() {
     let state = WorkflowState::new(ProfileId::Content);
 
     assert!(state.logo_enabled());
+    assert_eq!(state.foreground_theme(), ForegroundTheme::Magenta);
+    assert_eq!(state.foreground(), Rgba::BRAND);
     assert_eq!(state.background(), Rgba::WHITE);
+}
+
+#[test]
+fn black_foreground_selection_preserves_payload_and_encoding_but_recolors_artifacts() {
+    let mut state = WorkflowState::new(ProfileId::Content);
+    let payload = "BLACK BRANDING 123";
+    let request = state
+        .set_payload(payload.to_owned())
+        .expect("initial magenta preview request");
+    let magenta = evaluate_preview(&request).expect("magenta renders");
+    let request = state
+        .set_foreground_theme(ForegroundTheme::Black)
+        .expect("black preview request");
+    let black = evaluate_preview(&request).expect("black renders");
+
+    assert_eq!(request.payload(), payload);
+    assert_eq!(request.foreground_theme(), ForegroundTheme::Black);
+    assert_eq!(
+        black.diagnostics().foreground_theme(),
+        ForegroundTheme::Black
+    );
+    assert_eq!(black.diagnostics().foreground(), Rgba::BLACK);
+    assert_eq!(black.diagnostics().background(), Rgba::WHITE);
+    assert_eq!(
+        black.diagnostics().contrast_ratio(),
+        ContrastRatio::from_hundredths(2100)
+    );
+    assert_eq!(black.diagnostics().mode(), magenta.diagnostics().mode());
+    assert_eq!(
+        black.diagnostics().eci_assignment(),
+        magenta.diagnostics().eci_assignment()
+    );
+    assert_eq!(black.diagnostics().ecc(), magenta.diagnostics().ecc());
+    assert_eq!(
+        black.diagnostics().selected_version(),
+        magenta.diagnostics().selected_version()
+    );
+    assert_eq!(black.diagnostics().mask(), magenta.diagnostics().mask());
+    assert!(black.svg().contains("fill=\"#000000\""));
+    assert!(!black.svg().contains("#bd0f72"));
 }
 
 #[test]
