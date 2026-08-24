@@ -9,7 +9,7 @@ use std::process::Command;
 
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
+use qr_render::{LogoStyle, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 
 const QUIRC_COMMIT: &str = "542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca";
 const QUIRC_READER_VERSION: &str = "quirc-reader quirc 1.2";
@@ -23,27 +23,35 @@ fn representative_ascii_rasters_decode_to_exact_payload_bytes() -> Result<(), Bo
     verify_quirc(&source, &reader)?;
     let output = tempfile::tempdir()?;
 
-    let dense = "a".repeat(versions::first_byte_length(13));
+    let profile = |id| {
+        SUPPORTED_PROFILES
+            .into_iter()
+            .find(|profile| profile.id() == id)
+            .ok_or("representative quirc profile is missing")
+    };
+    let standard = profile(ProfileId::Standard)?;
+    let hero_campaign = profile(ProfileId::HeroCampaign)?;
+    let business_card = profile(ProfileId::BusinessCard)?;
+    let dense = "a".repeat(versions::first_byte_length(12));
     let adaptive_branded = format!("https://example.test/{}", "a".repeat(88));
     let cases = [
         (
             "ordinary-unbranded",
             "https://example.test/a".to_owned(),
-            1,
+            standard,
             false,
         ),
-        ("dense-unbranded", dense, 3, false),
+        ("dense-unbranded", dense, hero_campaign, false),
         (
             "branded-v6",
             "https://example.test/logo".to_owned(),
-            1,
+            standard,
             true,
         ),
-        ("branded-adaptive", adaptive_branded, 4, true),
+        ("branded-adaptive", adaptive_branded, business_card, true),
     ];
 
-    for (label, payload, profile_index, branded) in cases {
-        let profile = SUPPORTED_PROFILES[profile_index];
+    for (label, payload, profile, branded) in cases {
         let ecc = if branded {
             ErrorCorrection::High
         } else {
