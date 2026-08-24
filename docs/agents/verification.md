@@ -51,7 +51,7 @@ fail thresholds.
 | Command | Typical warm cost | Coverage boundary |
 |---|---:|---|
 | `git diff --check` | <1 s | whitespace errors only |
-| `pnpm run verify:meta` | 1–3 s | selector cases, workflow action pins, documentation validation, and all shell syntax |
+| `pnpm run verify:meta` | 1–3 s | selector cases, workflow action pins, CI build contract, documentation validation, and all shell syntax |
 | `pnpm run verify:python` | 15–30 s | Python lint, format, types, unit tests |
 | `pnpm run verify:core` | 15–35 s | qr-core format, Clippy, routine tests |
 | `pnpm run verify:render` | 20–60 s | qr-render format, Clippy, native tests, WASM PNG test |
@@ -61,6 +61,11 @@ fail thresholds.
 `verify` already includes formatting, linting, Rust native/WASM checks and
 tests, Python checks/tests, one optimized build, and Chromium. A successful
 `verify` makes all separate routine reruns redundant.
+
+The hosted Pages step reuses the WASM package produced by `web`/`full`
+verification and runs `pnpm run build:astro` only to apply the Pages base path.
+Focused `core`/`render` verification does not build the application, so those
+deployment paths run `pnpm run build:wasm` once before the Astro-only build.
 
 ## Specialized gates
 

@@ -676,7 +676,9 @@ decoder campaigns live in a separate workflow limited to matching core,
 render, artifact, oracle, and release-evidence inputs. Pages publishing is
 limited to site and build-input changes, runs only after the covering
 `Correctness` gate succeeds, and repackages that job's verified release
-artifacts with the Pages base path before upload and deployment. Both hosted
+WASM artifact with the Pages base path before upload and deployment. Focused
+core/render gates generate that WASM artifact once after verification; web/full
+gates reuse the artifact from their covering build. Both hosted
 workflows retain manual dispatch. Successful jobs never rewrite committed
 goldens or evidence; extended failures upload logs and generated failure
 evidence.

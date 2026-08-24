@@ -124,7 +124,7 @@ shared fixtures, or native/WASM equivalence.
 
 | Command | Included coverage | Do not add separately |
 |---|---|---|
-| `pnpm run verify:meta` | selector/doc-validation and workflow-action-pin checks, documentation links/metadata, and shell syntax | product tests unless changed commands/runtime require them |
+| `pnpm run verify:meta` | selector/doc-validation, workflow action pins and CI build contract, documentation links/metadata, and shell syntax | product tests unless changed commands/runtime require them |
 | `pnpm run verify:python` | Ruff, Ruff format, ty, Python unit tests | separate Python lint/test commands |
 | `pnpm run verify:core` | Rust format, qr-core Clippy, all routine qr-core tests | workspace/web/render checks |
 | `pnpm run verify:render` | Rust format, qr-render Clippy/native tests, WASM PNG renderer test | full web/browser gate |
@@ -177,7 +177,9 @@ artifact/oracle paths.
   npm lockfile.
 - Prefer repository `pnpm` scripts. They own pinned flags and orchestration.
 - Prefer the repository's Astro-owned `pnpm run build` and `pnpm run dev`
-  scripts for web builds and local development.
+  scripts for web builds and local development. `pnpm run build:astro` is a
+  CI-only repackaging helper and assumes the current job already generated the
+  WASM package.
 - Use Oxlint/Oxfmt for JS/TS and Ruff/ty through the locked `tests/oracles` uv
   project for Python.
 - Local sccache is optional: `RUSTC_WRAPPER=sccache`. CI owns the pinned shared
