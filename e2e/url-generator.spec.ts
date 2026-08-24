@@ -123,6 +123,18 @@ test("keeps the guideline on a separate page and preserves generator controls", 
   await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
+test("reserves vertical scrollbar space across generator and guideline pages", async ({ page }) => {
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter))
+    .toBe("stable");
+
+  await page.getByRole("link", { name: "Guideline" }).click();
+  await expect(page).toHaveURL(/\/guideline\/$/);
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter))
+    .toBe("stable");
+});
+
 test("keeps the generator contained on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("link", { name: "Guideline" })).toBeVisible();
