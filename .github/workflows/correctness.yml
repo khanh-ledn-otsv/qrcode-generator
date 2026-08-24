@@ -52,15 +52,21 @@ jobs:
         id: verification
         env:
           CI_VERIFY_BASE_SHA: ${{ github.event.before }}
+          CI_MANUAL_DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           changed_paths=()
-          if [[ -z "${CI_VERIFY_BASE_SHA}" || "${CI_VERIFY_BASE_SHA}" =~ ^0+$ ]] || ! git cat-file -e "${CI_VERIFY_BASE_SHA}^{commit}" 2>/dev/null; then
-            changed_paths+=("__unavailable_ci_base__")
+          if [[ "${CI_MANUAL_DISPATCH}" == "true" ]]; then
+            verification_scope="full"
+            deploy_pages="$(scripts/select-pages-deployment.sh --force)"
           else
-            mapfile -t changed_paths < <(git diff --name-only "${CI_VERIFY_BASE_SHA}" HEAD)
+            if [[ -z "${CI_VERIFY_BASE_SHA}" || "${CI_VERIFY_BASE_SHA}" =~ ^0+$ ]] || ! git cat-file -e "${CI_VERIFY_BASE_SHA}^{commit}" 2>/dev/null; then
+              changed_paths+=("__unavailable_ci_base__")
+            else
+              mapfile -t changed_paths < <(git diff --name-only "${CI_VERIFY_BASE_SHA}" HEAD)
+            fi
+            verification_scope="$(scripts/select-verification.sh "${changed_paths[@]}")"
+            deploy_pages="$(scripts/select-pages-deployment.sh "${changed_paths[@]}")"
           fi
-          verification_scope="$(scripts/select-verification.sh "${changed_paths[@]}")"
-          deploy_pages="$(scripts/select-pages-deployment.sh "${changed_paths[@]}")"
           echo "scope=${verification_scope}" >> "$GITHUB_OUTPUT"
           echo "deploy_pages=${deploy_pages}" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7

@@ -23,7 +23,7 @@ for changed_path in "$@"; do
       ;;
     README.md | docs/* | .scratch/*)
       ;;
-    .github/* | scripts/check-doc-links.mjs | scripts/select-verification.sh | scripts/test-ci-build-contract.sh | scripts/test-select-verification.sh | scripts/verify-changed.sh)
+    .github/* | scripts/check-doc-links.mjs | scripts/select-verification.sh | scripts/test-ci-build-contract.sh | scripts/test-select-verification.sh | scripts/test-workflow-manual-deployment.sh | scripts/verify-changed.sh)
       merge_scope "meta"
       ;;
     ruff.toml | ty.toml | tests/support/*)

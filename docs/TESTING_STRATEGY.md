@@ -678,10 +678,11 @@ limited to site and build-input changes, runs only after the covering
 `Correctness` gate succeeds, and repackages that job's verified release
 WASM artifact with the Pages base path before upload and deployment. Focused
 core/render gates generate that WASM artifact once after verification; web/full
-gates reuse the artifact from their covering build. Both hosted
-workflows retain manual dispatch. Successful jobs never rewrite committed
-goldens or evidence; extended failures upload logs and generated failure
-evidence.
+gates reuse the artifact from their covering build. A manual dispatch of the
+`Correctness` workflow bypasses path exclusions, runs the full routine gate, and
+always publishes Pages. Both hosted workflows retain manual dispatch.
+Successful jobs never rewrite committed goldens or evidence; extended failures
+upload logs and generated failure evidence.
 
 ## 13. Flake and failure policy
 
