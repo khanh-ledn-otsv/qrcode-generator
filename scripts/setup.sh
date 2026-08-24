@@ -27,8 +27,8 @@ rustup target add wasm32-unknown-unknown
 if [[ "$(trunk --version 2>/dev/null || true)" != "trunk 0.21.14" ]]; then
   cargo install --locked --force trunk --version 0.21.14
 fi
-if [[ "$(wasm-bindgen-test-runner --version 2>/dev/null || true)" != "wasm-bindgen-test-runner 0.2.126" ]]; then
-  cargo install --locked --force wasm-bindgen-cli --version 0.2.126
+if [[ "$(wasm-bindgen-test-runner --version 2>/dev/null || true)" != "wasm-bindgen-test-runner 0.2.127" ]]; then
+  cargo install --locked --force wasm-bindgen-cli --version 0.2.127
 fi
 
 case "${QR_PLAYWRIGHT_INSTALL_MODE:-browser-only}" in

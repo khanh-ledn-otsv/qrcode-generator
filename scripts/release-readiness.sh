@@ -21,7 +21,7 @@ release_candidate="$(git rev-parse HEAD)"
 
 [[ "${node_version}" == v24.* ]] || { echo "Node.js v24 is required." >&2; exit 1; }
 [[ "${pnpm_version}" == "11.20.0" ]] || { echo "pnpm 11.20.0 is required." >&2; exit 1; }
-[[ "${rustc_version}" == "rustc 1.97.1 "* ]] || { echo "Rust 1.97.1 is required." >&2; exit 1; }
+[[ "${rustc_version}" == "rustc 1.98.0 "* ]] || { echo "Rust 1.98.0 is required." >&2; exit 1; }
 [[ "${trunk_version}" == "trunk 0.21.14" ]] || { echo "Trunk 0.21.14 is required." >&2; exit 1; }
 [[ "${playwright_version}" == "Version 1.62.1" ]] || { echo "Playwright 1.62.1 is required." >&2; exit 1; }
 [[ "${zxing_version}" == "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825" ]] || { echo "ZXing-C++ is not pinned." >&2; exit 1; }

@@ -134,25 +134,31 @@ fn logo_artifacts_embed_the_source_artwork_through_a_trimmed_presentation_box() 
     let mut pixels = vec![0; reader.output_buffer_size().unwrap()];
     let output = reader.next_frame(&mut pixels).unwrap();
     pixels.truncate(output.buffer_size());
-    assert!(!pixels.chunks_exact(4).any(|pixel| pixel == [0, 0, 0, 255]));
     assert!(
-        pixels
-            .chunks_exact(4)
-            .any(|pixel| pixel == [189, 15, 114, 255])
+        !pixels
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .any(|pixel| pixel == &[0, 0, 0, 255])
     );
-    assert!(pixels.chunks_exact(4).any(|pixel| {
-        pixel[3] == 255 && pixel != [255, 255, 255, 255] && pixel != [189, 15, 114, 255]
+    assert!(pixels.as_chunks::<4>().0.contains(&[189, 15, 114, 255]));
+    assert!(pixels.as_chunks::<4>().0.iter().any(|pixel| {
+        pixel[3] == 255 && *pixel != [255, 255, 255, 255] && *pixel != [189, 15, 114, 255]
     }));
     let row_bytes = usize::try_from(output.width).unwrap() * 4;
     assert!(
         pixels[..row_bytes]
-            .chunks_exact(4)
-            .all(|pixel| pixel == [255, 255, 255, 255])
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|pixel| *pixel == [255, 255, 255, 255])
     );
     assert!(
         pixels[pixels.len() - row_bytes..]
-            .chunks_exact(4)
-            .all(|pixel| pixel == [255, 255, 255, 255])
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|pixel| *pixel == [255, 255, 255, 255])
     );
 }
 
@@ -189,12 +195,14 @@ fn black_theme_recolors_qr_modules_and_bundled_logo_without_changing_geometry() 
     let mut pixels = vec![0; reader.output_buffer_size().unwrap()];
     let output = reader.next_frame(&mut pixels).unwrap();
     pixels.truncate(output.buffer_size());
-    assert!(pixels.chunks_exact(4).any(|pixel| pixel == [0, 0, 0, 255]));
     assert!(
-        !pixels
-            .chunks_exact(4)
-            .any(|pixel| pixel == [189, 15, 114, 255])
+        pixels
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .any(|pixel| pixel == &[0, 0, 0, 255])
     );
+    assert!(!pixels.as_chunks::<4>().0.contains(&[189, 15, 114, 255]));
 }
 
 fn shape_attributes(root: roxmltree::Node<'_, '_>) -> Vec<(String, String, String)> {

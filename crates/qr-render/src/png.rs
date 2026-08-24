@@ -21,7 +21,7 @@ fn render_rgba(model: &RenderModel<'_>) -> Result<Vec<u8>, RenderError> {
         .try_reserve_exact(placement.rgba_buffer_len())
         .map_err(|_| RenderError::RenderFailure)?;
     pixels.resize(placement.rgba_buffer_len(), 0);
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.copy_from_slice(&background);
     }
 
@@ -207,7 +207,8 @@ fn fill_rectangle(
         for pixel in pixels
             .get_mut(start..end)
             .ok_or(RenderError::RenderFailure)?
-            .chunks_exact_mut(4)
+            .as_chunks_mut::<4>()
+            .0
         {
             pixel.copy_from_slice(&color.channels());
         }
@@ -248,7 +249,7 @@ fn fill_square(
         let row_pixels = pixels
             .get_mut(start..end)
             .ok_or(RenderError::RenderFailure)?;
-        for pixel in row_pixels.chunks_exact_mut(4) {
+        for pixel in row_pixels.as_chunks_mut::<4>().0 {
             pixel.copy_from_slice(&channels);
         }
     }

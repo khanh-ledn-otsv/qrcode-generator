@@ -35,7 +35,7 @@ env:
   SCCACHE_VERSION: v0.17.0
   TAILWIND_VERSION: 4.3.3
   TRUNK_VERSION: 0.21.14
-  WASM_BINDGEN_CLI_VERSION: 0.2.126
+  WASM_BINDGEN_CLI_VERSION: 0.2.127
   ZXING_COMMIT: 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825
   QUIRC_COMMIT: 542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca
 
@@ -60,7 +60,7 @@ jobs:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: pnpm-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-${{ runner.os }}-${{ runner.arch }}-
-      - uses: dtolnay/rust-toolchain@1.97.1
+      - uses: dtolnay/rust-toolchain@1.98.0
         with:
           targets: wasm32-unknown-unknown
       - name: Configure pinned shared sccache
@@ -79,7 +79,7 @@ jobs:
         with:
           add-job-id-key: false
           cache-bin: false
-          shared-key: linux-rust-1.97.1
+          shared-key: linux-rust-1.98.0
       - name: Cache pinned Trunk and Tailwind
         uses: actions/cache@v6
         with:

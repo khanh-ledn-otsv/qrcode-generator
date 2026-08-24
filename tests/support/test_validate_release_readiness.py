@@ -34,7 +34,7 @@ def automated_evidence() -> dict[str, Any]:
         "tools": {
             "node": "v24.18.0",
             "pnpm": "11.20.0",
-            "rustc": "1.97.1",
+            "rustc": "1.98.0",
             "trunk": "0.21.14",
             "playwright": "1.62.1",
             "zxing": "3.0.2",

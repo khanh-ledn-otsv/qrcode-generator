@@ -129,7 +129,7 @@ fn write_grayscale_pgm(png: &[u8], path: &PathBuf) -> Result<(), Box<dyn Error>>
     rgba.truncate(output.buffer_size());
     let mut pgm = format!("P5\n{} {}\n255\n", output.width, output.height).into_bytes();
     pgm.reserve(rgba.len() / 4);
-    for pixel in rgba.chunks_exact(4) {
+    for pixel in rgba.as_chunks::<4>().0 {
         if pixel[3] != u8::MAX {
             return Err("quirc campaign requires opaque input".into());
         }

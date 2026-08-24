@@ -182,7 +182,9 @@ fn public_encoder_matches_pinned_mixed_mode_oracle_matrices() {
 fn decode_hex(text: &str) -> Vec<u8> {
     assert_eq!(text.len() % 2, 0, "golden payload hex has whole bytes");
     text.as_bytes()
-        .chunks_exact(2)
+        .as_chunks::<2>()
+        .0
+        .iter()
         .map(|pair| {
             let pair = std::str::from_utf8(pair).expect("golden hex is ASCII");
             u8::from_str_radix(pair, 16).expect("golden hex contains bytes")

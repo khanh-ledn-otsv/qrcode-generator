@@ -78,11 +78,19 @@ fn rounded_one_png_uses_opaque_antialiased_dots_outside_finders() {
     let model = RenderModel::new(&encoded, options).unwrap();
     let png = render_png(&model).unwrap();
     let (width, _, pixels) = decode_rgba(&png);
-    assert!(pixels.chunks_exact(4).all(|pixel| pixel[3] == u8::MAX));
     assert!(
         pixels
-            .chunks_exact(4)
-            .any(|pixel| { pixel != Rgba::WHITE.channels() && pixel != Rgba::BRAND.channels() })
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|pixel| pixel[3] == u8::MAX)
+    );
+    assert!(
+        pixels
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .any(|pixel| { *pixel != Rgba::WHITE.channels() && *pixel != Rgba::BRAND.channels() })
     );
 
     let placement = model.png_placement();

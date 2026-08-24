@@ -12,7 +12,7 @@
   Miri are campaigns. Tool installation is required only for the selected row.
 
 This runbook turns the approved output surface into reproducible local release
-evidence. Use Node.js 24 from `.nvmrc`, pnpm 11.20.0, Rust 1.97.1, and the
+evidence. Use Node.js 24 from `.nvmrc`, pnpm 11.20.0, Rust 1.98.0, and the
 locked oracle environment. Require a clean worktree only when the selected
 command says so; never alter user changes to create one.
 
