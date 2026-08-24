@@ -13,7 +13,6 @@ fi
 node_version="$(node --version)"
 pnpm_version="$(pnpm --version)"
 rustc_version="$(rustc --version)"
-trunk_version="$(trunk --version)"
 playwright_version="$(pnpm exec playwright --version)"
 zxing_source="tests/oracles/zxing-cpp"
 zxing_version="$(git -C "${zxing_source}" rev-parse HEAD)"
@@ -22,7 +21,6 @@ release_candidate="$(git rev-parse HEAD)"
 [[ "${node_version}" == v24.* ]] || { echo "Node.js v24 is required." >&2; exit 1; }
 [[ "${pnpm_version}" == "11.20.0" ]] || { echo "pnpm 11.20.0 is required." >&2; exit 1; }
 [[ "${rustc_version}" == "rustc 1.98.0 "* ]] || { echo "Rust 1.98.0 is required." >&2; exit 1; }
-[[ "${trunk_version}" == "trunk 0.21.14" ]] || { echo "Trunk 0.21.14 is required." >&2; exit 1; }
 [[ "${playwright_version}" == "Version 1.62.1" ]] || { echo "Playwright 1.62.1 is required." >&2; exit 1; }
 [[ "${zxing_version}" == "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825" ]] || { echo "ZXing-C++ is not pinned." >&2; exit 1; }
 
@@ -58,8 +56,10 @@ second_target="$(mktemp -d "${evidence_root}/build-b.XXXXXX")"
 first_dist="${repository_root}/dist"
 second_dist="${second_target}/dist"
 
-NO_COLOR=true CARGO_TARGET_DIR="${first_target}" trunk build --release --dist "${first_dist}"
-NO_COLOR=true CARGO_TARGET_DIR="${second_target}" trunk build --release --dist "${second_dist}"
+NO_COLOR=true CARGO_TARGET_DIR="${first_target}" PUBLIC_BASE_PATH=/ pnpm run build
+mv "${repository_root}/dist" "${first_dist}"
+NO_COLOR=true CARGO_TARGET_DIR="${second_target}" PUBLIC_BASE_PATH=/ pnpm run build
+mv "${repository_root}/dist" "${second_dist}"
 
 QR_E2E_USE_EXISTING_DIST=1 PLAYWRIGHT_JSON_OUTPUT_FILE="${evidence_root}/playwright.json" pnpm exec playwright test --reporter=json
 bash scripts/release-evidence.sh --dist "${first_dist}"
@@ -73,7 +73,6 @@ uv run --project tests/oracles --locked python tests/support/collect_release_rea
   --node "${node_version}" \
   --pnpm "${pnpm_version}" \
   --rustc "${rustc_version}" \
-  --trunk "${trunk_version}" \
   --playwright "${playwright_version}" \
   --zxing "${zxing_version}" \
   --output "${evidence_root}/automated.json"

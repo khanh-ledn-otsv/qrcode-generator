@@ -12,7 +12,9 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   await page.goto("/");
   await expect
     .poll(() =>
-      requests.some((requestUrl) => new URL(requestUrl).pathname === "/qr-preview-worker_bg.wasm"),
+      requests.some((requestUrl) =>
+        /\/qr_web_bg[.-][A-Za-z0-9_-]+\.wasm$/.test(new URL(requestUrl).pathname),
+      ),
     )
     .toBe(true);
   const initialUrl = page.url();
@@ -25,7 +27,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
       const request = new URL(requestUrl);
       expect(request.origin).toBe(localOrigin);
       expect(request.pathname).toMatch(
-        /^(?:\/$|\/favicon\.ico$|\/public\/images\/[\w.-]+\.png$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$|\/qr-preview-worker(?:_loader|_bg)?\.(?:js|wasm)$)/,
+        /^(?:\/$|\/favicon\.ico$|\/images\/[\w.-]+\.png$|\/_astro\/[\w.-]+\.(?:js|css|wasm)$)/,
       );
       return request.pathname;
     }),

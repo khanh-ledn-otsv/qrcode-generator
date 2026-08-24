@@ -1,8 +1,0 @@
-[build]
-target = "crates/qr-web/index.html"
-
-[tools]
-tailwindcss = "4.3.3"
-
-[serve]
-port = 3000

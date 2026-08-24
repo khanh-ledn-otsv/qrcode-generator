@@ -34,7 +34,6 @@ env:
   RUSTC_WRAPPER: sccache
   SCCACHE_VERSION: v0.17.0
   TAILWIND_VERSION: 4.3.3
-  TRUNK_VERSION: 0.21.14
   WASM_BINDGEN_CLI_VERSION: 0.2.127
   ZXING_COMMIT: 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825
   QUIRC_COMMIT: 542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca
@@ -80,13 +79,6 @@ jobs:
           add-job-id-key: false
           cache-bin: false
           shared-key: linux-rust-1.98.0
-      - name: Cache pinned Trunk and Tailwind
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/bin/trunk
-            ~/.cache/trunk
-          key: trunk-${{ runner.os }}-${{ runner.arch }}-${{ env.TRUNK_VERSION }}-tailwind-${{ env.TAILWIND_VERSION }}
       - name: Cache pinned wasm-bindgen tools
         uses: actions/cache@v6
         with:

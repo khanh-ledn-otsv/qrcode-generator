@@ -15,8 +15,9 @@ test("reports URL counts, validation, and latest debounced input", async ({ page
   await input.fill("https://e.test/old");
   await input.fill("https://e.test/latest?value=caf%C3%A9");
   await expect(page.getByLabel("Encoded URL")).toHaveValue("https://e.test/latest?value=caf%C3%A9");
-  await expect(page.getByText("37 characters | 37 UTF-8 bytes", { exact: true })).toBeVisible();
+  await expect(page.locator("#base-url-counts")).toHaveText("37 characters | 37 UTF-8 bytes");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.locator("#encoded-url-guidance")).toContainText("typical ASCII maximum");
 });
 
 test("profile controls are keyboard accessible and preserve declared geometry", async ({

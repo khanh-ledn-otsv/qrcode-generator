@@ -112,7 +112,7 @@ Prefer an explicit gate when the impact is known. Otherwise run
 | `tests/support/**`, Ruff/ty config only | `pnpm run verify:python` | B |
 | isolated `qr-core` source/tests | `pnpm run verify:core` | B |
 | isolated `qr-render` source/tests | `pnpm run verify:render` | B |
-| isolated `qr-web`, HTML, CSS, e2e, Playwright config | `pnpm run verify:web` | B |
+| isolated `qr-web`, Astro config/pages, HTML, CSS, e2e, Playwright config | `pnpm run verify:web` | B |
 | package-script-only change | run the changed script's narrow test plus `pnpm run verify:meta` | A/B |
 | production dependency/lockfile, workspace Cargo config, Trunk config, rust toolchain, shared fixture contract, WASM boundary, multiple product crates, or unknown path | `pnpm run verify` | B |
 
@@ -176,8 +176,8 @@ artifact/oracle paths.
 - Use the `packageManager`-pinned pnpm. Commit `pnpm-lock.yaml`; never create an
   npm lockfile.
 - Prefer repository `pnpm` scripts. They own pinned flags and orchestration.
-- Set `NO_COLOR=true` on direct Trunk commands. Prefer `pnpm run build` and
-  `pnpm run dev`.
+- Prefer the repository's Astro-owned `pnpm run build` and `pnpm run dev`
+  scripts for web builds and local development.
 - Use Oxlint/Oxfmt for JS/TS and Ruff/ty through the locked `tests/oracles` uv
   project for Python.
 - Local sccache is optional: `RUSTC_WRAPPER=sccache`. CI owns the pinned shared

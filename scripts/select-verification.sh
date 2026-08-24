@@ -35,7 +35,7 @@ for changed_path in "$@"; do
     crates/qr-render/*)
       merge_scope "render"
       ;;
-    .oxfmtrc.json | .oxlintrc.json | crates/qr-web/* | e2e/* | playwright.config.ts)
+    .oxfmtrc.json | .oxlintrc.json | astro.config.mjs | tsconfig.json | crates/qr-web/* | e2e/* | playwright.config.ts | src/* | public/*)
       merge_scope "web"
       ;;
     *)

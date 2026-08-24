@@ -41,7 +41,7 @@ def validate_automated_evidence(evidence: dict[str, Any]) -> None:
         raise EvidenceError("release evidence requires a clean git worktree")
 
     tools = _mapping(evidence.get("tools"), "tools")
-    for tool in ("node", "pnpm", "rustc", "trunk", "playwright", "zxing"):
+    for tool in ("node", "pnpm", "rustc", "playwright", "zxing"):
         _text(tools.get(tool), f"tools.{tool}")
 
     builds = _mapping(evidence.get("reproducible_builds"), "reproducible_builds")

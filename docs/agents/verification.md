@@ -92,7 +92,7 @@ this table.
 | qr-core encoding bits or shared encoded fixture | `pnpm run verify` | separate focused gates after full passes |
 | one qr-render geometry error with stable artifact bytes | `pnpm run verify:render` | browser/full evidence |
 | approved profile/logo/artifact contract | `pnpm run verify` then `pnpm run test:approved` | full decoder evidence unless decoder/artifact pipeline changed |
-| Leptos state or e2e assertion | `pnpm run verify:web` | separate build/e2e rerun |
+| Astro state or e2e assertion | `pnpm run verify:web` | separate build/e2e rerun |
 | Cargo dependency update | `pnpm run verify`; audit only for release/security work | every specialized suite |
 | release-evidence existing-dist behavior | `pnpm run verify:meta`, affected narrow test, then `bash scripts/release-evidence.sh --dist dist` | release readiness unless clean end-to-end readiness changed |
 

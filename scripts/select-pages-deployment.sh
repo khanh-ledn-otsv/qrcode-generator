@@ -10,7 +10,7 @@ for changed_path in "$@"; do
       deploy="true"
       break
       ;;
-    .cargo/* | Cargo.lock | Cargo.toml | Trunk.toml | assets/* | crates/* | rust-toolchain.toml)
+    .cargo/* | Cargo.lock | Cargo.toml | assets/* | crates/* | rust-toolchain.toml)
       deploy="true"
       break
       ;;

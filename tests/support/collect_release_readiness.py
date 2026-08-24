@@ -424,7 +424,6 @@ def main() -> None:
     parser.add_argument("--node", required=True)
     parser.add_argument("--pnpm", required=True)
     parser.add_argument("--rustc", required=True)
-    parser.add_argument("--trunk", required=True)
     parser.add_argument("--playwright", required=True)
     parser.add_argument("--zxing", required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -438,7 +437,6 @@ def main() -> None:
             "node": arguments.node,
             "pnpm": arguments.pnpm,
             "rustc": arguments.rustc,
-            "trunk": arguments.trunk,
             "playwright": arguments.playwright,
             "zxing": arguments.zxing,
         },

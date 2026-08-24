@@ -41,3 +41,22 @@
     @apply bg-page font-sans text-text antialiased;
   }
 }
+
+.hidden {
+  display: none !important;
+}
+
+#qr-preview > svg {
+  display: block;
+  height: auto;
+  max-height: 15rem;
+  max-width: 100%;
+}
+
+#usage-panel section {
+  margin-bottom: 3rem;
+}
+
+.usage-table {
+  min-width: 42rem;
+}

@@ -37,5 +37,5 @@ cargo llvm-cov --package qr-web --all-features --json --summary-only \
   --output-path "${evidence_dir}/qr-web.json"
 uv run --project tests/oracles --locked python tests/support/check_coverage_report.py \
   "${evidence_dir}/qr-web.json" --minimum-lines 85 --minimum-regions 80 \
-  --include crates/qr-web/src/workflow.rs \
-  --evidence "${evidence_dir}/qr-web-state-threshold.json"
+  --include crates/qr-web/src/generation.rs \
+  --evidence "${evidence_dir}/qr-web-generation-threshold.json"

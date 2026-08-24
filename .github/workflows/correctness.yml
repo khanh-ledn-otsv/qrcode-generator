@@ -11,7 +11,6 @@ on:
       - ".oxlintrc.json"
       - "Cargo.lock"
       - "Cargo.toml"
-      - "Trunk.toml"
       - "assets/**"
       - "crates/**"
       - "e2e/**"
@@ -34,7 +33,6 @@ env:
   RUSTC_WRAPPER: sccache
   SCCACHE_VERSION: v0.17.0
   TAILWIND_VERSION: 4.3.3
-  TRUNK_VERSION: 0.21.14
   WASM_BINDGEN_CLI_VERSION: 0.2.127
   ZXING_COMMIT: 8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825
 
@@ -108,14 +106,6 @@ jobs:
           add-job-id-key: false
           cache-bin: false
           shared-key: linux-rust-1.98.0
-      - name: Cache pinned Trunk and Tailwind
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full' || steps.verification.outputs.deploy_pages == 'true'
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/bin/trunk
-            ~/.cache/trunk
-          key: trunk-${{ runner.os }}-${{ runner.arch }}-${{ env.TRUNK_VERSION }}-tailwind-${{ env.TAILWIND_VERSION }}
       - name: Cache pinned wasm-bindgen tools
         if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: actions/cache@v6
@@ -139,12 +129,6 @@ jobs:
           QR_DECODER_SETUP_MODE: zxing
           QR_PLAYWRIGHT_INSTALL_MODE: with-deps
         run: ./scripts/setup.sh
-      - name: Install pinned Trunk for focused Pages build
-        if: steps.verification.outputs.deploy_pages == 'true' && steps.verification.outputs.scope != 'web' && steps.verification.outputs.scope != 'full'
-        run: |
-          if [[ "$(trunk --version 2>/dev/null || true)" != "trunk ${TRUNK_VERSION}" ]]; then
-            cargo install --locked --force trunk --version "${TRUNK_VERSION}"
-          fi
       - name: Run routine correctness gate
         env:
           CI_VERIFY_BASE_SHA: ${{ github.event.before }}
@@ -153,11 +137,12 @@ jobs:
         if: steps.verification.outputs.deploy_pages == 'true'
         id: pages
         uses: actions/configure-pages@v6
-      - name: Repackage verified build for GitHub Pages
+      - name: Build Astro app for GitHub Pages
         if: steps.verification.outputs.deploy_pages == 'true'
         env:
           NO_COLOR: "true"
-        run: trunk build --release --locked --dist dist-pages --public-url "${{ steps.pages.outputs.base_path }}/"
+          PUBLIC_BASE_PATH: "${{ steps.pages.outputs.base_path }}/"
+        run: pnpm run build && mv dist dist-pages
       - name: Upload verified GitHub Pages artifact
         if: steps.verification.outputs.deploy_pages == 'true'
         uses: actions/upload-pages-artifact@v5

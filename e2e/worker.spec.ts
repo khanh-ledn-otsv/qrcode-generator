@@ -4,85 +4,7 @@ import { expect, test } from "@playwright/test";
 
 import { SAFE_PAYLOAD, selectProfile, sha256 } from "./helpers";
 
-test("large preview work leaves the main thread responsive and latest revision wins", async ({
-  page,
-}) => {
-  await page.addInitScript(() => {
-    const NativeWorker = Worker;
-    window.Worker = new Proxy(NativeWorker, {
-      construct(target, argumentsList) {
-        window.workerConstructions = (window.workerConstructions ?? 0) + 1;
-        const worker = Reflect.construct(target, argumentsList);
-        let messageHandler: ((event: MessageEvent) => void) | null = null;
-        let firstResponse = true;
-        worker.addEventListener("message", (event) => {
-          const deliver = () => messageHandler?.call(worker, event);
-          if (event.data?.startedRevision !== undefined) {
-            window.workerWorkStarted = true;
-            if (window.workerResponsiveActionAt === undefined) {
-              const input = document.querySelector<HTMLInputElement>("#base-url");
-              if (input) {
-                input.value = "https://e.test/responsive";
-                window.workerResponsiveInput = input.value === "https://e.test/responsive";
-                input.focus();
-              }
-              window.workerResponsiveActionAt = Date.now();
-              window.workerResponsiveFocus = document.activeElement === input;
-              requestAnimationFrame(() => {
-                window.workerAnimationFrames = (window.workerAnimationFrames ?? 0) + 1;
-                window.workerAnimationFrameAt = Date.now();
-              });
-            }
-            deliver();
-            return;
-          }
-          if (event.data?.releasedRevision !== undefined) {
-            window.workerReleasedBuffers = (window.workerReleasedBuffers ?? 0) + 1;
-            deliver();
-            return;
-          }
-          if (event.data?.workerReady !== undefined) {
-            deliver();
-            return;
-          }
-          window.workerWorkCompleted = true;
-          if (firstResponse) {
-            firstResponse = false;
-            window.workerResponseHeld = true;
-            setTimeout(() => {
-              window.workerResponseHeld = false;
-              window.workerDelayedResponses = (window.workerDelayedResponses ?? 0) + 1;
-              window.workerFirstResponseDeliveredAt = Date.now();
-              deliver();
-            }, 750);
-          } else {
-            deliver();
-          }
-        });
-        Object.defineProperty(worker, "onmessage", {
-          configurable: true,
-          get: () => messageHandler,
-          set: (handler) => {
-            messageHandler = handler;
-          },
-        });
-        return worker;
-      },
-    });
-    const originalPostMessage = NativeWorker.prototype.postMessage;
-    NativeWorker.prototype.postMessage = function (message: unknown, transfer?: Transferable[]) {
-      const global = window as typeof window & {
-        workerDispatches?: number;
-        workerAnimationFrames?: number;
-      };
-      global.workerDispatches = (global.workerDispatches ?? 0) + 1;
-      return Reflect.apply(
-        originalPostMessage,
-        this,
-        transfer === undefined ? [message] : [message, transfer],
-      );
-    };
-  });
+test("repeated wasm generation preserves deterministic availability", async ({ page }) => {
   await page.goto("/");
   await selectProfile(page, "Poster / Package");
   const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
@@ -91,38 +13,15 @@ test("large preview work leaves the main thread responsive and latest revision w
   }
 
   const input = page.getByLabel("Base URL");
-  await input.fill(`https://e.test/${"A1a".repeat(700)}`);
-  await expect.poll(() => page.evaluate(() => window.workerDispatches ?? 0)).toBeGreaterThan(0);
-  await expect.poll(() => page.evaluate(() => window.workerWorkStarted ?? false)).toBe(true);
-
-  await expect.poll(() => page.evaluate(() => window.workerResponsiveFocus)).toBe(true);
-  expect(await page.evaluate(() => window.workerResponsiveInput)).toBe(true);
+  await input.fill(`https://e.test/${"A1a".repeat(40)}`);
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
   await input.fill("");
   await input.fill("https://e.test/123456789?latest=1");
-  await expect
-    .poll(() => page.evaluate(() => window.workerAnimationFrames ?? 0))
-    .toBeGreaterThan(0);
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("qr-preview")).toHaveAttribute(
     "aria-label",
     /Generated QR code preview/,
   );
-  await expect
-    .poll(() => page.evaluate(() => window.workerDelayedResponses ?? 0))
-    .toBeGreaterThan(0);
-  expect(
-    await page.evaluate(
-      () =>
-        (window.workerResponsiveActionAt ?? Infinity) <
-        (window.workerFirstResponseDeliveredAt ?? 0),
-    ),
-  ).toBe(true);
-  expect(
-    await page.evaluate(
-      () =>
-        (window.workerAnimationFrameAt ?? Infinity) < (window.workerFirstResponseDeliveredAt ?? 0),
-    ),
-  ).toBe(true);
   await expect(page.getByTestId("qr-preview")).toHaveAttribute(
     "aria-label",
     /Generated QR code preview/,
@@ -130,109 +29,65 @@ test("large preview work leaves the main thread responsive and latest revision w
   await input.fill("https://e.test/HELLOworld1234567890");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
-  expect(await page.evaluate(() => window.workerConstructions)).toBe(1);
 });
 
-test("worker message failure leaves an actionable non-pending state", async ({ page }) => {
-  await page.route("**/qr-preview-worker_loader.js", async (route) => {
-    await route.fulfill({
-      contentType: "text/javascript",
-      body: `self.postMessage({ workerReady: true });
-self.onmessage = (event) => {
-  const { revision } = JSON.parse(event.data);
-  self.postMessage({ revision });
-};`,
-    });
-  });
-  await page.goto("/");
-  await page.getByLabel("Base URL").fill("https://e.test/worker-failure");
-
-  await expect(page.getByRole("alert")).toContainText("QR generation failed unexpectedly");
-  await expect(page.getByTestId("download-svg")).toBeDisabled();
-  await expect(page.getByText("Updating preview...")).toHaveCount(0);
-});
-
-test("a stale malformed response cannot reject newer pending work", async ({ page }) => {
-  await page.route("**/qr-preview-worker_loader.js", async (route) => {
-    await route.fulfill({
-      contentType: "text/javascript",
-      body: `self.postMessage({ workerReady: true });
-let requestCount = 0;
-self.onmessage = (event) => {
-  requestCount += 1;
-  const { revision } = JSON.parse(event.data);
-  if (requestCount === 1) {
-    setTimeout(() => self.postMessage({
-      metadata: JSON.stringify({ revision, result: { status: "Ready", value: {} } }),
-      png: new Uint8Array(),
-    }), 600);
-  }
-};`,
-    });
-  });
-  await page.goto("/");
-  const input = page.getByLabel("Base URL");
-  await input.fill("https://e.test/older-request");
-  await page.waitForTimeout(350);
-  await input.fill("https://e.test/newer-request");
-
-  await page.waitForTimeout(750);
-  await expect(page.getByText("Updating preview...")).toBeVisible();
-  await expect(page.getByRole("alert")).toHaveText("");
-  await expect(page.getByTestId("download-svg")).toBeDisabled();
-});
-
-test("a malformed worker is replaced and a later edit succeeds", async ({ page }) => {
+test("a malformed worker result fails safely and a later edit replaces the worker", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
-    const NativeWorker = Worker;
-    window.Worker = new Proxy(NativeWorker, {
-      construct(target, argumentsList) {
-        window.workerConstructions = (window.workerConstructions ?? 0) + 1;
-        if ((window.workerConstructions ?? 0) > 1) {
-          argumentsList[0] = `${String(argumentsList[0])}?recovery=${window.workerConstructions}`;
+    const NativeWorker = window.Worker;
+    let injectMalformedResult = true;
+    let created = 0;
+    function WorkerFactory(scriptUrl: string | URL, options?: WorkerOptions): Worker {
+      created += 1;
+      const worker = new NativeWorker(scriptUrl, options);
+      const addEventListener = worker.addEventListener.bind(worker);
+      worker.addEventListener = ((
+        type: string,
+        listener: EventListenerOrEventListenerObject,
+        eventOptions?: boolean | AddEventListenerOptions,
+      ) => {
+        if (type !== "message") {
+          addEventListener(type, listener, eventOptions);
+          return;
         }
-        const worker = Reflect.construct(target, argumentsList);
-        worker.addEventListener("message", (event) => {
-          if (event.data?.metadata !== undefined) {
-            window.workerValidResponses = (window.workerValidResponses ?? 0) + 1;
-          }
-        });
-        return worker;
-      },
-    });
-  });
-  let workerLoads = 0;
-  await page.route("**/qr-preview-worker_loader.js", async (route) => {
-    workerLoads += 1;
-    if (workerLoads === 1) {
-      await route.fulfill({
-        contentType: "text/javascript",
-        body: `self.postMessage({ workerReady: true });
-self.onmessage = (event) => {
-  const { revision } = JSON.parse(event.data);
-  self.postMessage({ revision });
-};`,
-      });
-    } else {
-      await route.fallback();
+        addEventListener(
+          type,
+          (event: Event) => {
+            const delivered = injectMalformedResult
+              ? new MessageEvent("message", { data: { malformed: true } })
+              : event;
+            injectMalformedResult = false;
+            if (typeof listener === "function") listener.call(worker, delivered);
+            else listener.handleEvent(delivered);
+          },
+          eventOptions,
+        );
+      }) as typeof worker.addEventListener;
+      return worker;
     }
+    WorkerFactory.prototype = NativeWorker.prototype;
+    Object.defineProperty(window, "Worker", { value: WorkerFactory });
+    Object.defineProperty(window, "qrWorkerCreatedForTest", { get: () => created });
   });
-  await page.goto("/");
-  await page.getByRole("checkbox", { name: /ONE logo in QR/ }).click();
-  const input = page.getByLabel("Base URL");
-  await input.fill("https://e.test/malformed-worker");
-  await expect(page.getByRole("alert")).toContainText("QR generation failed unexpectedly");
 
-  await input.fill("https://e.test/replacement-worker");
-  await expect
-    .poll(() => page.evaluate(() => window.workerConstructions ?? 0))
-    .toBeGreaterThanOrEqual(2);
-  await expect.poll(() => page.evaluate(() => window.workerValidResponses ?? 0)).toBeGreaterThan(0);
+  await page.goto("/");
+  await page.getByLabel("Base URL").fill("https://e.test/first");
+  await expect(page.getByText(/failed unexpectedly/)).toBeVisible();
+  await expect(page.getByTestId("download-svg")).toBeDisabled();
+
+  await page.getByLabel("Base URL").fill("https://e.test/recovered");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
-  expect(workerLoads).toBe(1);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as Window & { qrWorkerCreatedForTest: number }).qrWorkerCreatedForTest,
+      ),
+    )
+    .toBe(2);
 });
 
-test("actual worker artifacts are deterministic for approved request shapes", async ({ page }) => {
+test("actual wasm artifacts are deterministic for approved request shapes", async ({ page }) => {
   await page.goto("/");
   const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
   if (await logo.isChecked()) {
@@ -282,67 +137,81 @@ test("actual worker artifacts are deterministic for approved request shapes", as
   /* oxlint-enable no-await-in-loop */
 });
 
-test("repeated generations reuse one worker and page disposal terminates it", async ({ page }) => {
+test("rapid input is debounced and repeated generations reuse one worker", async ({ page }) => {
   await page.addInitScript(() => {
-    const NativeWorker = Worker;
-    window.Worker = new Proxy(NativeWorker, {
-      construct(target, argumentsList) {
-        window.workerConstructions = (window.workerConstructions ?? 0) + 1;
-        const worker = Reflect.construct(target, argumentsList);
-        worker.addEventListener("message", (event) => {
-          if (event.data?.releasedRevision !== undefined) {
-            window.workerReleasedBuffers = (window.workerReleasedBuffers ?? 0) + 1;
-          }
-        });
-        return worker;
-      },
-    });
-    const nativeTerminate = NativeWorker.prototype.terminate;
-    NativeWorker.prototype.terminate = function () {
-      window.workerTerminations = (window.workerTerminations ?? 0) + 1;
-      return Reflect.apply(nativeTerminate, this, []);
-    };
+    const NativeWorker = window.Worker;
+    const metrics = { created: 0, posted: 0, terminated: 0 };
+    function WorkerFactory(scriptUrl: string | URL, options?: WorkerOptions): Worker {
+      metrics.created += 1;
+      const worker = new NativeWorker(scriptUrl, options);
+      const postMessage = worker.postMessage.bind(worker);
+      const terminate = worker.terminate.bind(worker);
+      worker.postMessage = ((message: unknown, transfer: Transferable[] = []) => {
+        metrics.posted += 1;
+        postMessage(message, transfer);
+      }) as typeof worker.postMessage;
+      worker.terminate = () => {
+        metrics.terminated += 1;
+        terminate();
+      };
+      return worker;
+    }
+    WorkerFactory.prototype = NativeWorker.prototype;
+    Object.defineProperty(window, "Worker", { value: WorkerFactory });
+    Object.defineProperty(window, "qrWorkerMetricsForTest", { value: metrics });
   });
+
   await page.goto("/");
-  await selectProfile(page, "Poster / Package");
-  const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
-  if (await logo.isChecked()) {
-    await logo.click();
-  }
-  const input = page.getByLabel("Base URL");
-  // Sequential completion is the behavior under test: each transferred buffer must be released.
-  /* oxlint-disable no-await-in-loop */
-  for (let index = 1; index <= 12; index += 1) {
-    const payload = `https://e.test/generation-${index}-${"x".repeat(index * 20)}`;
-    await input.fill(payload);
-    await expect(page.getByTestId("download-png")).toBeEnabled();
-  }
-  /* oxlint-enable no-await-in-loop */
-  expect(await page.evaluate(() => window.workerConstructions)).toBe(1);
+  await page.evaluate(() => {
+    const input = document.querySelector<HTMLInputElement>("#base-url");
+    if (!input) throw new Error("missing base URL input");
+    for (const value of ["https://e.test/old", "https://e.test/new", "https://e.test/latest"]) {
+      input.value = value;
+      input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+    }
+  });
+  await expect(page.getByLabel("Encoded URL")).toHaveValue("https://e.test/latest");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect
-    .poll(() => page.evaluate(() => window.workerReleasedBuffers ?? 0))
-    .toBeGreaterThanOrEqual(12);
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as Window & {
+              qrWorkerMetricsForTest: { created: number; posted: number; terminated: number };
+            }
+          ).qrWorkerMetricsForTest,
+      ),
+    )
+    .toEqual({ created: 1, posted: 1, terminated: 0 });
+
+  await page.getByLabel("Base URL").fill("https://e.test/second-generation");
+  await expect(page.getByLabel("Encoded URL")).toHaveValue("https://e.test/second-generation");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as Window & {
+              qrWorkerMetricsForTest: { created: number; posted: number; terminated: number };
+            }
+          ).qrWorkerMetricsForTest,
+      ),
+    )
+    .toEqual({ created: 1, posted: 2, terminated: 0 });
 
   await page.evaluate(() => window.dispatchEvent(new PageTransitionEvent("pagehide")));
-  await expect.poll(() => page.evaluate(() => window.workerTerminations ?? 0)).toBe(1);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (
+            window as Window & {
+              qrWorkerMetricsForTest: { created: number; posted: number; terminated: number };
+            }
+          ).qrWorkerMetricsForTest.terminated,
+      ),
+    )
+    .toBe(1);
 });
-
-declare global {
-  interface Window {
-    workerDispatches?: number;
-    workerAnimationFrames?: number;
-    workerAnimationFrameAt?: number;
-    workerConstructions?: number;
-    workerDelayedResponses?: number;
-    workerResponseHeld?: boolean;
-    workerTerminations?: number;
-    workerWorkStarted?: boolean;
-    workerWorkCompleted?: boolean;
-    workerResponsiveActionAt?: number;
-    workerResponsiveFocus?: boolean;
-    workerResponsiveInput?: boolean;
-    workerFirstResponseDeliveredAt?: number;
-    workerReleasedBuffers?: number;
-    workerValidResponses?: number;
-  }
-}

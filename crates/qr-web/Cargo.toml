@@ -4,26 +4,15 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
-
-[[bin]]
-name = "qr-web"
-path = "src/main.rs"
+autobins = false
 
 [dependencies]
-js-sys.workspace = true
-leptos.workspace = true
 qr-core.workspace = true
 qr-render.workspace = true
-serde = { workspace = true, features = ["derive"] }
-serde_json.workspace = true
-url.workspace = true
 wasm-bindgen.workspace = true
-web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "ClipboardEvent", "DataTransfer", "DedicatedWorkerGlobalScope", "Document", "DragEvent", "Element", "ErrorEvent", "Event", "HtmlAnchorElement", "HtmlElement", "HtmlTextAreaElement", "InputEvent", "MessageEvent", "Node", "PageTransitionEvent", "Response", "Url", "Window", "Worker"] }
 
-[[bin]]
-name = "qr-preview-worker"
-path = "src/worker_main.rs"
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-wasm-bindgen-futures.workspace = true
 wasm-bindgen-test.workspace = true

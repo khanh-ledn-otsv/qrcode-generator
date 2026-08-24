@@ -24,6 +24,6 @@ assert_deployment "false" ".github/workflows/extended-decoders.yml"
 assert_deployment "true" "__unavailable_ci_base__"
 assert_deployment "true" "Cargo.lock"
 assert_deployment "true" "assets/input.css"
-assert_deployment "true" "crates/qr-web/src/main.rs"
+assert_deployment "true" "crates/qr-web/src/wasm_api.rs"
 
 echo "Pages deployment selection passed."

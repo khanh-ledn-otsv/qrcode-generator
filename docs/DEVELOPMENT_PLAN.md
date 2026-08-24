@@ -281,9 +281,9 @@ decoder-evidence limit recorded in
 [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md) and
 `tests/approved-output-matrix-policy.json`. `crates/qr-render/tests/profile_geometry.rs`
 covers exact-fit and one-over version/geometry boundaries for every profile,
-and `crates/qr-web/tests/state.rs` covers exact-fit and one-over payload
-boundaries for every profile with the logo enabled and disabled, across both
-approved foreground themes.
+and the private generation-policy tests in `crates/qr-web/src/generation.rs`
+cover exact-fit and one-over payload boundaries for every profile with the logo
+enabled and disabled.
 
 ## 3. Specification corrections required
 
@@ -296,13 +296,15 @@ These are implementation interpretations until merged back into the product spec
 5. **Remainder bits:** Capacity tables and placement must explicitly include the standard remainder-bit count per version. Every non-function matrix cell must be assigned once, including remainder bits.
 6. **Input safety and web URL scope:** `qr-core` continues to accept exact
   arbitrary text under section 2.2. The release web generator accepts only an
-  absolute `http://` or `https://` URL with a host. It preserves the entered
-  base URL bytes and derives the encoded URL locally by appending enabled,
-  non-empty UTM and custom query parameters before any fragment. Existing
-  decoded query keys win and are never replaced; additions use deterministic
-  form-query percent encoding and stable UI order. Empty or invalid base URLs,
-  custom values without names, and over-limit derived URLs are invalid. No URL
-  or parameter value is persisted, logged, normalized, or transmitted.
+  absolute `http://` or `https://` URL with a host. Its base URL and parameter
+  controls are synchronized locally in both directions: editing the URL
+  populates UTM and custom controls, while editing, disabling, or removing a
+  control updates that decoded query key before any fragment. Unedited URL
+  components and query segments retain their entered bytes; changed values use
+  deterministic form-query percent encoding and existing parameter order, with
+  new parameters appended in stable UI order. Empty or invalid base URLs,
+  custom values without names, and over-limit synchronized URLs are invalid.
+  No URL or parameter value is persisted, logged, normalized, or transmitted.
 7. **External network calls:** Production HTML must not request Google Fonts or other remote UI assets. Bundle approved assets or use the system font stack.
 8. **Print guidance:** The 148 px, 177 px, and 236 px values are 150 dpi artifact conversions, not physical-size guarantees. Export remains SVG-first and the UI tells owners to test the final material, device, and surface.
 9. **Variant-choice guidance:** The practical guide distinguishes the four
@@ -338,17 +340,16 @@ Convert the repository to a Cargo workspace:
 │   │   ├── src/png.rs
 │   │   └── src/lib.rs
 │   └── qr-web/
-│       ├── index.html
-│       ├── input.css
-│       ├── src/app.rs
-│       ├── src/components/
-│       ├── src/download.rs
-│       ├── src/state.rs
-│       ├── src/main.rs
-│       └── assets/
+│       └── src/
+│           ├── generation.rs # product generation policy
+│           ├── wasm_api.rs   # minimal worker-facing WASM adapter
+│           └── lib.rs
+├── src/
+│   ├── pages/index.astro
+│   └── scripts/              # browser state, worker, downloads, presentation
 ├── tests/fixtures/            # provenance manifest + redistributable fixtures
 ├── fuzz/
-└── Trunk.toml                 # root command entry point targeting qr-web
+└── astro.config.mjs           # Astro application and Pages base path
 ```
 
 Dependency direction is strictly:
@@ -426,7 +427,7 @@ Use typed errors and checked arithmetic. At minimum:
 - `DimensionOverflow`
 - `RenderFailure`
 
-User errors return to Leptos as validation state. Internal invariant errors disable export and show a generic failure without logging payload data. No user-controlled path uses `unwrap`, unchecked indexing, or panics across WASM.
+User errors return to Astro as validation state. Internal invariant errors disable export and show a generic failure without logging payload data. No user-controlled path uses `unwrap`, unchecked indexing, or panics across WASM.
 
 ### 4.3 Preview worker boundary
 
@@ -438,19 +439,19 @@ instance runs the existing `evaluate_preview` path, including encoding,
 render-model construction, and deterministic SVG/PNG generation. QR behavior
 is not duplicated in JavaScript.
 
-Messages use an explicit version-local Rust protocol. Requests and response
-metadata are JSON; PNG bytes use a transferable `ArrayBuffer` so they are not
-expanded into JSON or retained in the worker after delivery. The main thread
-reconstructs the existing typed preview and accepts it only when its revision
-is still current. Malformed messages, worker startup/runtime errors, and failed
-dispatches leave the workflow in the existing payload-free internal-error
+Messages use an explicit version-local TypeScript protocol. The worker calls a
+small Rust WASM interface that returns deterministic SVG, a binary PNG buffer,
+and raw numeric diagnostics. PNG bytes use a transferable `ArrayBuffer` so
+they are not expanded into JSON or retained in the worker after delivery. The
+main thread formats presentation text and accepts a result only when its
+revision is still current. Malformed messages, worker startup/runtime errors,
+and failed dispatches leave the workflow in a payload-free internal-error
 state rather than pending indefinitely.
 
-Trunk builds the worker as the local `qr-preview-worker` binary and emits its
-loader and WASM beside the application. Worker creation happens once per app
-owner, uses no remote resource, and termination on owner cleanup releases its
-callbacks and WASM instance. All Worker and messaging APIs remain in `qr-web`;
-the `qr-web -> qr-render -> qr-core` dependency direction is unchanged.
+Astro imports the Rust `qr-web` WASM adapter directly. Preview generation,
+encoding, and deterministic SVG/PNG rendering remain in Rust, while Astro owns
+form state, tab navigation, and browser download actions. The
+`qr-web -> qr-render -> qr-core` dependency direction is unchanged.
 
 ## 5. Recommended dependencies
 
@@ -458,13 +459,12 @@ Keep versions exact in the workspace manifest and update dependencies deliberate
 
 ### Production
 
-- `leptos = =0.8.20` with `csr` for the web crate.
-- `wasm-bindgen`, `web-sys`, and `js-sys` only in `qr-web` for Blob/URL/download integration.
-- `serde`/`serde_json` in `qr-web` for the explicit local worker-message
-  protocol; compiled Rust constants remain preferred for the five profiles.
+- `wasm-bindgen` in `qr-web` for the worker-facing generation adapter.
+- Browser Worker, Blob, URL, debounce, revision, and download behavior stays
+  in Astro/TypeScript and uses no Rust browser bindings.
 - `thiserror` for typed errors if its WASM size is acceptable; otherwise implement `Display` manually.
 - `png` 0.18.x in `qr-render`, with only required features.
-- A small timer utility for debounce only if Leptos/browser APIs do not already provide the needed lifecycle-safe timeout.
+- Use the browser timer API for the lifecycle-scoped Astro debounce.
 
 Do not add `image`, `tiny-skia`, `resvg`, a QR crate, or a QR Reed–Solomon crate to production dependencies.
 
@@ -550,7 +550,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 **Exit:** safe SVG/PNG outputs for every profile and allowed version satisfy geometry assertions and decode gates; maximum versions retain 6 px/module.
 
-### M3 — Functional Leptos workflow (1–2 weeks, risk: low)
+### M3 — Functional Astro workflow (1–2 weeks, risk: low)
 
 - HTTP(S) base URL, optional UTM/custom parameters, derived encoded URL, and
   separate base/encoded character and byte counts.
@@ -585,7 +585,7 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 ## 8. Local verification
 
-The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Trunk build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, and adverse-image checks performed during release hardening.
+The repository documents local commands for formatting, warnings-as-errors linting, native tests, WASM checking, and an optimized Astro build. The extended suites in [`TESTING_STRATEGY.md`](TESTING_STRATEGY.md) are run locally when their related implementation exists, with longer fuzz, mutation, browser, and adverse-image checks performed during release hardening.
 
 Repository-owned hosted correctness automation selects a conservative focused
 gate for each push to `main`: isolated core, render, web, and Python-support
@@ -619,7 +619,7 @@ The following ticket slices are small enough for review and preserve dependency 
 13. Safe consolidated SVG renderer.
 14. Direct RGBA and PNG encoder.
 15. Independent SVG/PNG decode harness.
-16. Leptos state model, payload/profile workflow, and preview.
+16. Astro state model, payload/profile workflow, and preview.
 17. Diagnostics, validation, accessibility, and downloads.
 18. Approved fixed brand/white contrast and opaque previews.
 19. Rounded ONE modules and standard square finders.

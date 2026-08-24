@@ -51,7 +51,7 @@ All test tools must be pinned in manifests, lockfiles, or documented local tool 
 | Library | Scope | Why selected |
 |---|---|---|
 | `proptest` | `qr-core`, `qr-render` | Generates and shrinks payloads, versions, ECC levels, matrices, styles, and dimensions. Use instead of hand-written random loops so failures reduce to a reproducible minimal case. |
-| `wasm-bindgen-test` | `qr-web` browser boundary | Runs Rust tests on `wasm32-unknown-unknown` in a real headless browser. Covers Blob creation, object URLs, browser download adapters, and error conversion across WASM. |
+| `wasm-bindgen-test` | `qr-web` WASM seam | Runs Rust tests on `wasm32-unknown-unknown` in a real headless browser. Covers binary artifact transfer types, raw diagnostics, typed errors, and deterministic generation across WASM. |
 | `resvg` | test support only | Rasterizes production SVG independently from the production renderer so the actual SVG artifact can be decoded and pixel-inspected. |
 | `roxmltree` | test support only | Parses SVG for structural/security assertions: viewBox, dimensions, prohibited elements/attributes, external references, and deterministic path ordering. |
 | `image` | test support only | Applies deterministic blur, rotation, perspective, contrast, and compression simulations to rendered fixtures. It must not be a production renderer. |
@@ -133,7 +133,6 @@ crates/qr-render/
     └── determinism.rs
 crates/qr-web/
 └── tests/
-    ├── state.rs
     └── wasm_browser.rs
 tests/
 ├── fixtures/
@@ -460,31 +459,28 @@ machine-validated release evidence.
 
 ## 7. Web and WASM tests
 
-### 7.1 Native state tests
+### 7.1 Native generation-policy tests
 
-Keep form state and validation derivation in plain Rust where possible. Unit-test:
+Keep QR generation policy in plain Rust and browser interaction state in
+TypeScript. Unit-test the private generation module for:
 
-- every input-to-derived-state transition;
-- profile changes recalculate version, limits, sizes, logo availability, and warnings;
+- every profile's exact-fit and one-over capacity behavior;
+- profile choices recalculate version, limits, sizes, and logo availability;
 - logo toggling changes ECC to H and the minimum to Version 6 before version selection, then restores ECC M and the Version 1 minimum when disabled;
 - diagnostics explain when the branded minimum, rather than payload capacity, enlarged the symbol;
-- invalid states always disable both exports;
-- stale debounced work cannot overwrite newer input state;
-- warning ordering and severity are deterministic;
-- payload text never appears in filenames, metadata, logs, or accessible preview labels.
+- deterministic SVG/PNG artifacts and raw diagnostics;
+- typed invalid-input and capacity failures.
+
+Test debounce, stale-result rejection, presentation, accessibility, and export
+state through the Astro browser interface.
 
 ### 7.2 `wasm-bindgen-test`
 
 Run browser tests for:
 
-- Blob creation and MIME type;
-- object URL lifecycle and revocation;
-- exact downloaded byte content returned by adapters;
-- DOM/browser error conversion without panic;
-- debounce timers and disposal;
-- exact worker request/result round trips, typed failures, and byte-identical
-  direct-versus-worker SVG/PNG artifacts;
-- repeated generation without leaked object URLs or unbounded retained buffers.
+- binary SVG/PNG artifacts from the WASM seam;
+- raw diagnostic values and typed failures;
+- byte-identical repeated generation.
 
 Run these locally in headless desktop Chromium.
 
@@ -493,6 +489,9 @@ Run these locally in headless desktop Chromium.
 Test through the user-visible UI:
 
 - entering Numeric, Alphanumeric, URL, ASCII Byte, and UTF-8 payloads;
+- bidirectional synchronization between base-URL query parameters and the UTM
+  and custom controls, including edits, toggles, removals, fragments, and
+  preservation of untouched query bytes;
 - a semantic capacity table covers every output profile and the exact
   `106/58`, `152/58`, `287/58`, `331/58`, and `2,331/137` Byte-mode ASCII
   boundaries without/with the logo, including exact-fit and one-byte-over
@@ -595,7 +594,7 @@ Initial gates after M1 stabilizes:
 | GF/RS, matrix, mask, BCH, penalty files | ≥98% | ≥95% |
 | `qr-render` total | ≥90% | ≥85% |
 | Profile/geometry code | ≥98% | ≥95% |
-| Testable plain-Rust `qr-web` state | ≥85% | ≥80% |
+| Private `qr-web` generation policy | ≥85% | ≥80% |
 
 Generated constant tables, exhaustive-match boilerplate, and browser-only glue may be excluded only through reviewed configuration. Coverage regressions must be investigated before accepting a change. Coverage is a missing-test signal, not proof of correctness.
 
@@ -633,12 +632,12 @@ takes precedence over prose examples here.
 - native unit and integration tests;
 - table, golden, exact-boundary, and safe-render tests;
 - deterministic property tests and committed fuzz-corpus replay;
-- WASM check and optimized Trunk build;
+- WASM check and optimized Astro build;
 - browser smoke tests when web behavior changes.
 
 `pnpm run verify` preserves this complete routine gate while running independent
 Rust, web, and Python lanes concurrently. Cargo-heavy native/WASM commands stay
-in one serialized lane, the optimized Trunk artifact is built once, and
+in one serialized lane, the optimized Astro artifact is built once, and
 Playwright serves that existing artifact. The orchestrator does not override
 `CARGO_TARGET_DIR`, so local incremental compilation and the hosted shared Rust
 caches retain the standard workspace target layout. When `CI=true`, the compiled,

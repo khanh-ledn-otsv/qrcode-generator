@@ -3,6 +3,7 @@ mod high_versions;
 #[path = "support/raster.rs"]
 mod raster;
 
+use std::collections::BTreeSet;
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -17,6 +18,74 @@ use qr_render::{
     BRANDED_LOGO_VERSION, LogoStyle, OutputProfile, RenderError, RenderModel, RenderOptions,
     SUPPORTED_PROFILES, render_png, render_svg,
 };
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct ApprovedMatrixPolicy {
+    branded_geometry_policy: BrandedGeometryPolicy,
+}
+
+#[derive(Deserialize)]
+struct BrandedGeometryPolicy {
+    geometry_rows: Vec<ApprovedLogoRow>,
+}
+
+#[derive(Deserialize)]
+struct ApprovedLogoRow {
+    profile_indices: Vec<usize>,
+    version: u8,
+}
+
+fn approved_logo_rows(workspace: &Path) -> Result<BTreeSet<(usize, u8)>, Box<dyn Error>> {
+    let policy: ApprovedMatrixPolicy = serde_json::from_slice(&fs::read(
+        workspace.join("tests/approved-output-matrix-policy.json"),
+    )?)?;
+    let mut rows = BTreeSet::new();
+    for row in policy.branded_geometry_policy.geometry_rows {
+        for profile_index in row.profile_indices {
+            let profile = SUPPORTED_PROFILES
+                .get(profile_index)
+                .ok_or("approved logo row refers to an unknown profile")?;
+            if (profile.minimum_version().number()..=profile.maximum_version().number())
+                .contains(&row.version)
+            {
+                rows.insert((profile_index, row.version));
+            }
+        }
+    }
+    Ok(rows)
+}
+
+fn logo_is_enabled(model: &RenderModel<'_>) -> bool {
+    model.logo_placement().is_some()
+}
+
+fn selected_logo_rows() -> Result<BTreeSet<(usize, u8)>, Box<dyn Error>> {
+    let mut rows = BTreeSet::new();
+    for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
+        for version in profile.minimum_version().number()..=profile.maximum_version().number() {
+            let text = high_versions::payload_for_high_version(version)?;
+            let encoded = encode(EncodeRequest::first_fit(
+                &text,
+                ErrorCorrection::High,
+                Version::try_from(version)?,
+            ))?;
+            let options = RenderOptions::safe(profile)?.with_logo(LogoStyle::Bundled)?;
+            let model = RenderModel::new(&encoded, options)?;
+            if logo_is_enabled(&model) {
+                rows.insert((profile_index, version));
+            }
+        }
+    }
+    Ok(rows)
+}
+
+#[test]
+fn decoder_selects_exactly_the_approved_logo_rows() -> Result<(), Box<dyn Error>> {
+    let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    assert_eq!(selected_logo_rows()?, approved_logo_rows(&workspace)?);
+    Ok(())
+}
 
 #[test]
 #[ignore = "requires the manifest-pinned ZXing-C++ checkout and reader"]
@@ -34,6 +103,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
     let output = tempfile::tempdir()?;
     let mut failures = Vec::new();
     let mut enabled_rows = 0_usize;
+    let approved_rows = approved_logo_rows(&workspace)?;
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
         for version in profile.minimum_version().number()..=profile.maximum_version().number() {
@@ -56,6 +126,9 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
                 Err(RenderError::UnsafeLogoGeometry) => continue,
                 Err(error) => return Err(error.into()),
             };
+            if !logo_is_enabled(&model) {
+                continue;
+            }
             enabled_rows += 1;
             let svg = render_svg(&model)?;
             let dimensions = profile.png_dimensions_for(encoded.version())?;
@@ -82,13 +155,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             }
         }
     }
-    let expected_enabled_rows = SUPPORTED_PROFILES
-        .iter()
-        .filter(|profile| {
-            profile.minimum_version() <= BRANDED_LOGO_VERSION
-                && profile.maximum_version() >= BRANDED_LOGO_VERSION
-        })
-        .count();
+    let expected_enabled_rows = approved_rows.len();
     if enabled_rows != expected_enabled_rows {
         return Err(format!(
             "expected {expected_enabled_rows} enabled fixed rows, found {enabled_rows}"
