@@ -17,6 +17,7 @@ pub mod worker_protocol;
 const CONTROL_CHARACTER_CAUTION: &str =
     "This payload contains control characters. Confirm that they are intentional.";
 const LOGO_OUTPUT_CAUTION: &str = "The bundled logo obscures QR data modules. Validate the exported code in its actual environment.";
+const LOGO_CAPACITY_FALLBACK_REASON: &str = "payload exceeds branded capacity";
 const INTERNAL_FAILURE_MESSAGE: &str =
     "QR generation failed unexpectedly. Change the input and try again.";
 const SAFE_OUTPUT_GUIDANCE: &str =
@@ -859,26 +860,55 @@ impl WorkflowState {
 
 pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFailure> {
     let profile = supported_profile(request.profile_id).ok_or(WorkflowFailure::Internal)?;
-    let minimum_version = if request.logo_enabled {
+    let branded_minimum_version = if request.logo_enabled {
         profile.minimum_version().max(BRANDED_LOGO_VERSION)
     } else {
         profile.minimum_version()
     };
-    let encoded = encode(EncodeRequest::with_version_range(
+    let branded_attempt = encode(EncodeRequest::with_version_range(
         request.payload(),
         request.ecc(),
-        minimum_version,
+        branded_minimum_version,
         profile.maximum_version(),
-    ))
-    .map_err(|error| classify_encode_error(error, request, profile))?;
-    let options = RenderOptions::safe(profile)
-        .and_then(|options| {
-            options.with_logo(if request.logo_enabled {
+    ));
+
+    // The same payload may fit at ECC M without the logo even when the ECC-H
+    // branded encoding does not; try that before surfacing a capacity error.
+    let (encoded, minimum_version, logo_style, logo_fallback_reason) = match branded_attempt {
+        Ok(encoded) => (
+            encoded,
+            branded_minimum_version,
+            if request.logo_enabled {
                 LogoStyle::Bundled
             } else {
                 LogoStyle::None
-            })
-        })
+            },
+            None,
+        ),
+        Err(EncodeError::Payload(
+            EncodingError::PayloadTooLargeForProfile { .. }
+            | EncodingError::PayloadTooLargeForQr
+            | EncodingError::InvalidVersionRange { .. },
+        )) if request.logo_enabled => {
+            let fallback_minimum_version = profile.minimum_version();
+            let encoded = encode(EncodeRequest::with_version_range(
+                request.payload(),
+                ErrorCorrection::Medium,
+                fallback_minimum_version,
+                profile.maximum_version(),
+            ))
+            .map_err(|error| classify_encode_error(error, request, profile))?;
+            (
+                encoded,
+                fallback_minimum_version,
+                LogoStyle::None,
+                Some(LOGO_CAPACITY_FALLBACK_REASON),
+            )
+        }
+        Err(error) => return Err(classify_encode_error(error, request, profile)),
+    };
+    let options = RenderOptions::safe(profile)
+        .and_then(|options| options.with_logo(logo_style))
         .and_then(|options| options.with_foreground_theme(request.foreground_theme))
         .map_err(|error| classify_render_error(error, profile))?;
     let model = RenderModel::new(&encoded, options)
@@ -909,6 +939,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             maximum_version: profile.maximum_version(),
             selected_version: encoded.version(),
             branding_increased_version: request.logo_enabled
+                && logo_fallback_reason.is_none()
                 && encoded.minimum_version_increased_selection(),
             used_data_bits: encoded.data_bits_used(),
             available_data_bits: encoded.data_bits_capacity(),
@@ -923,9 +954,13 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             print_guidance: profile_presentation(profile.id()).guidance(),
             safety: model.options().safety(),
             contrast_ratio: model.options().contrast_ratio(),
-            requested_logo_style: model.requested_logo_style(),
+            requested_logo_style: if request.logo_enabled {
+                LogoStyle::Bundled
+            } else {
+                LogoStyle::None
+            },
             logo_style: model.options().logo_style(),
-            logo_fallback_reason: model.logo_fallback_reason(),
+            logo_fallback_reason: logo_fallback_reason.or_else(|| model.logo_fallback_reason()),
             logo_placement: model.logo_placement().map(LogoDiagnostics::from_placement),
         },
     })

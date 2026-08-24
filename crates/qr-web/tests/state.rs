@@ -366,17 +366,17 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
         let one_over = branded
             .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes() + 1))
             .expect("one-over branded boundary produces a request");
-        match evaluate_preview(&one_over) {
-            Ok(preview) => {
-                assert_eq!(preview.diagnostics().logo_style(), LogoStyle::None);
-                assert_eq!(
-                    preview.diagnostics().logo_fallback_reason(),
-                    Some("unsafe logo geometry")
-                );
-            }
-            Err(WorkflowFailure::OverCapacity { .. }) => {}
-            Err(failure) => panic!("unexpected one-over branding failure: {failure:?}"),
-        }
+        // One byte past the branded (ECC H) boundary always falls back to
+        // no-logo output now: either the payload no longer fits within the
+        // profile's approved version range at ECC H, or it fits a version
+        // whose logo geometry is unsafe.
+        let one_over_preview = evaluate_preview(&one_over)
+            .expect("one-over branded boundary falls back to no-logo output");
+        assert_eq!(one_over_preview.diagnostics().logo_style(), LogoStyle::None);
+        assert!(matches!(
+            one_over_preview.diagnostics().logo_fallback_reason(),
+            Some("payload exceeds branded capacity" | "unsafe logo geometry")
+        ));
     }
 }
 
@@ -416,6 +416,59 @@ fn fixed_variant_falls_back_from_unsafe_logo_geometry() {
     assert_eq!(unbranded.payload(), payload);
     assert_eq!(preview.diagnostics().ecc(), ErrorCorrection::Medium);
     assert!(preview.diagnostics().selected_version().number() <= 12);
+}
+
+#[test]
+fn fixed_variant_falls_back_from_branded_capacity_overflow() {
+    // A payload that fits the profile's version range at ECC M (no logo) but
+    // exceeds it at ECC H (branded) must fall back to no-logo output rather
+    // than surfacing a hard capacity error.
+    let guide = link_capacity_guide()
+        .into_iter()
+        .find(|row| row.profile_id() == ProfileId::Standard)
+        .expect("Standard has a link capacity guide row");
+    let payload = synthetic_ascii_url(guide.with_logo_ascii_bytes() + 1);
+    assert!(payload.len() <= guide.without_logo_ascii_bytes());
+
+    let mut state = WorkflowState::new(ProfileId::Standard);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
+    let branded = state
+        .set_payload(payload.clone())
+        .expect("revision is available");
+    assert_eq!(branded.ecc(), ErrorCorrection::High);
+
+    let preview = evaluate_preview(&branded).expect("capacity overflow falls back to no-logo");
+    let diagnostics = preview.diagnostics();
+    assert_eq!(diagnostics.requested_logo_style(), LogoStyle::Bundled);
+    assert_eq!(diagnostics.logo_style(), LogoStyle::None);
+    assert_eq!(
+        diagnostics.logo_fallback_reason(),
+        Some("payload exceeds branded capacity")
+    );
+    assert_eq!(diagnostics.ecc(), ErrorCorrection::Medium);
+    assert!(!diagnostics.branding_increased_version());
+}
+
+#[test]
+fn fixed_variant_reports_over_capacity_when_even_no_logo_output_does_not_fit() {
+    // Beyond the profile's own ceiling, no fallback can help: the same
+    // one-over payload that rejects logo-off output must also reject a
+    // branded request instead of silently degrading forever.
+    let mut state = WorkflowState::new(ProfileId::PosterPackage);
+    state
+        .set_logo_enabled(true)
+        .expect("enabling the logo produces a request");
+    let one_over = state
+        .set_payload("a".repeat(288))
+        .expect("revision is available");
+    assert_eq!(
+        evaluate_preview(&one_over),
+        Err(WorkflowFailure::OverCapacity {
+            maximum_version: qr_core::Version::new(12).unwrap(),
+        })
+    );
 }
 
 #[test]
