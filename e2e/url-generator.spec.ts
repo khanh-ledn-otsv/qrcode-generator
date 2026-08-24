@@ -64,8 +64,8 @@ test("renders the local ONE header and remains contained on mobile", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   const logo = page.getByRole("img", { name: "ONE" });
   await expect(logo).toBeVisible();
-  await expect(logo).toHaveAttribute("src", "one-logotype-white.png");
-  await expect(page.getByRole("button", { name: "Usage" })).toBeDisabled();
+  await expect(logo).toHaveAttribute("src", "/public/images/one-logotype-white.png");
+  await expect(page.getByRole("button", { name: "Usage" })).toBeEnabled();
 
   await page.getByLabel("Base URL").fill(`https://example.test/${"long-path-".repeat(8)}`);
   const pageWidth = await page.evaluate(() => ({

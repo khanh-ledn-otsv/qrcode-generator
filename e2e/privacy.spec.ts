@@ -25,7 +25,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
       const request = new URL(requestUrl);
       expect(request.origin).toBe(localOrigin);
       expect(request.pathname).toMatch(
-        /^(?:\/$|\/favicon\.ico$|\/one-logotype-white\.png$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$|\/qr-preview-worker(?:_loader|_bg)?\.(?:js|wasm)$)/,
+        /^(?:\/$|\/favicon\.ico$|\/public\/images\/[\w.-]+\.png$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$|\/qr-preview-worker(?:_loader|_bg)?\.(?:js|wasm)$)/,
       );
       return request.pathname;
     }),

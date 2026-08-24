@@ -13,12 +13,23 @@ use qr_web::workflow::{
     mode_label, profile_presentation, version_label,
 };
 
+use crate::usage::UsageGuide;
+
+mod usage;
+
 const PREVIEW_DEBOUNCE: Duration = Duration::from_millis(250);
 type DebounceSignal = RwSignal<DebounceTimer>;
 type PreviewWorkerStore = StoredValue<Option<PreviewWorker>, LocalStorage>;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Tab {
+    Generator,
+    Usage,
+}
+
 #[component]
 fn App() -> impl IntoView {
+    let active_tab = RwSignal::new(Tab::Generator);
     let state = RwSignal::new(WorkflowState::new(ProfileId::Standard));
     let url_state = RwSignal::new(UrlPayloadState::default());
     let pending_timer = RwSignal::new(DebounceTimer::default());
@@ -49,7 +60,7 @@ fn App() -> impl IntoView {
     view! {
         <header class="h-16 bg-brand px-4 sm:px-6">
             <div class="mx-auto flex h-full max-w-5xl items-center justify-center">
-                <img class="h-10 w-auto object-contain" src="one-logotype-white.png" alt="ONE" />
+                <img class="h-10 w-auto object-contain" src="/public/images/one-logotype-white.png" alt="ONE" />
             </div>
         </header>
         <main class="bg-page px-4 py-8 sm:px-6 sm:py-12">
@@ -60,11 +71,33 @@ fn App() -> impl IntoView {
                 </header>
 
                 <nav class="mt-8 flex border-b border-border" aria-label="QR generator sections">
-                    <button type="button" class="border-b-2 border-brand px-3 py-2 text-sm font-semibold text-brand" aria-current="page">"Generator"</button>
-                    <button type="button" class="cursor-not-allowed px-3 py-2 text-sm text-text-muted" disabled=true aria-disabled="true">"Usage"</button>
+                    <button
+                        type="button"
+                        class="px-3 py-2 text-sm font-semibold"
+                        class:border-b-2=move || active_tab.get() == Tab::Generator
+                        class:border-brand=move || active_tab.get() == Tab::Generator
+                        class:text-brand=move || active_tab.get() == Tab::Generator
+                        class:text-text-muted=move || active_tab.get() != Tab::Generator
+                        aria-current=move || (active_tab.get() == Tab::Generator).then_some("page")
+                        on:click=move |_| active_tab.set(Tab::Generator)
+                    >"Generator"</button>
+                    <button
+                        type="button"
+                        class="px-3 py-2 text-sm font-semibold"
+                        class:border-b-2=move || active_tab.get() == Tab::Usage
+                        class:border-brand=move || active_tab.get() == Tab::Usage
+                        class:text-brand=move || active_tab.get() == Tab::Usage
+                        class:text-text-muted=move || active_tab.get() != Tab::Usage
+                        aria-current=move || (active_tab.get() == Tab::Usage).then_some("page")
+                        on:click=move |_| active_tab.set(Tab::Usage)
+                    >"Usage"</button>
                 </nav>
 
-                <div class="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">
+                <div class:hidden=move || active_tab.get() != Tab::Usage>
+                    <UsageGuide />
+                </div>
+
+                <div class:hidden=move || active_tab.get() != Tab::Generator class="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">
                     <section aria-labelledby="settings-heading">
                         <h2 id="settings-heading" class="text-lg font-semibold text-text">"Settings"</h2>
 
@@ -194,7 +227,7 @@ fn App() -> impl IntoView {
                     </section>
                 </div>
 
-                <details class="mt-8 border-t border-border py-4" data-testid="qr-specification">
+                <details class="mt-8 border-t border-border py-4" data-testid="qr-specification" class:hidden=move || active_tab.get() != Tab::Generator>
                     <summary class="cursor-pointer text-sm font-semibold text-text focus:outline-none focus:ring-2 focus:ring-focus">"QR code specification"</summary>
                     <div class="mt-4 grid gap-6 lg:grid-cols-2">
                         <dl class="grid grid-cols-2 gap-4 text-sm">
