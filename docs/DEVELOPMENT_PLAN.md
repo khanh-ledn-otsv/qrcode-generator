@@ -95,24 +95,25 @@ than attributing a mixed symbol to one mode.
 
 ### 2.4 Safe-workflow error-correction policy
 
-Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics but is not user-selectable. Output profiles define only canvas dimensions and a maximum version; they do not silently change ECC. For an exact payload and selected profile, the workflow requests ECC M with Version 1 as its minimum and chooses the first fitting version up to the profile ceiling.
+Use ECC M for every non-logo release-1 workflow. ECC is displayed in diagnostics but is not user-selectable. Output profiles define only canvas dimensions and an approved version range; they do not silently change ECC. For an exact payload and selected profile, the workflow requests ECC M within that range.
 
-The compiled selectable profiles are Inline (100 px SVG / 300 px PNG, through
-Version 6), Content (120/360, through Version 8), Landing (150/450, through
-Version 12), Print (160/480, through Version 13), and the separate non-default
-Adaptive profile through Version 40. Adaptive does not replace or silently
-select any fixed profile; without the logo it follows the same ordinary ECC-M
-first-fit rule and derives dimensions only after selecting the version.
+The compiled selectable profiles are fixed artifact contracts: Small (100/300,
+Versions 5–6), Standard (120/360, Versions 5–8), Primary CTA (160/480,
+Versions 5–12), Hero / Campaign (200/600, Versions 8–12), Business card
+(148/444, Versions 5–12), Flyer / Brochure (177/531, Versions 5–12), and
+Poster / Package (236/708, Versions 5–12). The three print base dimensions are
+25 mm, 30 mm, and 40 mm converted at 150 dpi and rounded to the nearest pixel.
+The artifact policy does not guarantee physical print results; owners must test
+their actual device, material, and surface.
 
 The in-product practical guide records the exact maximum for typical ASCII
 links that select whole-payload Byte mode. Total length includes scheme, host,
-path, query, and fragment. The verified `(without logo / with logo)` limits are
-Inline `106 / 58`, Content `152 / 58`, Landing `287 / 58`, Print `331 / 58`,
-and Adaptive `2,331 / 137` bytes. Fixed branded limits reflect the approved
-Version 6-only geometry; Adaptive branding reflects approval through Version
-11. The guide explains that non-ASCII characters may occupy multiple UTF-8
-bytes plus ECI overhead, QR-alphanumeric-only input can sometimes fit more,
-and the exact preview result remains authoritative.
+path, query, and fragment. Every retained fixed profile has an explicit limit;
+Hero / Campaign has no bundled-logo capacity because its range begins at Version
+8, while the centered logo is approved only at Version 6. The guide explains
+that non-ASCII characters may occupy multiple UTF-8 bytes plus ECI overhead,
+QR-alphanumeric-only input can sometimes fit more, and the exact preview result
+remains authoritative.
 
 The bundled logo is enabled by default and is the only release-1 choice that changes ECC: logo mode uses ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
@@ -126,10 +127,6 @@ Use a direct RGBA buffer renderer in `qr-render`, then serialize it with the Rus
   complete image is never resized.
 - The bundled PNG logo uses deterministic 4×4 final-pixel coverage inside its presentation box so diagonal artwork edges remain smooth; finder and knockout edges remain pixel-sharp.
 - Fixed profiles retain their compiled dimensions and 3× PNG relationship.
-  Adaptive uses the selected matrix plus the four-module quiet zone to derive a
-  four-pixel-per-logical-module SVG side and a six-pixel-per-logical-module PNG
-  side. The PNG retains an integer six-pixel module scale and needs no surplus
-  padding.
 - Direct RGBA buffers have a target-independent defensive ceiling of 64 MiB; requests above it fail with a typed error before allocation.
 - PNG encoder settings, filter, compression, color type, bit depth, and metadata policy are explicit and covered by a byte-for-byte determinism test.
 - SVG is generated directly from the render model with stable path ordering
@@ -236,18 +233,17 @@ is excluded.
 
 ECC percentages are not used as an occlusion budget. Decode testing is mandatory for every enabled logo/profile/version fixture.
 
-Release evidence exhausts the selectable surface with 436 generated scenarios:
-120 required-payload rows and 316 exact-version rows across profile, logo state,
+Release evidence exhausts the selectable surface with 340 generated scenarios:
+168 required-payload rows and 172 exact-version rows across profile, logo state,
 and foreground theme. Native PNG and independently rasterized SVG artifacts
 share one scenario identity and record deterministic hashes, safety, decode
-outcome, foreground theme, and fixed/adaptive logo geometry. The resulting policy
-has 290 accepted rows and 146 typed expected rejections. Deterministic adverse
-evidence separately records 29 outcomes across explicit safe opaque-Print,
-centered-logo-caution, and Adaptive-Version-10 and Version-11 long-URL caution
-pass envelopes; it does not imply that every payload density passes every
-transform.
+outcome, foreground theme, and fixed logo geometry. The resulting policy has
+244 accepted rows and 96 typed expected rejections.
 
 The exported symbol always retains exactly four quiet-zone modules per side.
+For Version $v$, its complete logical width is $4v + 25$ modules. Every
+approved fixed range retains a centered integer module pitch and at least six
+PNG pixels per module at its maximum version after quiet-zone and logo rules.
 Decorative export borders, frames, labels, and strokes remain excluded; fixed
 PNG canvas surplus is background-only.
 
@@ -255,14 +251,14 @@ PNG canvas surplus is background-only.
 
 These are implementation interpretations until merged back into the product specification.
 
-1. **No border layer and explicit SVG sizing:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only. Fixed-profile SVG `width` and `height` equal the compiled base dimensions; Adaptive dimensions are derived from the selected logical extent. Every SVG `viewBox` is the tight logical extent of the QR matrix plus exactly four quiet-zone modules on every side and contains no fixed-canvas surplus padding. Consumers scale the vector through `width` and `height`. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
+1. **No border layer and explicit SVG sizing:** Decorative borders, frames, labels, and module strokes are excluded. PNG surplus padding remains blank/background-only. Fixed-profile SVG `width` and `height` equal the compiled base dimensions. Every SVG `viewBox` is the tight logical extent of the QR matrix plus exactly four quiet-zone modules on every side and contains no fixed-canvas surplus padding. Consumers scale the vector through `width` and `height`. No border types, render options, controls, errors, or tests should be scaffolded for possible future use.
 2. **Capacity diagnostics:** Display exact `used data bits / available data bits`, data codewords, and whether the symbol uses one mode or a mixed segment plan. “Remaining capacity” is an estimate because an edit can change the optimal segmentation.
 3. **Function-module protection:** Branding and logo knockout never modify function modules. The spec's general “protect function patterns” goal takes precedence over language that only makes finder overlap explicitly invalid.
 4. **Mask evaluation:** Apply each mask only to data/remainder modules, write the corresponding format bits, then score the complete final matrix. Choose the lowest score and lower mask ID on a tie.
 5. **Remainder bits:** Capacity tables and placement must explicitly include the standard remainder-bit count per version. Every non-function matrix cell must be assigned once, including remainder bits.
 6. **Input safety:** Plain text is allowed; URL syntax is not required. The UI may identify likely URLs, but it must not rewrite them. Empty input and over-limit input are invalid. Control characters receive a caution unless product policy later forbids them.
 7. **External network calls:** Production HTML must not request Google Fonts or other remote UI assets. Bundle approved assets or use the system font stack.
-8. **Print guidance:** The 160 px value is a design canvas, not a physical-size guarantee. Export remains SVG-first and the UI displays “place at 25–30 mm or larger; validate for the actual environment.”
+8. **Print guidance:** The 148 px, 177 px, and 236 px values are 150 dpi artifact conversions, not physical-size guarantees. Export remains SVG-first and the UI tells owners to test the final material, device, and surface.
 9. **Variant-choice guidance:** The practical guide distinguishes the four
    predictable fixed-dimension contracts from Adaptive's payload-derived
    dimensions. It explains each fixed profile's intended placement and ceiling,

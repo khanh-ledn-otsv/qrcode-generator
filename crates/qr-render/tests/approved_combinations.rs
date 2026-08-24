@@ -11,7 +11,7 @@ use std::path::Path;
 
 use qr_render::{
     APPROVED_FOREGROUND_THEMES, APPROVED_LOGO_STYLES, ForegroundTheme, LogoStyle,
-    MAXIMUM_ADAPTIVE_LOGO_VERSION, SUPPORTED_PROFILES,
+    SUPPORTED_PROFILES,
 };
 
 fn matrix_policy() -> serde_json::Value {
@@ -67,7 +67,16 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
     let required_payload_rows = tuples.len() * styling::REQUIRED_PAYLOAD_CLASSES.len();
     let tuple_version_rows = tuples
         .iter()
-        .map(|tuple| usize::from(tuple.profile.maximum_version().number()))
+        .map(|tuple| {
+            usize::from(
+                tuple
+                    .profile
+                    .maximum_version()
+                    .number()
+                    .saturating_sub(tuple.profile.minimum_version().number())
+                    + 1,
+            )
+        })
         .sum::<usize>();
     assert_eq!(
         policy["tuple_dimensions"]["profiles"],
@@ -141,7 +150,8 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
             .collect::<HashSet<_>>();
         assert_eq!(
             versions,
-            (1..=tuple.profile.maximum_version().number()).collect(),
+            (tuple.profile.minimum_version().number()..=tuple.profile.maximum_version().number())
+                .collect(),
             "{} version coverage",
             tuple.label()
         );
@@ -167,13 +177,7 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
         );
         if record.outcome.is_renderable() && record.tuple.logo == LogoStyle::Bundled {
             let version = record.version.expect("branded rows record a version");
-            assert!(
-                version == 6
-                    || (record.tuple.profile.id() == qr_render::ProfileId::Adaptive
-                        && version <= MAXIMUM_ADAPTIVE_LOGO_VERSION.number()),
-                "{} branded version",
-                record.label()
-            );
+            assert!(version == 6, "{} branded version", record.label());
             let placement = record
                 .logo_placement
                 .expect("renderable branded rows record geometry");

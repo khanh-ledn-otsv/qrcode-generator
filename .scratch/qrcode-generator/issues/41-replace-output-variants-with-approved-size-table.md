@@ -9,11 +9,11 @@ convert print sizes from millimeters to pixels with a 150 dpi policy.
 
 **Type:** task
 
-**Status:** open
+**Status:** resolved
 
-- [ ] Remove Adaptive from the public selectable variant list, migrations,
+- [x] Remove Adaptive from the public selectable variant list, migrations,
   labels, diagnostics, tests, documentation, and approved-output matrix.
-- [ ] Provide exactly these Digital variants and use their researched version
+- [x] Provide exactly these Digital variants and use their researched version
   ranges as starting candidates, then confirm or adjust those ranges with the
   final module pitch, logo geometry, and independent decoder evidence:
   - Small: 100 x 100 px, intended for web footer and secondary CTA usage, QR
@@ -23,23 +23,23 @@ convert print sizes from millimeters to pixels with a 150 dpi policy.
     usage, QR Versions 5-12.
   - Hero / Campaign: 200 x 200 px, intended for landing-page and campaign
     usage, QR Versions 8-12.
-- [ ] Provide exactly these Print variants, converting millimeters at 150 dpi
+- [x] Provide exactly these Print variants, converting millimeters at 150 dpi
   and rounding to the nearest integer pixel:
   - Business card: 25 mm -> 148 x 148 px.
   - Flyer / Brochure: 30 mm -> 177 x 177 px.
   - Poster / Package: 40 mm -> 236 x 236 px.
-- [ ] Keep export dimensions deterministic and identical between preview, SVG,
+- [x] Keep export dimensions deterministic and identical between preview, SVG,
   PNG, diagnostics, approved matrices, browser downloads, and documentation.
-- [ ] Keep physical-size guidance explicit: the pixel conversion is a 150 dpi
+- [x] Keep physical-size guidance explicit: the pixel conversion is a 150 dpi
   artifact policy, while real print output still requires owner/device testing
   on the final material and surface.
-- [ ] Document the accepted module-pitch rule used to approve final version
+- [x] Document the accepted module-pitch rule used to approve final version
   ranges. For a Version `v` symbol with a four-module quiet zone, the total
   logical width is `4v + 25` modules, so each fixed artifact size must leave a
   scannable per-module pitch after quiet zone and logo constraints.
-- [ ] Preserve exact payload handling, local-only browser processing, opaque
+- [x] Preserve exact payload handling, local-only browser processing, opaque
   white background, and the two approved foreground/logo themes.
-- [ ] Run the routine covering gate plus affected approved-output, artifact hash,
+- [x] Run the routine covering gate plus affected approved-output, artifact hash,
   and independent decoder checks for all retained variants.
 
 ## Product intent
@@ -58,3 +58,14 @@ version range and logo policy, return a typed user-visible failure rather than
 silently changing the payload or generating a non-contract size.
 
 ## Comments
+
+## Answer
+
+Replaced the legacy selectable profiles with the seven approved fixed Digital
+and Print variants. The workflow selects within each explicit range before
+render geometry is calculated; unsupported logo placement returns a typed
+visible failure. Print artifacts use the required 150 dpi conversions (148,
+177, and 236 px), and preview, SVG, PNG, diagnostics, downloads, approved
+matrix, and generated logo policy share each compiled size. The accepted pitch
+rule is $4v + 25$ logical modules, with a centered integer pitch and at least
+six PNG pixels per module at each approved maximum version.

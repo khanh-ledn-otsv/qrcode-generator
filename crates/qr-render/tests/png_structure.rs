@@ -10,12 +10,14 @@ use qr_core::{EncodeRequest, EncodedQr, Version, encode};
 use qr_render::{GlyphOwnership, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png};
 
 const PNG_SIGNATURE: &[u8; 8] = b"\x89PNG\r\n\x1a\n";
-const APPROVED_PNG_SHA256: [&str; 5] = [
+const APPROVED_PNG_SHA256: [&str; 7] = [
     "48e5185bcdd5a796e9c27bd0cb514ad670d57f1623c15e9db2e00ee15af55c32",
     "a46afd15bc93b51a6d078bfb8d7816a80e868f9ca5ca56a86589b750a12c30f9",
-    "61f1048b72cbe60312e37fa698f0682b969b33af14b761a2d9850d19b7ae27c2",
     "d43efaad97e5422da89785f9a1806056796d053ae8844b834657e025231cab34",
-    "7d55795a9e500124bf9e217f7330d1c8299dfdd806567dd93c5331814beef591",
+    "5dd4104ba8b75d8bcf4ffb8ee36d6a5cf7409c9df2e089503cf9e1fc683c7ed6",
+    "f41be9f0e417373a47695048d9602e04670b25435aab54433e3fd09819939d68",
+    "0e7b0f2d1920804acd769e2bd635a522e21d8f3e36a0e030a552084b2a79bf81",
+    "af49eba629ca970f04f865c01095efcaec5556e2ac8a3e57805aabdf699a3087",
 ];
 
 #[test]

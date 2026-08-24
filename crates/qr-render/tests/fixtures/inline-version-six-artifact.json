@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
   "id": "synthetic-inline-v06-m-unbranded-artifact",
+  "profile": "Small",
   "synthetic": true,
   "payload": "cross-target unbranded Inline Version 6 artifact",
   "payload_sha256": "7d84e7c99224527b9f71c0255e58c6bd031604073ef0ffbccb9bb073a20c38ee",
   "encoding": "utf-8",
-  "profile": "Inline",
+  "profile": "Small",
   "version": 6,
   "ecc": "M",
   "logo": "none",

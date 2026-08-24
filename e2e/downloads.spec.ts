@@ -10,9 +10,6 @@ import { expectDecodedPayload, expectDecodedPayloadBytes } from "./zxing";
 
 const ZXING_COMMIT = "8dd1cf5c4fd6fb6211bb96713db926ac6f2cf825";
 const ZXING_VERSION = "ZXingReader version 3.0.2";
-const LONG_ONE_URL =
-  "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-
 async function rasterizeDownloadedSvg(
   page: Page,
   svgPath: string,
@@ -79,7 +76,7 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
     expect(() => expectDecodedPayloadBytes(Buffer.from("padded \n"), "padded ")).toThrow();
   });
 
-  await selectProfile(page, "Inline");
+  await selectProfile(page, "Small");
   const [svgDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.getByTestId("download-svg").click(),
@@ -101,7 +98,7 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
   expect(png.subarray(0, 8)).toEqual(Buffer.from("89504e470d0a1a0a", "hex"));
   expect(png.readUInt32BE(16)).toBe(300);
   expect(png.readUInt32BE(20)).toBe(300);
-  // These hashes pin the default branded rounded-module Inline artifacts.
+  // These hashes pin the default branded rounded-module Small artifacts.
   expect(await sha256(svg)).toBe(
     "42e06fc03b3961344d1ac890de93a47c63fa0b020a742be600a14ce59d966598",
   );
@@ -111,7 +108,7 @@ test("downloads fixed filenames and exact deterministic SVG and PNG bytes", asyn
 });
 
 test("downloads deterministic black branded SVG and PNG artifacts", async ({ page }, testInfo) => {
-  await selectProfile(page, "Content");
+  await selectProfile(page, "Standard");
   await page.getByText("Black", { exact: true }).click();
   await expect.poll(() => diagnostic(page, "Foreground")).toBe("Black #000000");
 
@@ -164,7 +161,7 @@ test("downloaded PNGs and SVGs independently decode common payload formats", asy
   const version = spawnSync(reader, ["-version"], { encoding: "utf8" });
   expect(version.status, version.stderr).toBe(0);
   expect(version.stdout.trim()).toBe(ZXING_VERSION);
-  await selectProfile(page, "Inline");
+  await selectProfile(page, "Small");
 
   const cases = [
     { name: "short number", payload: "1234567890" },
@@ -210,7 +207,7 @@ test("downloaded PNGs and SVGs independently decode common payload formats", asy
 });
 
 test("downloads and independently decodes multiline text", async ({ page }, testInfo) => {
-  await selectProfile(page, "Inline");
+  await selectProfile(page, "Small");
   const payload = "line one\nline two\n";
   const input = page.getByLabel("Text to encode");
   await input.fill("line one");
@@ -224,78 +221,4 @@ test("downloads and independently decodes multiline text", async ({ page }, test
   const reader = resolve(source, "build/example/ZXingReader");
   const svgRaster = testInfo.outputPath("multiline-svg.png");
   await downloadAndDecodeArtifacts(page, reader, payload, svgRaster, 300);
-});
-
-test("downloads and decodes the deterministic Adaptive Version 10 artifacts", async ({ page }) => {
-  await selectProfile(page, "Adaptive");
-  await enterPayload(page, LONG_ONE_URL);
-  await expect(page.getByTestId("download-svg")).toBeEnabled();
-  const [svgDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-svg").click(),
-  ]);
-  const [pngDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-png").click(),
-  ]);
-  const [repeatedSvgDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-svg").click(),
-  ]);
-  const [repeatedPngDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-png").click(),
-  ]);
-  const svg = await readFile(await svgDownload.path());
-  const png = await readFile(await pngDownload.path());
-  expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
-  expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
-  expect(svg.toString("utf8")).toContain('width="260"');
-  expect(png.readUInt32BE(16)).toBe(390);
-  expect(png.readUInt32BE(20)).toBe(390);
-
-  const source = resolve("tests/oracles/zxing-cpp");
-  const reader = resolve(source, "build/example/ZXingReader");
-  expectDecodedPayload(reader, await pngDownload.path(), LONG_ONE_URL);
-});
-
-test("downloads and decodes deterministic Adaptive Version 40 artifacts", async ({ page }) => {
-  const payload = "a".repeat(2_331);
-  await selectProfile(page, "Adaptive");
-  await page.getByText("ONE lettermark", { exact: true }).click();
-  await enterPayload(page, payload);
-
-  const [svgDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-svg").click(),
-  ]);
-  const [pngDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-png").click(),
-  ]);
-  const [repeatedSvgDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-svg").click(),
-  ]);
-  const [repeatedPngDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByTestId("download-png").click(),
-  ]);
-  const svg = await readFile(await svgDownload.path());
-  const png = await readFile(await pngDownload.path());
-  expect(await readFile(await repeatedSvgDownload.path())).toEqual(svg);
-  expect(await readFile(await repeatedPngDownload.path())).toEqual(png);
-  expect(svg.toString("utf8")).toContain('width="740"');
-  expect(png.readUInt32BE(16)).toBe(1_110);
-  expect(png.readUInt32BE(20)).toBe(1_110);
-  expect(await sha256(svg)).toBe(
-    "13f93d47f419c88c6ae23167d346ded1896dab987488ecfe4582f5f21f7573f5",
-  );
-  expect(await sha256(png)).toBe(
-    "08a579af8d94164c6be39e9c4e8be4f49c55af702849bd8c0afdf0cd6469023a",
-  );
-
-  const source = resolve("tests/oracles/zxing-cpp");
-  const reader = resolve(source, "build/example/ZXingReader");
-  expectDecodedPayload(reader, await pngDownload.path(), payload);
 });

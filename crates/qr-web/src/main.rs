@@ -18,7 +18,7 @@ type PreviewWorkerStore = StoredValue<Option<PreviewWorker>, LocalStorage>;
 
 #[component]
 fn App() -> impl IntoView {
-    let state = RwSignal::new(WorkflowState::new(ProfileId::Content));
+    let state = RwSignal::new(WorkflowState::new(ProfileId::Standard));
     let pending_timer = RwSignal::new(DebounceTimer::default());
     let pending_edit_start = RwSignal::new(None::<u32>);
     let preview_worker = StoredValue::new_local(None);
@@ -64,16 +64,13 @@ fn App() -> impl IntoView {
                 />
                 <span class="block text-sm font-bold text-slate-950">{presentation.name()}</span>
                 <span class="mt-1 block text-xs leading-5 text-slate-600">
-                    {if profile.id() == ProfileId::Adaptive {
-                        format!("Automatic dimensions · up to V{}", profile.maximum_version().number())
-                    } else {
-                        format!(
-                            "{} px SVG · {} px PNG · up to V{}",
-                            profile.svg_dimensions().width().get(),
-                            profile.png_dimensions().width().get(),
-                            profile.maximum_version().number(),
-                        )
-                    }}
+                    {format!(
+                        "{} px SVG · {} px PNG · V{}–V{}",
+                        profile.svg_dimensions().width().get(),
+                        profile.png_dimensions().width().get(),
+                        profile.minimum_version().number(),
+                        profile.maximum_version().number(),
+                    )}
                 </span>
             </label>
         }
@@ -164,7 +161,7 @@ fn App() -> impl IntoView {
                         "These totals cover ASCII links that use QR Byte mode, including the scheme, host, path, query, and fragment. Each ASCII character is one byte. Non-ASCII characters can use multiple UTF-8 bytes plus encoding overhead, while links limited to the QR alphanumeric set can sometimes fit more. The preview result for your exact text is authoritative."
                     </p>
                     <p class="mt-3 text-sm leading-6 text-slate-600">
-                        "Without-logo output uses ECC M; logo output uses ECC H. Fixed variants approve logo placement only at Version 6, while Adaptive approves it through Version 11. The difference is not a fixed character subtraction, and ECC H's nominal percentage is not an occlusion budget."
+                        "Without-logo output uses ECC M; logo output uses ECC H. Every fixed variant approves the centered logo only at Version 6. The difference is not a fixed character subtraction, and ECC H's nominal percentage is not an occlusion budget."
                     </p>
 
                     <section class="mt-8" aria-labelledby="variant-guide-heading">
@@ -172,48 +169,48 @@ fn App() -> impl IntoView {
                             "Which output variant should I choose?"
                         </h3>
                         <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                            "Choose a fixed variant when your layout needs predictable file dimensions. Choose Adaptive when the link may outgrow those ceilings and the final pixel dimensions can change with the payload."
+                            "Choose the named destination that matches your placement. Every export keeps the same fixed dimensions in the preview, SVG, PNG, diagnostics, and downloads."
                         </p>
 
                         <div class="mt-4 grid gap-4 md:grid-cols-2">
                             <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
-                                <h4 class="text-base font-bold text-slate-950">"Inline"</h4>
+                                <h4 class="text-base font-bold text-slate-950">"Small"</h4>
                                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                                    "Inline uses a fixed 100 px SVG and 300 px PNG, through Version 6. Choose it for compact interface placements and short links. Its logo stays exactly centered because branded fixed output is limited to Version 6."
+                                    "Small uses a fixed 100 px SVG and 300 px PNG for web footers and secondary calls to action. It supports Versions 5–6."
                                 </p>
                             </article>
 
                             <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
-                                <h4 class="text-base font-bold text-slate-950">"Content"</h4>
+                                <h4 class="text-base font-bold text-slate-950">"Standard"</h4>
                                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                                    "Content uses a fixed 120 px SVG and 360 px PNG, through Version 8 without the logo. Choose it for article, card, and standard website placements that need more room than Inline. Logo output remains at Version 6."
+                                    "Standard uses a fixed 120 px SVG and 360 px PNG for general web content. It supports Versions 5–8."
                                 </p>
                             </article>
 
                             <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
-                                <h4 class="text-base font-bold text-slate-950">"Landing"</h4>
+                                <h4 class="text-base font-bold text-slate-950">"Primary CTA"</h4>
                                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                                    "Landing uses a fixed 150 px SVG and 450 px PNG, through Version 12 without the logo. Choose it for prominent web or campaign placements and longer no-logo links. Logo output remains at Version 6."
+                                    "Primary CTA uses a fixed 160 px SVG and 480 px PNG for download-app and continue-on-mobile calls to action. It supports Versions 5–12."
                                 </p>
                             </article>
 
                             <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
-                                <h4 class="text-base font-bold text-slate-950">"Print"</h4>
+                                <h4 class="text-base font-bold text-slate-950">"Hero / Campaign"</h4>
                                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                                    "Print uses a fixed 160 px SVG and 480 px PNG, through Version 13 without the logo. Choose it as the largest fixed starting artifact, then place it at 25–30 mm or larger and test the final material. Logo output remains at Version 6."
+                                    "Hero / Campaign uses a fixed 200 px SVG and 600 px PNG for landing pages and campaigns. It supports Versions 8–12."
                                 </p>
                             </article>
 
                             <article class="rounded-2xl bg-fuchsia-50 p-5 ring-1 ring-inset ring-fuchsia-200 md:col-span-2">
-                                <h4 class="text-base font-bold text-slate-950">"Adaptive"</h4>
+                                <h4 class="text-base font-bold text-slate-950">"Print"</h4>
                                 <p class="mt-2 text-sm leading-6 text-slate-700">
-                                    "Adaptive selects the smallest QR version that fits your exact text, then sizes the square output from that matrix and a four-module quiet zone on every side. SVG uses 4 pixels per logical module and PNG uses 6, with no surplus padding, so the downloaded dimensions grow with longer links."
+                                    "Business card is 25 mm converted to 148 px, Flyer / Brochure is 30 mm converted to 177 px, and Poster / Package is 40 mm converted to 236 px. Their PNG exports are 444 px, 531 px, and 708 px respectively."
                                 </p>
                                 <p class="mt-2 text-sm leading-6 text-slate-700">
-                                    "With the logo enabled, the logo is exactly centered at Version 6. Versions 7–11 move it six modules above center, while keeping it horizontally centered, to avoid protected alignment modules. Version 12 or higher rejects the logo because a safe placement has not been approved; disable the logo to preserve the exact link and continue through Version 40."
+                                    "These pixel values are a 150 dpi artifact policy, not a physical-size guarantee. Test the final output with the owner, printer, material, and surface."
                                 </p>
                                 <p class="mt-2 text-sm leading-6 text-slate-700">
-                                    "Choose Adaptive for variable or long links, or when a fixed variant reports a capacity or logo-placement limit. Choose a fixed variant instead when predictable dimensions or an exactly centered logo matter more than maximum capacity."
+                                    "Version ranges retain a scannable integer module pitch after the four-module quiet zone and logo constraint. A Version v symbol has a logical width of 4v + 25 modules."
                                 </p>
                             </article>
                         </div>
@@ -235,16 +232,16 @@ fn App() -> impl IntoView {
                         </article>
 
                         <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
-                            <h3 class="text-base font-bold text-slate-950">"Need the logo? Choose Adaptive"</h3>
+                            <h3 class="text-base font-bold text-slate-950">"Need the logo? Keep it compact"</h3>
                             <p class="mt-2 text-sm leading-6 text-slate-600">
-                                "Adaptive sizes the output for the QR version and uses reviewed, version-aware logo placement through Version 11. If the link needs Version 12 or higher, disable the logo."
+                                "Every fixed output keeps the approved centered logo at Version 6. If the exact payload needs another version, disable the logo without changing the text."
                             </p>
                         </article>
 
                         <article class="rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-200">
                             <h3 class="text-base font-bold text-slate-950">"PNG resolution"</h3>
                             <p class="mt-2 text-sm leading-6 text-slate-600">
-                                "Fixed-size profiles download PNGs at 3× their listed SVG width. Adaptive PNGs use 6 pixels per module versus 4 for SVG, so their width is 1.5×."
+                                "Every fixed-size profile downloads PNGs at 3× its listed SVG width."
                             </p>
                         </article>
 

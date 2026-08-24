@@ -48,12 +48,6 @@ pub const BRANDED_LOGO_VERSION: Version = match Version::new(6) {
     Err(_) => panic!("the approved branded logo version must be a valid QR version"),
 };
 
-/// Highest adaptive logo version backed by the committed decode campaign.
-pub const MAXIMUM_ADAPTIVE_LOGO_VERSION: Version = match Version::new(11) {
-    Ok(version) => version,
-    Err(_) => panic!("the approved adaptive logo maximum must be a valid QR version"),
-};
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ModuleCoordinate(u32);
 
@@ -185,11 +179,8 @@ impl LogoPlacement {
 
 pub(crate) fn calculate_logo_placement(
     matrix: &ModuleMatrix,
-    profile_id: ProfileId,
+    _profile_id: ProfileId,
 ) -> Result<LogoPlacement, RenderError> {
-    if profile_id == ProfileId::Adaptive {
-        return calculate_adaptive_logo_placement(matrix);
-    }
     if matrix.version() != BRANDED_LOGO_VERSION {
         return Err(RenderError::UnsafeLogoGeometry);
     }
@@ -216,36 +207,6 @@ fn centered_logo_placement(
         .map(|difference| difference / 2)
         .ok_or(RenderError::UnsafeLogoGeometry)?;
     placement_for_source(matrix, centered_left, centered_top, source_width)
-}
-
-fn calculate_adaptive_logo_placement(matrix: &ModuleMatrix) -> Result<LogoPlacement, RenderError> {
-    if matrix.version() < BRANDED_LOGO_VERSION || matrix.version() > MAXIMUM_ADAPTIVE_LOGO_VERSION {
-        return Err(RenderError::UnsafeLogoGeometry);
-    }
-    let matrix_width = u32::from(matrix.size());
-    let matrix_width_units = matrix_width
-        .checked_mul(TEN_THOUSANDTHS_PER_MODULE)
-        .ok_or(RenderError::DimensionOverflow)?;
-    let source_height = SOURCE_WIDTH_TEN_THOUSANDTHS
-        .checked_mul(SOURCE_VIEW_BOX_HEIGHT)
-        .and_then(|height| height.checked_div(SOURCE_VIEW_BOX_WIDTH))
-        .ok_or(RenderError::DimensionOverflow)?;
-    let centered_left = matrix_width_units
-        .checked_sub(SOURCE_WIDTH_TEN_THOUSANDTHS)
-        .map(|difference| difference / 2)
-        .ok_or(RenderError::UnsafeLogoGeometry)?;
-    let centered_top = matrix_width_units
-        .checked_sub(source_height)
-        .map(|difference| difference / 2)
-        .ok_or(RenderError::UnsafeLogoGeometry)?;
-    let top = if matrix.version() == BRANDED_LOGO_VERSION {
-        centered_top
-    } else {
-        centered_top
-            .checked_sub(6 * TEN_THOUSANDTHS_PER_MODULE)
-            .ok_or(RenderError::UnsafeLogoGeometry)?
-    };
-    placement_for_source(matrix, centered_left, top, SOURCE_WIDTH_TEN_THOUSANDTHS)
 }
 
 fn placement_for_source(

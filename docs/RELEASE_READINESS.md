@@ -38,6 +38,6 @@ report under `target/release-readiness/`.
 | Clean pinned reproducible build | tool capture plus two artifact hash maps | `automated.reproducible_builds` |
 | Chromium critical paths, downloads, and privacy with zero retries | desktop Chromium with `retries: 0` | `automated.browsers`, `automated.downloads` |
 | All approved payload/version paths, typed geometry rejections, and adverse decoding | generated PNG/SVG hashes, geometry facts, and pinned-decoder evidence | `automated.artifact_evidence` |
-| SVG-first, sizing, per-variant ASCII Byte-mode capacity and selection guidance, Adaptive sizing/logo limitations, default logo with opt-out, unconditional Rounded ONE modules, opaque output, and environment guidance | browser assertion against the visible semantic guide | `automated.guidance` |
+| SVG-first, fixed sizing, per-variant ASCII Byte-mode capacity and selection guidance, Version 6-only centered logo limitation, default logo with opt-out, unconditional Rounded ONE modules, opaque output, and environment guidance | browser assertion against the visible semantic guide | `automated.guidance` |
 
 The validator rejects missing tests, retry-based browser results, mismatched builds, invalid hashes, runtime network requests, or incomplete artifact evidence.

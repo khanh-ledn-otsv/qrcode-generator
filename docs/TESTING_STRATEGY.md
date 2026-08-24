@@ -320,13 +320,12 @@ Then test combined matrices and tie behavior. For each automatic-mask fixture:
 Exhaustively iterate every version permitted by each profile:
 
 - fixed-profile SVG `width` and `height` equal the compiled base dimensions;
-- Adaptive SVG and PNG dimensions equal the selected logical extent multiplied
-  by four and six respectively, through Version 40;
+- every selectable profile keeps its compiled SVG and PNG dimensions across its
+  approved version range;
 - SVG `viewBox` is exactly `0 0 N N`, where `N` is the matrix width plus eight modules for the four-module quiet zone on each side; it contains no fixed-canvas surplus padding;
-- fixed-profile PNG dimensions equal exactly 3× base dimensions; Adaptive PNG
-  dimensions follow its independent six-pixel-per-module policy;
+- fixed-profile PNG dimensions equal exactly 3× base dimensions;
 - complete symbol includes four quiet modules per side;
-- module scale is the largest positive even scale that fits;
+- module scale is the largest centered integer scale that fits;
 - rendered symbol dimensions and outer padding use checked integer arithmetic;
 - direct RGBA allocation lengths above the target-independent 64 MiB ceiling are rejected identically on native and WASM;
 - outer padding is symmetric and integral;
@@ -334,7 +333,7 @@ Exhaustively iterate every version permitted by each profile:
 - surplus padding is opaque white and contains no artwork;
 - unsafe logo geometry is rejected before rendering.
 
-Include explicit expected cases for all five profile ceilings and for transitions where module scale decreases. Adaptive Version 10 must assert its 65-module logical extent, 260 px SVG, six-pixel PNG module scale, 390 px rendered symbol, and zero surplus padding; Version 40 asserts a 185-module logical extent, 740 px SVG, and 1110 px PNG. Chromium rasterizes the selected Adaptive SVG at its declared size and requires rounded modules outside the logo region to use the selected approved foreground.
+Include explicit expected cases for all seven profile ranges and for transitions where module scale decreases. Chromium rasterizes each selected fixed SVG at its declared size and requires rounded modules outside the logo region to use the selected approved foreground.
 
 ### 6.2 SVG artifact tests
 

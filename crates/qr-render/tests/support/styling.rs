@@ -385,14 +385,20 @@ pub fn approved_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>
 pub fn representative_decode_cases() -> Result<Vec<PreparedDecodeCase>, Box<dyn Error>> {
     let mut prepared = Vec::new();
     for tuple in approved_style_tuples() {
-        prepared.push(prepare_decode_case(tuple, short_url_case())?);
+        match prepare_decode_case(tuple, short_url_case()) {
+            Ok(case) => prepared.push(case),
+            Err(RenderError::UnsafeLogoGeometry) => {}
+            Err(error) => return Err(error.into()),
+        }
     }
     Ok(prepared)
 }
 
 fn matrix_cases(tuple: ApprovedStyleTuple) -> Result<Vec<DecodeCase>, Box<dyn Error>> {
     let mut cases = required_payload_cases(tuple.profile, tuple.ecc())?;
-    for version in 1..=tuple.profile.maximum_version().number() {
+    for version in
+        tuple.profile.minimum_version().number()..=tuple.profile.maximum_version().number()
+    {
         cases.push(DecodeCase {
             kind: MatrixCaseKind::VersionCoverage,
             class: PayloadClass::AsciiByte,
@@ -421,16 +427,22 @@ fn prepare_decode_case(
             qr_core::Version::try_from(version).map_err(|_| RenderError::RenderFailure)?;
         EncodeRequest::with_version_range(&case.text, tuple.ecc(), version, version)
     } else if tuple.logo == LogoStyle::Bundled
+        && tuple.profile.minimum_version() <= BRANDED_LOGO_VERSION
         && tuple.profile.maximum_version() >= BRANDED_LOGO_VERSION
     {
         EncodeRequest::with_version_range(
             &case.text,
             tuple.ecc(),
-            BRANDED_LOGO_VERSION,
+            tuple.profile.minimum_version().max(BRANDED_LOGO_VERSION),
             tuple.profile.maximum_version(),
         )
     } else {
-        EncodeRequest::first_fit(&case.text, tuple.ecc(), tuple.profile.maximum_version())
+        EncodeRequest::with_version_range(
+            &case.text,
+            tuple.ecc(),
+            tuple.profile.minimum_version(),
+            tuple.profile.maximum_version(),
+        )
     };
     let encoded = encode(request).map_err(|_| RenderError::RenderFailure)?;
     if case

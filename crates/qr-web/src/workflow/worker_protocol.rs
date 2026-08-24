@@ -468,16 +468,13 @@ enum WireFailure {
     },
     OverCapacity {
         maximum_version: u8,
-        adaptive_recommended: bool,
     },
     LogoMinimumUnavailable {
         minimum_version: u8,
         maximum_version: u8,
         profile: u8,
     },
-    UnsafeLogoGeometry {
-        adaptive_recommended: bool,
-    },
+    UnsafeLogoGeometry,
     Internal,
 }
 
@@ -492,12 +489,8 @@ impl WireFailure {
                 byte_length,
                 maximum,
             },
-            WorkflowFailure::OverCapacity {
-                maximum_version,
-                adaptive_recommended,
-            } => Self::OverCapacity {
+            WorkflowFailure::OverCapacity { maximum_version } => Self::OverCapacity {
                 maximum_version: maximum_version.number(),
-                adaptive_recommended,
             },
             WorkflowFailure::LogoMinimumUnavailable {
                 minimum_version,
@@ -508,11 +501,7 @@ impl WireFailure {
                 maximum_version: maximum_version.number(),
                 profile: profile_from_name(profile_name),
             },
-            WorkflowFailure::UnsafeLogoGeometry {
-                adaptive_recommended,
-            } => Self::UnsafeLogoGeometry {
-                adaptive_recommended,
-            },
+            WorkflowFailure::UnsafeLogoGeometry {} => Self::UnsafeLogoGeometry,
             WorkflowFailure::Internal => Self::Internal,
         }
     }
@@ -527,15 +516,10 @@ impl WireFailure {
                 byte_length,
                 maximum,
             },
-            Self::OverCapacity {
-                maximum_version,
-                adaptive_recommended,
-            } => version(maximum_version).map_or(WorkflowFailure::Internal, |maximum_version| {
-                WorkflowFailure::OverCapacity {
-                    maximum_version,
-                    adaptive_recommended,
-                }
-            }),
+            Self::OverCapacity { maximum_version } => version(maximum_version)
+                .map_or(WorkflowFailure::Internal, |maximum_version| {
+                    WorkflowFailure::OverCapacity { maximum_version }
+                }),
             Self::LogoMinimumUnavailable {
                 minimum_version,
                 maximum_version,
@@ -556,11 +540,7 @@ impl WireFailure {
                     _ => WorkflowFailure::Internal,
                 }
             }
-            Self::UnsafeLogoGeometry {
-                adaptive_recommended,
-            } => WorkflowFailure::UnsafeLogoGeometry {
-                adaptive_recommended,
-            },
+            Self::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry {},
             Self::Internal => WorkflowFailure::Internal,
         }
     }
@@ -572,32 +552,38 @@ fn version(number: u8) -> Option<Version> {
 
 const fn profile_number(profile: ProfileId) -> u8 {
     match profile {
-        ProfileId::Inline => 0,
-        ProfileId::Content => 1,
-        ProfileId::Landing => 2,
-        ProfileId::Print => 3,
-        ProfileId::Adaptive => 4,
+        ProfileId::Small => 0,
+        ProfileId::Standard => 1,
+        ProfileId::PrimaryCta => 2,
+        ProfileId::HeroCampaign => 3,
+        ProfileId::BusinessCard => 4,
+        ProfileId::FlyerBrochure => 5,
+        ProfileId::PosterPackage => 6,
     }
 }
 
 const fn profile_from_number(number: u8) -> Option<ProfileId> {
     match number {
-        0 => Some(ProfileId::Inline),
-        1 => Some(ProfileId::Content),
-        2 => Some(ProfileId::Landing),
-        3 => Some(ProfileId::Print),
-        4 => Some(ProfileId::Adaptive),
+        0 => Some(ProfileId::Small),
+        1 => Some(ProfileId::Standard),
+        2 => Some(ProfileId::PrimaryCta),
+        3 => Some(ProfileId::HeroCampaign),
+        4 => Some(ProfileId::BusinessCard),
+        5 => Some(ProfileId::FlyerBrochure),
+        6 => Some(ProfileId::PosterPackage),
         _ => None,
     }
 }
 
 fn profile_from_name(name: &str) -> u8 {
     [
-        ProfileId::Inline,
-        ProfileId::Content,
-        ProfileId::Landing,
-        ProfileId::Print,
-        ProfileId::Adaptive,
+        ProfileId::Small,
+        ProfileId::Standard,
+        ProfileId::PrimaryCta,
+        ProfileId::HeroCampaign,
+        ProfileId::BusinessCard,
+        ProfileId::FlyerBrochure,
+        ProfileId::PosterPackage,
     ]
     .into_iter()
     .find(|profile| profile_presentation(*profile).name() == name)

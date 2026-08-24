@@ -32,28 +32,6 @@
         "brightness-plus-6",
         "grayscale-luma"
       ]
-    },
-    {
-      "configuration": "adaptive-v10-long-url",
-      "safety": "caution",
-      "transforms": [
-        "blur-r0.35",
-        "jpeg-q92",
-        "contrast-minus-8",
-        "brightness-plus-6",
-        "grayscale-luma"
-      ]
-    },
-    {
-      "configuration": "adaptive-v11-long-url",
-      "safety": "caution",
-      "transforms": [
-        "blur-r0.35",
-        "jpeg-q92",
-        "contrast-minus-8",
-        "brightness-plus-6",
-        "grayscale-luma"
-      ]
     }
   ],
   "transforms": [

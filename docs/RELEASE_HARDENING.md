@@ -43,12 +43,8 @@ Pinning fixed thresholding removes both image-dependent oracle preprocessing
 ambiguities while preserving detection and decode checks.
 
 Independent SVG decoding rasterizes the vector at the profile's PNG export
-dimensions. That is 3× the SVG dimensions for fixed profiles and six pixels per
-logical module for Adaptive. Structural tests separately enforce the required
-base `width` and `height`. The dense Version 13 vector has only about two pixels
-per module when rasterized at its base CSS size and no ZXing binarizer decodes
-that low-density raster; at export density the same resolution-independent
-artifact decodes.
+dimensions, exactly 3× the SVG dimensions for every fixed profile. Structural
+tests separately enforce the required base `width` and `height`.
 
 ## Routine and extended local gates
 

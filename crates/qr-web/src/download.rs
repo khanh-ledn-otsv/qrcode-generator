@@ -120,10 +120,10 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn blob_constructor_errors_become_typed_failures_without_panicking() {
-        let mut state = WorkflowState::new(ProfileId::Inline);
+        let mut state = WorkflowState::new(ProfileId::Small);
         state
             .set_logo_enabled(false)
-            .expect("Inline can use ordinary no-logo fitting");
+            .expect("Small can use ordinary no-logo fitting");
         let request = state
             .set_payload("blob error".to_owned())
             .expect("revision is available");

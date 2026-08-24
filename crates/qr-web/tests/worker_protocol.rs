@@ -4,10 +4,10 @@ use qr_web::workflow::{ArtifactKind, WorkflowState, evaluate_preview};
 
 #[test]
 fn worker_protocol_preserves_revision_payload_diagnostics_and_artifact_bytes() {
-    let mut state = WorkflowState::new(ProfileId::Adaptive);
+    let mut state = WorkflowState::new(ProfileId::PosterPackage);
     state
         .set_logo_enabled(false)
-        .expect("Adaptive supports unbranded output");
+        .expect("fixed output supports unbranded output");
     let preview_request = state
         .set_payload("MIXED-1234-lowercase-世界".to_owned())
         .expect("revision is available");
@@ -40,14 +40,13 @@ fn worker_protocol_preserves_revision_payload_diagnostics_and_artifact_bytes() {
 #[test]
 fn worker_artifacts_match_direct_evaluation_across_approved_request_shapes() {
     let cases = [
-        (ProfileId::Inline, true, "BRANDED-123".to_owned()),
-        (ProfileId::Content, false, "café 世界".to_owned()),
+        (ProfileId::Small, true, "BRANDED-123".to_owned()),
+        (ProfileId::Standard, false, "café 世界".to_owned()),
         (
-            ProfileId::Adaptive,
+            ProfileId::PosterPackage,
             false,
             "HELLOworld1234567890".to_owned(),
         ),
-        (ProfileId::Adaptive, false, "a".repeat(2_331)),
     ];
 
     for (profile, logo_enabled, payload) in cases {
@@ -55,7 +54,7 @@ fn worker_artifacts_match_direct_evaluation_across_approved_request_shapes() {
         state
             .set_logo_enabled(logo_enabled)
             .expect("logo transition produces a revision");
-        if profile == ProfileId::Content {
+        if profile == ProfileId::Standard {
             state
                 .set_foreground_theme(ForegroundTheme::Black)
                 .expect("theme transition produces a revision");
@@ -87,7 +86,7 @@ fn worker_artifacts_match_direct_evaluation_across_approved_request_shapes() {
 
 #[test]
 fn malformed_ready_responses_never_become_exportable_previews() {
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = WorkflowState::new(ProfileId::Small);
     let request = state
         .set_payload("valid payload".to_owned())
         .expect("payload starts a preview");

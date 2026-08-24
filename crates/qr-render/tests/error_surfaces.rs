@@ -17,7 +17,7 @@ fn every_geometry_and_profile_error_has_stable_context() {
         GeometryError::InvalidCanvasDimensions,
         GeometryError::InvalidModuleCount,
         GeometryError::DimensionOverflow,
-        GeometryError::NoPositiveEvenScale,
+        GeometryError::NoPositiveModuleScale,
         GeometryError::OuterPaddingIsNotIntegral,
         GeometryError::VersionExceedsProfile {
             requested: version_two,
@@ -28,7 +28,7 @@ fn every_geometry_and_profile_error_has_stable_context() {
         "canvas dimensions",
         "module count",
         "overflowed",
-        "positive even",
+        "positive centered",
         "symmetric and integral",
         "exceeds the profile maximum",
     ]) {
@@ -43,13 +43,11 @@ fn every_geometry_and_profile_error_has_stable_context() {
             base: PixelDimensions::square(90),
             png: PixelDimensions::square(180),
         },
-        ProfileError::AdaptiveDimensionsDoNotMatchMaximum {
-            expected_base: PixelDimensions::square(740),
-            expected_png: PixelDimensions::square(1110),
-            base: PixelDimensions::square(180),
-            png: PixelDimensions::square(540),
+        ProfileError::InvertedVersionRange {
+            minimum: version_two,
+            maximum: version_one,
         },
-        ProfileError::InvalidGeometry(GeometryError::NoPositiveEvenScale),
+        ProfileError::InvalidGeometry(GeometryError::NoPositiveModuleScale),
         ProfileError::MaximumVersionScaleBelowSix,
     ];
     for (error, fragment) in profile_errors.iter().zip([
@@ -57,7 +55,7 @@ fn every_geometry_and_profile_error_has_stable_context() {
         "square",
         "overflowed",
         "exactly three times",
-        "adaptive dimensions must match",
+        "minimum version",
         "invalid profile geometry",
         "at least six pixels",
     ]) {
@@ -78,10 +76,10 @@ fn public_geometry_accessors_expose_the_calculated_contract() {
 
     let profile = SUPPORTED_PROFILES[0];
     let geometry = profile
-        .geometry(Version::new(1).expect("version 1 is valid"))
+        .geometry(profile.minimum_version())
         .expect("supported profile geometry calculates");
     assert_eq!(profile.png_dimensions(), geometry.canvas_dimensions());
-    assert_eq!(geometry.matrix_modules().get(), 21);
+    assert_eq!(geometry.matrix_modules().get(), 37);
     assert_eq!(
         geometry.rendered_symbol_dimensions().width(),
         geometry.rendered_symbol_dimensions().height()

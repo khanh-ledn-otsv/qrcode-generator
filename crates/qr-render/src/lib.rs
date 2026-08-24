@@ -15,7 +15,7 @@ pub use geometry::{
 };
 pub use logo::{
     BRANDED_LOGO_VERSION, BUNDLED_LOGO_SVG, LogoKnockoutBounds, LogoPlacement, LogoSourceBounds,
-    MAXIMUM_ADAPTIVE_LOGO_VERSION, ModuleCoordinate,
+    ModuleCoordinate,
 };
 pub use model::{
     APPROVED_FOREGROUND_THEMES, APPROVED_LOGO_STYLES, BrandableCell, ContrastRatio,

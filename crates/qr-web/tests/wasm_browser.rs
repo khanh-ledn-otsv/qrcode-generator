@@ -11,10 +11,10 @@ use web_sys::Response;
 
 #[wasm_bindgen_test(async)]
 async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = WorkflowState::new(ProfileId::Small);
     state
         .set_logo_enabled(false)
-        .expect("Inline can use ordinary no-logo fitting");
+        .expect("Small can use ordinary no-logo fitting");
     let request = state
         .set_payload("browser artifact".to_owned())
         .expect("revision is available");
@@ -35,7 +35,7 @@ async fn blob_has_exact_artifact_bytes_mime_type_and_revocable_url() {
 
 #[wasm_bindgen_test]
 fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
-    let mut state = WorkflowState::new(ProfileId::Inline);
+    let mut state = WorkflowState::new(ProfileId::Small);
     state
         .set_logo_enabled(true)
         .expect("enabling the logo produces a request");
@@ -67,9 +67,9 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
 }
 
 #[wasm_bindgen_test]
-fn adaptive_long_url_selects_version_ten_and_exports_on_wasm() {
-    let payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-    let mut state = WorkflowState::new(ProfileId::Adaptive);
+fn fixed_logo_rejects_a_naturally_larger_version_on_wasm() {
+    let payload = "a".repeat(59);
+    let mut state = WorkflowState::new(ProfileId::PosterPackage);
     state
         .set_logo_enabled(true)
         .expect("enabling the logo produces a request");
@@ -77,70 +77,46 @@ fn adaptive_long_url_selects_version_ten_and_exports_on_wasm() {
         .set_payload(payload.to_owned())
         .expect("revision is available");
     assert_eq!(request.payload(), payload);
-    let first = evaluate_preview(&request).expect("adaptive URL renders");
-    let second = evaluate_preview(&request).expect("repeated adaptive URL renders");
-    assert_eq!(first.svg(), second.svg());
     assert_eq!(
-        first.artifact(ArtifactKind::Png).bytes(),
-        second.artifact(ArtifactKind::Png).bytes(),
+        evaluate_preview(&request),
+        Err(WorkflowFailure::UnsafeLogoGeometry {})
     );
-    assert!(state.complete_preview(request.revision(), Ok(first)));
-
-    let diagnostics = state
-        .preview()
-        .expect("adaptive preview is ready")
-        .diagnostics();
-    assert_eq!(diagnostics.selected_version().number(), 10);
-    assert_eq!(diagnostics.maximum_version().number(), 40);
-    assert_eq!(diagnostics.svg_side_pixels(), 260);
-    assert_eq!(diagnostics.png_side_pixels(), 390);
-    assert_eq!(diagnostics.module_scale(), 6);
-    assert_eq!(diagnostics.rendered_symbol_side_pixels(), 390);
-    assert_eq!(diagnostics.outer_padding_per_side(), 0);
-    let placement = diagnostics.logo_placement().expect("adaptive placement");
-    assert_eq!(placement.source_left_ten_thousandths(), 220_000);
-    assert_eq!(placement.source_top_ten_thousandths(), 200_625);
-    assert_eq!(placement.knockout_left(), 21);
-    assert_eq!(placement.knockout_top(), 19);
-    assert!(state.exports_enabled());
 }
 
 #[wasm_bindgen_test]
-fn adaptive_version_forty_boundary_is_deterministic_on_wasm() {
-    let mut state = WorkflowState::new(ProfileId::Adaptive);
+fn fixed_version_twelve_boundary_is_deterministic_on_wasm() {
+    let mut state = WorkflowState::new(ProfileId::PosterPackage);
     state
         .set_logo_enabled(false)
-        .expect("Adaptive can disable the logo");
+        .expect("fixed output can disable the logo");
     let exact = state
-        .set_payload("a".repeat(2_331))
+        .set_payload("a".repeat(287))
         .expect("revision is available");
-    let first = evaluate_preview(&exact).expect("Version 40 boundary renders");
-    let second = evaluate_preview(&exact).expect("repeated Version 40 boundary renders");
+    let first = evaluate_preview(&exact).expect("Version 12 boundary renders");
+    let second = evaluate_preview(&exact).expect("repeated Version 12 boundary renders");
     assert_eq!(first.svg(), second.svg());
     assert_eq!(
         first.artifact(ArtifactKind::Png).bytes(),
         second.artifact(ArtifactKind::Png).bytes()
     );
-    assert_eq!(first.diagnostics().selected_version().number(), 40);
-    assert_eq!(first.diagnostics().svg_side_pixels(), 740);
-    assert_eq!(first.diagnostics().png_side_pixels(), 1_110);
-    assert_eq!(first.diagnostics().module_scale(), 6);
+    assert_eq!(first.diagnostics().selected_version().number(), 12);
+    assert_eq!(first.diagnostics().svg_side_pixels(), 236);
+    assert_eq!(first.diagnostics().png_side_pixels(), 708);
 
     let one_over = state
-        .set_payload("a".repeat(2_332))
+        .set_payload("a".repeat(288))
         .expect("revision is available");
     assert_eq!(
         evaluate_preview(&one_over),
         Err(WorkflowFailure::OverCapacity {
-            maximum_version: qr_core::Version::new(40).unwrap(),
-            adaptive_recommended: false,
+            maximum_version: qr_core::Version::new(12).unwrap(),
         })
     );
 }
 
 #[wasm_bindgen_test(async)]
 async fn repeated_object_urls_are_revoked_instead_of_retained() {
-    let mut state = WorkflowState::new(ProfileId::Content);
+    let mut state = WorkflowState::new(ProfileId::Standard);
     let mut revoked = Vec::new();
     for generation in 0..32 {
         let payload = format!("bounded generation {generation}");
@@ -165,7 +141,7 @@ async fn repeated_object_urls_are_revoked_instead_of_retained() {
 
 #[wasm_bindgen_test]
 fn control_character_payload_renders_both_artifacts_on_wasm() {
-    let mut state = WorkflowState::new(ProfileId::Content);
+    let mut state = WorkflowState::new(ProfileId::Standard);
     let request = state
         .set_payload("line one\nline two".to_owned())
         .expect("revision is available");

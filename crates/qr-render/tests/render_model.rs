@@ -315,9 +315,10 @@ fn repeated_construction_is_deterministic() {
 fn impractical_allocations_have_a_target_independent_typed_failure() {
     let encoded = encoded_qr("BOUNDS");
     let impractical = OutputProfile::try_new(
-        ProfileId::Inline,
+        ProfileId::Small,
         qr_render::PixelDimensions::square(50_000),
         qr_render::PixelDimensions::square(150_000),
+        Version::try_from(1).unwrap(),
         Version::try_from(1).unwrap(),
     )
     .unwrap();

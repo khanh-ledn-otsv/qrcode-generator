@@ -8,12 +8,14 @@ use qr_core::{EncodeRequest, EncodedQr, encode};
 use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, Version, render_svg};
 use sha2::{Digest, Sha256};
 
-const APPROVED_SVG_SHA256: [&str; 5] = [
+const APPROVED_SVG_SHA256: [&str; 7] = [
     "252464e4aebd927f1b49d9fed491a4f166d5c54ddec0059f9bef249f08f7da6e",
     "34f1337c7cff58418f524c4dc148f491d5e9b684a9da235ef71f9596d27c88d7",
-    "667ab7321ce239dc46a0f482d8929222e171841bd8de42b75de5856737b364ba",
     "a4b8a18eee28ae6654608e777052a3ddf552d76efd1be1f0e11be39ce3305af6",
-    "91db53628c8dd731982393a521f8e3839614f9ec75f203126ba466c6100c8413",
+    "16f77f30441c0e42e1518681adb8a37baf1f67446666938885a27d402999d651",
+    "065c3b9404cd3417f1e2e6907ffa56d66565a4d25ce3a56652223e6fdaf07deb",
+    "44ad21966f6c9171909d30d862af0ca16651fb72ab1f13f68582e6a11ac9ce70",
+    "25b80237bf4a6a61783fdf04184dab0835b33d0907a2567a94be19d1a6bffbdf",
 ];
 
 #[test]

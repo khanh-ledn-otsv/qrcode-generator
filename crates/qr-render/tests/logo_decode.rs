@@ -14,8 +14,8 @@ use fixture_tool::{
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION, OutputProfile, ProfileId,
-    RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png, render_svg,
+    BRANDED_LOGO_VERSION, LogoStyle, OutputProfile, RenderError, RenderModel, RenderOptions,
+    SUPPORTED_PROFILES, render_png, render_svg,
 };
 
 #[test]
@@ -36,7 +36,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
     let mut enabled_rows = 0_usize;
 
     for (profile_index, profile) in SUPPORTED_PROFILES.into_iter().enumerate() {
-        for version in 1..=profile.maximum_version().number() {
+        for version in profile.minimum_version().number()..=profile.maximum_version().number() {
             let text = high_versions::payload_for_high_version(version)?;
             let encoded = encode(EncodeRequest::first_fit(
                 &text,
@@ -82,23 +82,16 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             }
         }
     }
-    let fixed_version_six_rows = SUPPORTED_PROFILES
+    let expected_enabled_rows = SUPPORTED_PROFILES
         .iter()
         .filter(|profile| {
-            profile.id() != ProfileId::Adaptive && profile.maximum_version() >= BRANDED_LOGO_VERSION
+            profile.minimum_version() <= BRANDED_LOGO_VERSION
+                && profile.maximum_version() >= BRANDED_LOGO_VERSION
         })
         .count();
-    let adaptive_rows = SUPPORTED_PROFILES
-        .iter()
-        .find(|profile| profile.id() == ProfileId::Adaptive)
-        .map(|_| {
-            usize::from(MAXIMUM_ADAPTIVE_LOGO_VERSION.number() - BRANDED_LOGO_VERSION.number() + 1)
-        })
-        .ok_or("Adaptive profile is missing")?;
-    let expected_enabled_rows = fixed_version_six_rows + adaptive_rows;
     if enabled_rows != expected_enabled_rows {
         return Err(format!(
-            "expected {expected_enabled_rows} enabled fixed/adaptive rows, found {enabled_rows}"
+            "expected {expected_enabled_rows} enabled fixed rows, found {enabled_rows}"
         )
         .into());
     }
@@ -108,11 +101,7 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
             continue;
         }
         for (payload_label, text) in required_logo_payloads(profile)? {
-            let logo_maximum = if profile.id() == ProfileId::Adaptive {
-                MAXIMUM_ADAPTIVE_LOGO_VERSION
-            } else {
-                profile.maximum_version()
-            };
+            let logo_maximum = BRANDED_LOGO_VERSION;
             let encoded = encode(EncodeRequest::with_version_range(
                 &text,
                 ErrorCorrection::High,
@@ -168,13 +157,9 @@ fn bundled_logo_decodes_for_every_enabled_profile_version() -> Result<(), Box<dy
 }
 
 fn required_logo_payloads(
-    profile: OutputProfile,
+    _profile: OutputProfile,
 ) -> Result<Vec<(&'static str, String)>, Box<dyn Error>> {
-    let logo_maximum = if profile.id() == ProfileId::Adaptive {
-        MAXIMUM_ADAPTIVE_LOGO_VERSION
-    } else {
-        profile.maximum_version()
-    };
+    let logo_maximum = BRANDED_LOGO_VERSION;
     let dense_prefix = "https://example.test/";
     let mut dense_url = None;
     for suffix_length in 0..=1_000 {
@@ -201,7 +186,7 @@ fn required_logo_payloads(
         return Err("dense logo URL did not select the approved logo ceiling version".into());
     }
 
-    let mut payloads = vec![
+    let payloads = vec![
         ("short-url", "https://example.test/a".to_owned()),
         ("dense-url", dense_url),
         ("numeric", "12345678901234567890".to_owned()),
@@ -209,11 +194,5 @@ fn required_logo_payloads(
         ("ascii-byte", "lowercase-logo-byte".to_owned()),
         ("utf8-eci26", "café logo".to_owned()),
     ];
-    if profile.id() == ProfileId::Adaptive {
-        payloads.push((
-            "one-news-url",
-            "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya".to_owned(),
-        ));
-    }
     Ok(payloads)
 }

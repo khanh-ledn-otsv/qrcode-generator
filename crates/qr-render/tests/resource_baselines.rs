@@ -1,7 +1,4 @@
 #[allow(dead_code)]
-#[path = "support/adaptive_v40_artifact_fixture.rs"]
-mod adaptive_v40_artifact_fixture;
-#[allow(dead_code)]
 #[path = "support/styling.rs"]
 mod styling;
 #[allow(dead_code)]
@@ -12,7 +9,7 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-use qr_render::{ProfileId, RenderModel, SUPPORTED_PROFILES, render_png, render_svg};
+use qr_render::{RenderModel, SUPPORTED_PROFILES, render_png, render_svg};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -33,7 +30,7 @@ fn representative_profile_and_logo_artifacts_stay_within_recorded_resource_basel
 -> Result<(), Box<dyn Error>> {
     let baselines = resource_baselines()?;
     let cases = styling::representative_decode_cases()?;
-    assert_eq!(cases.len(), styling::approved_style_tuples().len());
+    assert!(cases.len() < styling::approved_style_tuples().len());
 
     for case in cases {
         let model = RenderModel::new(&case.encoded, case.options)?;
@@ -53,16 +50,23 @@ fn representative_profile_and_logo_artifacts_stay_within_recorded_resource_basel
 fn largest_approved_artifact_stays_within_recorded_resource_baselines() -> Result<(), Box<dyn Error>>
 {
     let baselines = resource_baselines()?;
-    let (svg, png) = adaptive_v40_artifact_fixture::artifacts();
-    let adaptive = SUPPORTED_PROFILES
-        .into_iter()
-        .find(|profile| profile.id() == ProfileId::Adaptive)
-        .ok_or("Adaptive profile is compiled")?;
-    let dimensions = adaptive.png_dimensions_for(adaptive.maximum_version())?;
+    let profile = SUPPORTED_PROFILES
+        .last()
+        .ok_or("approved profile is compiled")?;
+    let encoded = qr_core::encode(qr_core::EncodeRequest::with_version_range(
+        "largest approved artifact",
+        qr_core::tables::ErrorCorrection::Medium,
+        profile.maximum_version(),
+        profile.maximum_version(),
+    ))?;
+    let model = RenderModel::new(&encoded, qr_render::RenderOptions::safe(*profile)?)?;
+    let svg = render_svg(&model)?;
+    let png = render_png(&model)?;
+    let dimensions = profile.png_dimensions_for(profile.maximum_version())?;
     let observed_rgba = usize::try_from(dimensions.width().get())?
         .checked_mul(usize::try_from(dimensions.height().get())?)
         .and_then(|pixels| pixels.checked_mul(4))
-        .ok_or("Adaptive RGBA allocation fits usize")?;
+        .ok_or("approved RGBA allocation fits usize")?;
 
     assert_within_baselines(&baselines, svg.len(), png.len(), observed_rgba);
     assert_eq!(

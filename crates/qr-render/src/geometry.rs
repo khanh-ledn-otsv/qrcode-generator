@@ -160,9 +160,10 @@ impl CanvasGeometry {
 
         let limiting_side = canvas_dimensions.width.0.min(canvas_dimensions.height.0);
         let raw_scale = limiting_side / symbol.extent_modules().get();
-        let module_scale = raw_scale - (raw_scale % 2);
+        let module_scale =
+            raw_scale - ((limiting_side - raw_scale * symbol.extent_modules().get()) % 2);
         if module_scale == 0 {
-            return Err(GeometryError::NoPositiveEvenScale);
+            return Err(GeometryError::NoPositiveModuleScale);
         }
 
         let rendered_side = symbol
@@ -252,7 +253,7 @@ pub enum GeometryError {
     InvalidCanvasDimensions,
     InvalidModuleCount,
     DimensionOverflow,
-    NoPositiveEvenScale,
+    NoPositiveModuleScale,
     OuterPaddingIsNotIntegral,
     VersionExceedsProfile {
         requested: qr_core::Version,
@@ -268,8 +269,8 @@ impl fmt::Display for GeometryError {
             }
             Self::InvalidModuleCount => formatter.write_str("module count must be positive"),
             Self::DimensionOverflow => formatter.write_str("geometry dimensions overflowed"),
-            Self::NoPositiveEvenScale => {
-                formatter.write_str("no positive even module scale fits the canvas")
+            Self::NoPositiveModuleScale => {
+                formatter.write_str("no positive centered module scale fits the canvas")
             }
             Self::OuterPaddingIsNotIntegral => {
                 formatter.write_str("outer padding cannot be symmetric and integral")

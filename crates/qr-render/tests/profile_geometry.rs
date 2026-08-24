@@ -31,16 +31,18 @@ fn print_unbranded_inline_version_six_hashes_for_fixture_refresh() {
 #[test]
 fn supported_profiles_match_the_approved_output_contract() {
     let expected = [
-        (ProfileId::Inline, 100, 300, 6),
-        (ProfileId::Content, 120, 360, 8),
-        (ProfileId::Landing, 150, 450, 12),
-        (ProfileId::Print, 160, 480, 13),
-        (ProfileId::Adaptive, 740, 1110, 40),
+        (ProfileId::Small, 100, 300, 5, 6),
+        (ProfileId::Standard, 120, 360, 5, 8),
+        (ProfileId::PrimaryCta, 160, 480, 5, 12),
+        (ProfileId::HeroCampaign, 200, 600, 8, 12),
+        (ProfileId::BusinessCard, 148, 444, 5, 12),
+        (ProfileId::FlyerBrochure, 177, 531, 5, 12),
+        (ProfileId::PosterPackage, 236, 708, 5, 12),
     ];
 
     assert_eq!(SUPPORTED_PROFILES.len(), expected.len());
 
-    for (profile, (id, base_side, png_side, maximum_version)) in
+    for (profile, (id, base_side, png_side, minimum_version, maximum_version)) in
         SUPPORTED_PROFILES.iter().zip(expected)
     {
         assert_eq!(profile.validate(), Ok(()));
@@ -51,51 +53,22 @@ fn supported_profiles_match_the_approved_output_contract() {
             PixelDimensions::square(base_side)
         );
         assert_eq!(profile.png_dimensions(), PixelDimensions::square(png_side));
+        assert_eq!(profile.minimum_version().number(), minimum_version);
         assert_eq!(profile.maximum_version().number(), maximum_version);
-    }
-}
-
-#[test]
-fn adaptive_dimensions_grow_with_the_selected_version() {
-    let adaptive = SUPPORTED_PROFILES[4];
-    let examples = [
-        (1, 116, 174),
-        (10, 260, 390),
-        (11, 276, 414),
-        (40, 740, 1110),
-    ];
-
-    assert_eq!(adaptive.id(), ProfileId::Adaptive);
-    for (version_number, svg_side, png_side) in examples {
-        let version = Version::try_from(version_number).unwrap();
-        assert_eq!(
-            adaptive.svg_dimensions_for(version).unwrap(),
-            PixelDimensions::square(svg_side)
-        );
-        assert_eq!(
-            adaptive.png_dimensions_for(version).unwrap(),
-            PixelDimensions::square(png_side)
-        );
-        let geometry = adaptive.geometry(version).unwrap();
-        assert_eq!(
-            geometry.canvas_dimensions(),
-            PixelDimensions::square(png_side)
-        );
-        assert_eq!(geometry.module_scale().get(), 6);
-        assert_eq!(geometry.outer_padding().left.get(), 0);
     }
 }
 
 #[test]
 fn every_supported_version_has_centered_even_integer_geometry() {
     for profile in SUPPORTED_PROFILES {
-        for version_number in 1..=profile.maximum_version().number() {
+        for version_number in
+            profile.minimum_version().number()..=profile.maximum_version().number()
+        {
             let version = Version::try_from(version_number).unwrap();
             let geometry = profile.geometry(version).unwrap();
 
             assert_eq!(geometry.quiet_zone_modules(), ModuleCount::new(4).unwrap());
             assert!(geometry.module_scale().get() > 0);
-            assert_eq!(geometry.module_scale().get() % 2, 0);
             assert_eq!(
                 geometry.outer_padding().left,
                 geometry.outer_padding().right
@@ -113,9 +86,13 @@ fn every_supported_version_has_centered_even_integer_geometry() {
                 PaddingContent::BackgroundOnly
             );
 
-            let next_even_scale = geometry.module_scale().get() + 2;
-            let next_width = geometry.symbol_modules().get() * next_even_scale;
-            assert!(next_width > profile.png_dimensions_for(version).unwrap().width().get());
+            let next_scale = geometry.module_scale().get() + 1;
+            let next_width = geometry.symbol_modules().get() * next_scale;
+            let canvas_side = profile.png_dimensions_for(version).unwrap().width().get();
+            assert!(
+                next_width > canvas_side || (canvas_side - next_width) % 2 != 0,
+                "the selected scale is the largest symmetrically centered integer pitch"
+            );
         }
 
         let maximum_geometry = profile.geometry(profile.maximum_version()).unwrap();
@@ -124,41 +101,26 @@ fn every_supported_version_has_centered_even_integer_geometry() {
 }
 
 #[test]
-fn profile_ceiling_geometry_matches_the_approved_worked_examples() {
-    let expected = [
-        (ProfileId::Inline, 49, 6, 3),
-        (ProfileId::Content, 57, 6, 9),
-        (ProfileId::Landing, 73, 6, 6),
-        (ProfileId::Print, 77, 6, 9),
-        (ProfileId::Adaptive, 185, 6, 0),
-    ];
-
-    for (profile, (id, symbol_modules, scale, padding)) in SUPPORTED_PROFILES.iter().zip(expected) {
+fn profile_ceiling_geometry_meets_the_approved_module_pitch_rule() {
+    for profile in SUPPORTED_PROFILES {
         let geometry = profile.geometry(profile.maximum_version()).unwrap();
-        assert_eq!(profile.id(), id);
-        assert_eq!(geometry.symbol_modules().get(), symbol_modules);
-        assert_eq!(geometry.module_scale().get(), scale);
-        assert_eq!(geometry.outer_padding().left.get(), padding);
+        assert!(geometry.module_scale().get() >= 6);
+        assert_eq!(
+            geometry.outer_padding().left,
+            geometry.outer_padding().right
+        );
+        assert_eq!(
+            geometry.outer_padding().top,
+            geometry.outer_padding().bottom
+        );
     }
 }
 
 #[test]
-fn scale_transitions_are_exercised_for_each_profile() {
-    let expected_scales: [&[u32]; 5] = [
-        &[10, 8, 8, 6, 6, 6],
-        &[12, 10, 8, 8, 8, 6, 6, 6],
-        &[14, 12, 12, 10, 10, 8, 8, 6, 6, 6, 6, 6],
-        &[16, 14, 12, 10, 10, 8, 8, 8, 6, 6, 6, 6, 6],
-        &[
-            6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-            6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-        ],
-    ];
-
-    assert_eq!(SUPPORTED_PROFILES.len(), expected_scales.len());
-
-    for (profile, expected) in SUPPORTED_PROFILES.iter().zip(expected_scales) {
-        let actual: Vec<u32> = (1..=profile.maximum_version().number())
+fn module_scale_does_not_increase_within_each_fixed_profile_range() {
+    for profile in SUPPORTED_PROFILES {
+        let actual: Vec<u32> = (profile.minimum_version().number()
+            ..=profile.maximum_version().number())
             .map(|number| {
                 profile
                     .geometry(Version::try_from(number).unwrap())
@@ -167,7 +129,7 @@ fn scale_transitions_are_exercised_for_each_profile() {
                     .get()
             })
             .collect();
-        assert_eq!(actual, expected);
+        assert!(actual.windows(2).all(|pair| pair[0] >= pair[1]));
     }
 }
 
@@ -178,27 +140,30 @@ fn invalid_profiles_return_specific_errors() {
 
     assert_eq!(
         OutputProfile::try_new(
-            ProfileId::Inline,
+            ProfileId::Small,
             PixelDimensions::square(0),
             PixelDimensions::square(0),
+            Version::try_from(1).unwrap(),
             Version::try_from(1).unwrap(),
         ),
         Err(ProfileError::DimensionsMustBePositive)
     );
     assert_eq!(
         OutputProfile::try_new(
-            ProfileId::Inline,
+            ProfileId::Small,
             PixelDimensions::new(90, 91),
             PixelDimensions::square(270),
+            Version::try_from(1).unwrap(),
             Version::try_from(1).unwrap(),
         ),
         Err(ProfileError::DimensionsMustBeSquare)
     );
     assert_eq!(
         OutputProfile::try_new(
-            ProfileId::Inline,
+            ProfileId::Small,
             PixelDimensions::square(40),
             PixelDimensions::square(120),
+            Version::try_from(1).unwrap(),
             Version::try_from(1).unwrap(),
         ),
         Err(ProfileError::MaximumVersionScaleBelowSix)
@@ -206,9 +171,10 @@ fn invalid_profiles_return_specific_errors() {
 
     assert_eq!(
         OutputProfile::try_new(
-            ProfileId::Inline,
+            ProfileId::Small,
             base,
             incorrect_png,
+            Version::try_from(5).unwrap(),
             Version::try_from(5).unwrap(),
         ),
         Err(ProfileError::PngDimensionsAreNotTriple {
@@ -217,28 +183,26 @@ fn invalid_profiles_return_specific_errors() {
         })
     );
 
-    let adaptive_base = PixelDimensions::square(180);
-    let adaptive_png = PixelDimensions::square(540);
     assert_eq!(
         OutputProfile::try_new(
-            ProfileId::Adaptive,
-            adaptive_base,
-            adaptive_png,
-            Version::try_from(40).unwrap(),
+            ProfileId::Small,
+            PixelDimensions::square(100),
+            PixelDimensions::square(300),
+            Version::try_from(7).unwrap(),
+            Version::try_from(6).unwrap(),
         ),
-        Err(ProfileError::AdaptiveDimensionsDoNotMatchMaximum {
-            expected_base: PixelDimensions::square(740),
-            expected_png: PixelDimensions::square(1110),
-            base: adaptive_base,
-            png: adaptive_png,
+        Err(ProfileError::InvertedVersionRange {
+            minimum: Version::try_from(7).unwrap(),
+            maximum: Version::try_from(6).unwrap(),
         })
     );
 
     assert_eq!(
         OutputProfile::try_new(
-            ProfileId::Inline,
+            ProfileId::Small,
             PixelDimensions::square(u32::MAX),
             PixelDimensions::square(270),
+            Version::try_from(5).unwrap(),
             Version::try_from(5).unwrap(),
         ),
         Err(ProfileError::DimensionOverflow)
@@ -249,11 +213,11 @@ fn invalid_profiles_return_specific_errors() {
 fn impossible_asymmetric_and_overflowing_geometry_return_typed_errors() {
     assert_eq!(
         CanvasGeometry::calculate(PixelDimensions::square(2), ModuleCount::new(21).unwrap()),
-        Err(GeometryError::NoPositiveEvenScale)
+        Err(GeometryError::NoPositiveModuleScale)
     );
-    assert_eq!(
-        CanvasGeometry::calculate(PixelDimensions::square(271), ModuleCount::new(37).unwrap()),
-        Err(GeometryError::OuterPaddingIsNotIntegral)
+    assert!(
+        CanvasGeometry::calculate(PixelDimensions::square(271), ModuleCount::new(37).unwrap())
+            .is_ok()
     );
     assert_eq!(
         CanvasGeometry::calculate(
@@ -266,9 +230,9 @@ fn impossible_asymmetric_and_overflowing_geometry_return_typed_errors() {
 
 #[test]
 fn a_version_above_the_profile_ceiling_is_rejected() {
-    let inline = SUPPORTED_PROFILES[0];
+    let small = SUPPORTED_PROFILES[0];
     assert_eq!(
-        inline.geometry(Version::try_from(7).unwrap()),
+        small.geometry(Version::try_from(7).unwrap()),
         Err(GeometryError::VersionExceedsProfile {
             requested: Version::try_from(7).unwrap(),
             maximum: Version::try_from(6).unwrap(),
@@ -278,8 +242,9 @@ fn a_version_above_the_profile_ceiling_is_rejected() {
 
 fn supported_profile_and_version() -> impl Strategy<Value = (OutputProfile, Version)> {
     prop::sample::select(SUPPORTED_PROFILES.to_vec()).prop_flat_map(|profile| {
+        let minimum = profile.minimum_version().number();
         let maximum = profile.maximum_version().number();
-        (Just(profile), 1_u8..=maximum).prop_map(|(profile, number)| {
+        (Just(profile), minimum..=maximum).prop_map(|(profile, number)| {
             (
                 profile,
                 Version::try_from(number).expect("strategy only generates valid versions"),
@@ -304,7 +269,6 @@ proptest! {
 
         prop_assert_eq!(geometry.canvas_dimensions(), profile.png_dimensions_for(version).unwrap());
         prop_assert!(scale > 0);
-        prop_assert_eq!(scale % 2, 0);
         prop_assert_eq!(geometry.outer_padding().left, geometry.outer_padding().right);
         prop_assert_eq!(geometry.outer_padding().top, geometry.outer_padding().bottom);
         prop_assert_eq!(geometry.outer_padding().content, PaddingContent::BackgroundOnly);
@@ -319,9 +283,10 @@ proptest! {
         let base = PixelDimensions::square(base_side);
         let incorrect_png = PixelDimensions::square(base_side * 3 + 1);
         let result = OutputProfile::try_new(
-            ProfileId::Inline,
+            ProfileId::Small,
             base,
             incorrect_png,
+            Version::try_from(1).unwrap(),
             Version::try_from(maximum_version).unwrap(),
         );
 

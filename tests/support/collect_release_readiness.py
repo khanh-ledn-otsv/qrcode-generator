@@ -18,9 +18,7 @@ REQUIRED_PROJECTS = ("chromium",)
 PRIVACY_TEST = "payload, logo, configuration, and downloads make no runtime request"
 DOWNLOAD_TESTS = {
     "downloads fixed filenames and exact deterministic SVG and PNG bytes",
-    "downloaded PNG independently decodes with the pinned reader",
-    "downloads and decodes the deterministic Adaptive Version 10 artifacts",
-    "downloads and decodes deterministic Adaptive Version 40 artifacts",
+    "downloaded PNGs and SVGs independently decode common payload formats",
 }
 GUIDANCE_TESTS = {
     "explains export, physical sizing, and placement validation before generation",
@@ -34,10 +32,8 @@ CRITICAL_WORKFLOW_TESTS = {
     "shows the opaque preview at its real SVG size",
     "uses approved foreground themes with one opaque white rounded ONE appearance",
     "logo mode is enabled by default and can be turned off",
-    "fixed profiles recommend Adaptive when centered branding is unavailable",
-    "Adaptive preserves and exports the long ONE URL at Version 10",
-    "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
-    "Adaptive reaches the exact unbranded Version 40 boundary",
+    "fixed profiles reject centered branding above Version 6",
+    "Poster / Package preserves fixed dimensions at Version 12",
     "always uses rounded ONE modules without an appearance control",
 }
 WORKSPACE_ROOT = Path(__file__).resolve().parents[2]
@@ -92,13 +88,21 @@ def _expected_matrix_keys(policy: dict[str, Any]) -> set[tuple[object, ...]]:
         if not isinstance(count, int) or count <= 0:
             raise ResultEvidenceError("approved matrix policy has invalid tuple dimensions")
         counts.append(count)
+    profile_min_versions = policy.get("profile_min_versions")
     profile_max_versions = policy.get("profile_max_versions")
     payload_classes = policy.get("required_payload_classes")
     version_payload_class = policy.get("version_coverage_payload_class")
     if (
-        not isinstance(profile_max_versions, list)
+        not isinstance(profile_min_versions, list)
+        or len(profile_min_versions) != counts[0]
+        or not all(isinstance(version, int) and version > 0 for version in profile_min_versions)
+        or not isinstance(profile_max_versions, list)
         or len(profile_max_versions) != counts[0]
         or not all(isinstance(version, int) and version > 0 for version in profile_max_versions)
+        or any(
+            minimum > maximum
+            for minimum, maximum in zip(profile_min_versions, profile_max_versions)
+        )
         or not isinstance(payload_classes, list)
         or not payload_classes
         or not all(isinstance(payload, str) for payload in payload_classes)
@@ -111,7 +115,9 @@ def _expected_matrix_keys(policy: dict[str, Any]) -> set[tuple[object, ...]]:
     for indices in itertools.product(*ranges):
         for payload_class in payload_classes:
             expected.add((*indices, "required-payload", payload_class, payload_class, None))
-        for version in range(1, profile_max_versions[indices[0]] + 1):
+        for version in range(
+            profile_min_versions[indices[0]], profile_max_versions[indices[0]] + 1
+        ):
             expected.add(
                 (
                     *indices,
@@ -182,14 +188,23 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
             raise ResultEvidenceError(
                 f"approved output evidence has incomplete {dimension} coverage"
             )
+    profile_min_versions = policy.get("profile_min_versions")
     profile_max_versions = policy.get("profile_max_versions")
-    if not isinstance(profile_max_versions, list) or not all(
-        isinstance(version, int) for version in profile_max_versions
+    if (
+        not isinstance(profile_min_versions, list)
+        or not isinstance(profile_max_versions, list)
+        or not all(isinstance(version, int) for version in profile_min_versions)
+        or not all(isinstance(version, int) for version in profile_max_versions)
     ):
         raise ResultEvidenceError("approved matrix policy has invalid profile versions")
-    if {row.get("version") for row in rows if isinstance(row.get("version"), int)} != set(
-        range(1, max(profile_max_versions) + 1)
-    ):
+    approved_versions = {
+        version
+        for minimum, maximum in zip(profile_min_versions, profile_max_versions)
+        for version in range(minimum, maximum + 1)
+    }
+    if {
+        row.get("version") for row in rows if isinstance(row.get("version"), int)
+    } != approved_versions:
         raise ResultEvidenceError("approved output evidence has incomplete version coverage")
     required_payloads = set(policy.get("required_payload_classes", []))
     if {row.get("payload_class") for row in rows} != required_payloads:

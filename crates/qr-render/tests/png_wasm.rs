@@ -2,10 +2,6 @@
 
 use wasm_bindgen_test::wasm_bindgen_test;
 
-#[path = "support/adaptive_branded_artifact_fixture.rs"]
-mod adaptive_branded_artifact_fixture;
-#[path = "support/adaptive_v40_artifact_fixture.rs"]
-mod adaptive_v40_artifact_fixture;
 #[path = "support/branded_artifact_fixture.rs"]
 mod branded_artifact_fixture;
 #[path = "support/inline_version_six_artifact_fixture.rs"]
@@ -31,22 +27,6 @@ fn branded_svg_and_png_bytes_match_every_enabled_native_fixture() {
     assert_eq!(
         branded_artifact_fixture::hashes(),
         branded_artifact_fixture::SHA256
-    );
-}
-
-#[wasm_bindgen_test]
-fn adaptive_svg_and_png_bytes_match_versions_six_through_eleven() {
-    assert_eq!(
-        adaptive_branded_artifact_fixture::hashes(),
-        adaptive_branded_artifact_fixture::SHA256
-    );
-}
-
-#[wasm_bindgen_test]
-fn adaptive_version_forty_svg_and_png_match_the_native_fixture() {
-    assert_eq!(
-        adaptive_v40_artifact_fixture::hashes(),
-        adaptive_v40_artifact_fixture::SHA256
     );
 }
 

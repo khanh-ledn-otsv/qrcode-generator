@@ -7,8 +7,8 @@ use qr_render::{
 use sha2::{Digest, Sha256};
 
 pub const PAYLOAD: &str = "cross-target branded artifact";
-pub const ENABLED_PROFILE_INDICES: [usize; 5] = [0, 1, 2, 3, 4];
-pub const SHA256: [[&str; 2]; 5] = [
+pub const ENABLED_PROFILE_INDICES: [usize; 6] = [0, 1, 2, 4, 5, 6];
+pub const SHA256: [[&str; 2]; 6] = [
     [
         "2b99c437c5acf5c9dd1a760c1a95e26631f8e3b6d8d1d52e2133a45cbc51a001",
         "9f6ac2b6a5ec87295241df30c64b854860b2e816b28d8eaeea429ff8b3d71ed8",
@@ -18,16 +18,20 @@ pub const SHA256: [[&str; 2]; 5] = [
         "cea27bef2c98b9a45c3d6231633cf24679973e9ec2f9e4042d691d8e19b13df7",
     ],
     [
-        "6a04ec5ef969a9cd4d183cfe875f4800c39749cc386030c5ffc1f00a64b6e261",
-        "8edb35e689fb15837546053fc4de4a93e66f1b6f7a19e374d41d419e33750be6",
-    ],
-    [
         "684519e4a83da0e96cd431b3a0a9bab6d890cbf69b2c88ab15cc74f735bd98ad",
         "3b9760350a61fbcd198357d26d4a6d21151d2f9b9844b4bde8b571bb12f74dec",
     ],
     [
-        "7fe0ca72be4a8467b8fd2f76945dd709dbeb66ecf1f36b0227ac47f0b63d8a88",
-        "7dd883fec5e2cb1a54151bdd22160fd969537b091b367578bac7dd5be5c8b3f2",
+        "f9be9175d9ebf74b2dd39663a0f0e8159335446068b49a45f3ac75b7932b53d0",
+        "de167f8f60570105330da67c89d4ffe6bda8b1c850b8224fa9cdf20a5397800e",
+    ],
+    [
+        "f9285f423d9d16c58005b0537282f17da4fb1449ffb0a5721ef450a516ea6ef6",
+        "157f78b9b1f4a614a3016265f618e602f9274c6183d0975a4d64e4700e415d16",
+    ],
+    [
+        "b99e8a2504ca89cf450f5f62b07bd6dd302b1d92dd35dc4fc7d490c6aac244e6",
+        "a2aaf2dbef39a269957d0f194cdedcb2e95038055945e6ee9a077c203d9ed2d0",
     ],
 ];
 
@@ -74,7 +78,7 @@ pub fn black_content_hashes() -> [String; 2] {
     [sha256_hex(&svg), sha256_hex(&png)]
 }
 
-pub fn hashes() -> [[String; 2]; 5] {
+pub fn hashes() -> [[String; 2]; 6] {
     ENABLED_PROFILE_INDICES.map(|profile_index| {
         let (svg, png) = artifacts(profile_index);
         [sha256_hex(&svg), sha256_hex(&png)]

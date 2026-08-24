@@ -72,7 +72,10 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
                 f"version-v{version}",
                 version,
             )
-            for version in range(1, policy["profile_max_versions"][indices[0]] + 1)
+            for version in range(
+                policy["profile_min_versions"][indices[0]],
+                policy["profile_max_versions"][indices[0]] + 1,
+            )
         )
     for index, scenario in enumerate(scenarios):
         (
@@ -85,21 +88,21 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             covered_version,
         ) = scenario
         logo = logo_state_index == 1
+        supports_centered_logo = profile_index in branding["fixed_profile_indices"] and (
+            policy["profile_min_versions"][profile_index]
+            <= branding["minimum_version"]
+            <= policy["profile_max_versions"][profile_index]
+        )
         decoded = not logo or (
-            (
-                case_kind == "required-payload"
-                and (payload_class != "dense-url" or profile_index == 0)
-            )
-            or (
-                case_kind == "version-coverage"
-                and (
-                    covered_version == branding["minimum_version"]
-                    or (
-                        profile_index == branding["adaptive_profile_index"]
-                        and branding["minimum_version"]
-                        <= covered_version
-                        <= branding["adaptive_maximum_version"]
-                    )
+            supports_centered_logo
+            and (
+                (
+                    case_kind == "required-payload"
+                    and (payload_class != "dense-url" or profile_index == 0)
+                )
+                or (
+                    case_kind == "version-coverage"
+                    and covered_version == branding["minimum_version"]
                 )
             )
         )
@@ -111,12 +114,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         }
         row_version = covered_version
         if case_kind == "required-payload" and decoded and logo:
-            row_version = (
-                policy["profile_max_versions"][profile_index]
-                if payload_class == "dense-url"
-                and profile_index == branding["adaptive_profile_index"]
-                else branding["minimum_version"]
-            )
+            row_version = branding["minimum_version"]
         row = {
             "id": f"row-{index}",
             "case_kind": case_kind,
@@ -218,20 +216,10 @@ class ReleaseReadinessEvidenceTests(unittest.TestCase):
             CRITICAL_WORKFLOW_TESTS,
         )
         self.assertIn(
-            "fixed profiles recommend Adaptive when centered branding is unavailable",
-            CRITICAL_WORKFLOW_TESTS,
+            "fixed profiles reject centered branding above Version 6", CRITICAL_WORKFLOW_TESTS
         )
         self.assertIn(
-            "Adaptive preserves and exports the long ONE URL at Version 10",
-            CRITICAL_WORKFLOW_TESTS,
-        )
-        self.assertIn(
-            "Adaptive grows through Version 11 and gates unreviewed higher-version branding",
-            CRITICAL_WORKFLOW_TESTS,
-        )
-        self.assertIn(
-            "Adaptive reaches the exact unbranded Version 40 boundary",
-            CRITICAL_WORKFLOW_TESTS,
+            "Poster / Package preserves fixed dimensions at Version 12", CRITICAL_WORKFLOW_TESTS
         )
         self.assertIn(
             "always uses rounded ONE modules without an appearance control",

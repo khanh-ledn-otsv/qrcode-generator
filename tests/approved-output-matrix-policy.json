@@ -1,11 +1,12 @@
 {
   "schema_version": 1,
   "tuple_dimensions": {
-    "profiles": 5,
+    "profiles": 7,
     "logo_states": 2,
     "foreground_themes": 2
   },
-  "profile_max_versions": [6, 8, 12, 13, 40],
+  "profile_min_versions": [5, 5, 5, 8, 5, 5, 5],
+  "profile_max_versions": [6, 8, 12, 12, 12, 12, 12],
   "required_payload_classes": [
     "short-url",
     "dense-url",
@@ -16,72 +17,26 @@
   ],
   "version_coverage_payload_class": "ascii-byte",
   "branded_geometry_policy": {
-    "fixed_profile_indices": [0, 1, 2, 3],
-    "adaptive_profile_index": 4,
+    "fixed_profile_indices": [0, 1, 2, 3, 4, 5, 6],
     "minimum_version": 6,
-    "adaptive_maximum_version": 11,
+    "maximum_version": 6,
     "geometry_rows": [
       {
-        "profile_indices": [0, 1, 2, 3, 4],
+        "profile_indices": [0, 1, 2, 3, 4, 5, 6],
         "version": 6,
         "source_ten_thousandths": [140000, 180625, 130000, 48750],
         "knockout_modules": [13, 17, 15, 7],
         "protected_clearance_modules": 6,
         "obscured_data_modules": 105,
         "obscured_remainder_modules": 0
-      },
-      {
-        "profile_indices": [4],
-        "version": 7,
-        "source_ten_thousandths": [160000, 140625, 130000, 48750],
-        "knockout_modules": [15, 13, 15, 7],
-        "protected_clearance_modules": 0,
-        "obscured_data_modules": 105,
-        "obscured_remainder_modules": 0
-      },
-      {
-        "profile_indices": [4],
-        "version": 8,
-        "source_ten_thousandths": [180000, 160625, 130000, 48750],
-        "knockout_modules": [17, 15, 15, 7],
-        "protected_clearance_modules": 0,
-        "obscured_data_modules": 105,
-        "obscured_remainder_modules": 0
-      },
-      {
-        "profile_indices": [4],
-        "version": 9,
-        "source_ten_thousandths": [200000, 180625, 130000, 48750],
-        "knockout_modules": [19, 17, 15, 7],
-        "protected_clearance_modules": 0,
-        "obscured_data_modules": 105,
-        "obscured_remainder_modules": 0
-      },
-      {
-        "profile_indices": [4],
-        "version": 10,
-        "source_ten_thousandths": [220000, 200625, 130000, 48750],
-        "knockout_modules": [21, 19, 15, 7],
-        "protected_clearance_modules": 0,
-        "obscured_data_modules": 105,
-        "obscured_remainder_modules": 0
-      },
-      {
-        "profile_indices": [4],
-        "version": 11,
-        "source_ten_thousandths": [240000, 220625, 130000, 48750],
-        "knockout_modules": [23, 21, 15, 7],
-        "protected_clearance_modules": 0,
-        "obscured_data_modules": 105,
-        "obscured_remainder_modules": 0
       }
     ]
   },
   "expected_rows": {
-    "required_payload": 120,
-    "version_coverage": 316,
-    "total": 436,
-    "decoded": 290,
-    "expected_invalid": 146
+    "required_payload": 168,
+    "version_coverage": 172,
+    "total": 340,
+    "decoded": 244,
+    "expected_invalid": 96
   }
 }

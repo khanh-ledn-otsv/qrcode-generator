@@ -5,9 +5,9 @@ use qr_core::matrix::MaskId;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeError, EncodeRequest, EncodingMode, Version, encode};
 use qr_render::{
-    BRANDED_LOGO_VERSION, ContrastRatio, ForegroundTheme, LogoStyle, MAXIMUM_ADAPTIVE_LOGO_VERSION,
-    OutputProfile, OutputSafety, ProfileId, RenderError, RenderModel, RenderOptions, Rgba,
-    SUPPORTED_PROFILES, render_png, render_svg,
+    BRANDED_LOGO_VERSION, ContrastRatio, ForegroundTheme, LogoStyle, OutputProfile, OutputSafety,
+    ProfileId, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES, render_png,
+    render_svg,
 };
 
 use crate::textarea::{TextAreaBuffer, projected_utf16_length};
@@ -22,7 +22,7 @@ const INTERNAL_FAILURE_MESSAGE: &str =
 const SAFE_OUTPUT_GUIDANCE: &str =
     "Use SVG when resizing and validate the QR code in its final environment.";
 const PRINT_OUTPUT_GUIDANCE: &str =
-    "Place at 25–30 mm or larger; validate for the actual environment.";
+    "150 dpi artifact policy; test the final material, device, and surface.";
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ProfilePresentation {
@@ -51,30 +51,40 @@ impl ProfilePresentation {
 #[must_use]
 pub const fn profile_presentation(profile_id: ProfileId) -> ProfilePresentation {
     match profile_id {
-        ProfileId::Inline => ProfilePresentation {
-            name: "Inline",
-            value: "inline",
+        ProfileId::Small => ProfilePresentation {
+            name: "Small",
+            value: "small",
             guidance: SAFE_OUTPUT_GUIDANCE,
         },
-        ProfileId::Content => ProfilePresentation {
-            name: "Content",
-            value: "content",
+        ProfileId::Standard => ProfilePresentation {
+            name: "Standard",
+            value: "standard",
             guidance: SAFE_OUTPUT_GUIDANCE,
         },
-        ProfileId::Landing => ProfilePresentation {
-            name: "Landing",
-            value: "landing",
+        ProfileId::PrimaryCta => ProfilePresentation {
+            name: "Primary CTA",
+            value: "primary-cta",
             guidance: SAFE_OUTPUT_GUIDANCE,
         },
-        ProfileId::Print => ProfilePresentation {
-            name: "Print",
-            value: "print",
+        ProfileId::HeroCampaign => ProfilePresentation {
+            name: "Hero / Campaign",
+            value: "hero-campaign",
+            guidance: SAFE_OUTPUT_GUIDANCE,
+        },
+        ProfileId::BusinessCard => ProfilePresentation {
+            name: "Business card",
+            value: "business-card",
             guidance: PRINT_OUTPUT_GUIDANCE,
         },
-        ProfileId::Adaptive => ProfilePresentation {
-            name: "Adaptive",
-            value: "adaptive",
-            guidance: SAFE_OUTPUT_GUIDANCE,
+        ProfileId::FlyerBrochure => ProfilePresentation {
+            name: "Flyer / Brochure",
+            value: "flyer-brochure",
+            guidance: PRINT_OUTPUT_GUIDANCE,
+        },
+        ProfileId::PosterPackage => ProfilePresentation {
+            name: "Poster / Package",
+            value: "poster-package",
+            guidance: PRINT_OUTPUT_GUIDANCE,
         },
     }
 }
@@ -104,32 +114,42 @@ impl LinkCapacityGuideRow {
 }
 
 #[must_use]
-pub const fn link_capacity_guide() -> [LinkCapacityGuideRow; 5] {
+pub const fn link_capacity_guide() -> [LinkCapacityGuideRow; 7] {
     [
         LinkCapacityGuideRow {
-            profile_id: ProfileId::Inline,
+            profile_id: ProfileId::Small,
             without_logo_ascii_bytes: 106,
             with_logo_ascii_bytes: 58,
         },
         LinkCapacityGuideRow {
-            profile_id: ProfileId::Content,
+            profile_id: ProfileId::Standard,
             without_logo_ascii_bytes: 152,
             with_logo_ascii_bytes: 58,
         },
         LinkCapacityGuideRow {
-            profile_id: ProfileId::Landing,
+            profile_id: ProfileId::PrimaryCta,
             without_logo_ascii_bytes: 287,
             with_logo_ascii_bytes: 58,
         },
         LinkCapacityGuideRow {
-            profile_id: ProfileId::Print,
-            without_logo_ascii_bytes: 331,
+            profile_id: ProfileId::HeroCampaign,
+            without_logo_ascii_bytes: 287,
+            with_logo_ascii_bytes: 0,
+        },
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::BusinessCard,
+            without_logo_ascii_bytes: 287,
             with_logo_ascii_bytes: 58,
         },
         LinkCapacityGuideRow {
-            profile_id: ProfileId::Adaptive,
-            without_logo_ascii_bytes: 2_331,
-            with_logo_ascii_bytes: 137,
+            profile_id: ProfileId::FlyerBrochure,
+            without_logo_ascii_bytes: 287,
+            with_logo_ascii_bytes: 58,
+        },
+        LinkCapacityGuideRow {
+            profile_id: ProfileId::PosterPackage,
+            without_logo_ascii_bytes: 287,
+            with_logo_ascii_bytes: 58,
         },
     ]
 }
@@ -538,16 +558,13 @@ pub enum WorkflowFailure {
     },
     OverCapacity {
         maximum_version: Version,
-        adaptive_recommended: bool,
     },
     LogoMinimumUnavailable {
         minimum_version: Version,
         maximum_version: Version,
         profile_name: &'static str,
     },
-    UnsafeLogoGeometry {
-        adaptive_recommended: bool,
-    },
+    UnsafeLogoGeometry {},
     Internal,
 }
 
@@ -560,13 +577,9 @@ impl WorkflowFailure {
                 byte_length,
                 maximum,
             } => format!("The payload is {byte_length} bytes; the input limit is {maximum} bytes."),
-            Self::OverCapacity {
-                maximum_version,
-                adaptive_recommended,
-            } => format!(
-                "The payload does not fit this profile's maximum QR version {}.{}",
+            Self::OverCapacity { maximum_version } => format!(
+                "The payload does not fit this output variant's maximum QR version {}.",
                 maximum_version.number(),
-                adaptive_recommendation(*adaptive_recommended),
             ),
             Self::LogoMinimumUnavailable {
                 minimum_version,
@@ -577,16 +590,7 @@ impl WorkflowFailure {
                 minimum_version.number(),
                 maximum_version.number(),
             ),
-            Self::UnsafeLogoGeometry {
-                adaptive_recommended,
-            } if *adaptive_recommended => format!(
-                "Logo mode is unavailable because no safe placement exists for this QR version.{}",
-                adaptive_recommendation(true),
-            ),
-            Self::UnsafeLogoGeometry { .. } => format!(
-                "Adaptive logo placement is approved only through QR Version {}; disable the logo to keep this exact payload.",
-                MAXIMUM_ADAPTIVE_LOGO_VERSION.number(),
-            ),
+            Self::UnsafeLogoGeometry {} => "Logo mode is approved only at QR Version 6 for these fixed output variants. Disable the logo to keep this exact payload.".to_owned(),
             Self::Internal => INTERNAL_FAILURE_MESSAGE.to_owned(),
         }
     }
@@ -827,10 +831,15 @@ impl WorkflowState {
 
 pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFailure> {
     let profile = supported_profile(request.profile_id).ok_or(WorkflowFailure::Internal)?;
+    let minimum_version = if request.logo_enabled {
+        profile.minimum_version().max(BRANDED_LOGO_VERSION)
+    } else {
+        profile.minimum_version()
+    };
     let encoded = encode(EncodeRequest::with_version_range(
         request.payload(),
         request.ecc(),
-        request.minimum_version(),
+        minimum_version,
         profile.maximum_version(),
     ))
     .map_err(|error| classify_encode_error(error, request, profile))?;
@@ -868,7 +877,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             eci_assignment: encoded.eci_assignment(),
             ecc: encoded.ecc(),
             mask: encoded.mask(),
-            minimum_version: request.minimum_version(),
+            minimum_version,
             maximum_version: profile.maximum_version(),
             selected_version: encoded.version(),
             branding_increased_version: request.logo_enabled
@@ -955,7 +964,6 @@ fn classify_encode_error(
             EncodingError::PayloadTooLargeForProfile { .. } | EncodingError::PayloadTooLargeForQr,
         ) => WorkflowFailure::OverCapacity {
             maximum_version: profile.maximum_version(),
-            adaptive_recommended: profile.id() != ProfileId::Adaptive,
         },
         EncodeError::Payload(EncodingError::InvalidVersionRange { minimum, maximum })
             if request.logo_enabled =>
@@ -970,20 +978,10 @@ fn classify_encode_error(
     }
 }
 
-fn classify_render_error(error: RenderError, profile: OutputProfile) -> WorkflowFailure {
+fn classify_render_error(error: RenderError, _profile: OutputProfile) -> WorkflowFailure {
     match error {
-        RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry {
-            adaptive_recommended: profile.id() != ProfileId::Adaptive,
-        },
+        RenderError::UnsafeLogoGeometry => WorkflowFailure::UnsafeLogoGeometry {},
         _ => WorkflowFailure::Internal,
-    }
-}
-
-const fn adaptive_recommendation(recommended: bool) -> &'static str {
-    if recommended {
-        " Try Adaptive for long payloads and version-aware logo placement."
-    } else {
-        ""
     }
 }
 

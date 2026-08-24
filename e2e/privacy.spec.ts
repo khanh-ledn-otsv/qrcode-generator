@@ -34,8 +34,8 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   await enterPayload(page, SAFE_PAYLOAD);
   await expect(page.getByRole("checkbox", { name: /Rounded ONE modules/ })).toHaveCount(0);
   await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();
-  await selectProfile(page, "Print");
-  await expect(page.getByRole("radio", { name: /Print/ })).toBeChecked();
+  await selectProfile(page, "Business card");
+  await expect(page.getByRole("radio", { name: /Business card/ })).toBeChecked();
   await expect(page.getByRole("group", { name: "Background treatment" })).toHaveCount(0);
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [svgDownload] = await Promise.all([
@@ -58,8 +58,8 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
 
   await page.getByText("ONE lettermark", { exact: true }).click();
-  await selectProfile(page, "Adaptive");
-  await enterPayload(page, "a".repeat(2_331));
+  await selectProfile(page, "Poster / Package");
+  await enterPayload(page, "a".repeat(287));
   await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [pngDownload] = await Promise.all([
@@ -68,8 +68,8 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
   ]);
   expect(pngDownload.suggestedFilename()).toBe("qr-code.png");
   const png = await readFile(await pngDownload.path());
-  expect(png.readUInt32BE(16)).toBe(1_110);
-  expect(png.readUInt32BE(20)).toBe(1_110);
+  expect(png.readUInt32BE(16)).toBe(708);
+  expect(png.readUInt32BE(20)).toBe(708);
   expect(requests).toEqual([]);
   expect(
     await page.evaluate(() => ({

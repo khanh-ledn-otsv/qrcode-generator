@@ -22,7 +22,7 @@ pub fn artifacts() -> (Vec<u8>, Vec<u8>) {
     .unwrap();
     let inline = SUPPORTED_PROFILES
         .into_iter()
-        .find(|profile| profile.id() == ProfileId::Inline)
+        .find(|profile| profile.id() == ProfileId::Small)
         .unwrap();
     let model = RenderModel::new(&encoded, RenderOptions::safe(inline).unwrap()).unwrap();
 
@@ -41,7 +41,7 @@ pub fn provenance_hashes() -> [String; 2] {
     assert_eq!(manifest["synthetic"], true);
     assert_eq!(manifest["payload"], PAYLOAD);
     assert_eq!(manifest["payload_sha256"], sha256_hex(PAYLOAD.as_bytes()));
-    assert_eq!(manifest["profile"], "Inline");
+    assert_eq!(manifest["profile"], "Small");
     assert_eq!(manifest["version"], 6);
     assert_eq!(manifest["ecc"], "M");
     assert_eq!(manifest["logo"], "none");

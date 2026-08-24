@@ -3,7 +3,7 @@ use std::path::Path;
 
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, EncodingMode, Version, encode};
-use qr_render::{RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png, render_svg};
+use qr_render::{OutputProfile, ProfileId, RenderModel, RenderOptions, render_png, render_svg};
 use sha2::{Digest, Sha256};
 
 #[test]
@@ -23,7 +23,7 @@ fn mixed_mode_matrices_and_render_artifacts_match_reviewed_evidence() {
         let encoded = encode(EncodeRequest::first_fit(
             payload,
             ErrorCorrection::Low,
-            Version::new(40).expect("Version 40 is valid"),
+            Version::new(8).expect("Version 8 is valid"),
         ))
         .expect("mixed-mode evidence payload encodes");
         assert_eq!(encoded.mode(), EncodingMode::Mixed);
@@ -44,9 +44,17 @@ fn mixed_mode_matrices_and_render_artifacts_match_reviewed_evidence() {
                 .expect("matrix fingerprint is text")
         );
 
+        let evidence_profile = OutputProfile::try_new(
+            ProfileId::Standard,
+            qr_render::PixelDimensions::square(120),
+            qr_render::PixelDimensions::square(360),
+            Version::new(1).expect("Version 1 is valid"),
+            Version::new(8).expect("Version 8 is valid"),
+        )
+        .expect("mixed-mode evidence profile is valid");
         let model = RenderModel::new(
             &encoded,
-            RenderOptions::safe(SUPPORTED_PROFILES[1]).expect("Content profile is valid"),
+            RenderOptions::safe(evidence_profile).expect("evidence profile is safe"),
         )
         .expect("mixed-mode matrix renders");
         assert_eq!(

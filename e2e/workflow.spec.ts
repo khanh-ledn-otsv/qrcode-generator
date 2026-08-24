@@ -35,7 +35,7 @@ test("reports representative modes, UTF-8 counts, and latest debounced input", a
 test("distinguishes the input-limit boundary and keeps exports disabled", async ({ page }) => {
   const input = page.getByLabel("Text to encode");
   await input.fill("x".repeat(4096));
-  await expect(page.getByRole("alert")).toContainText("does not fit this profile");
+  await expect(page.getByRole("alert")).toContainText("does not fit this output variant");
   await expect(page.getByTestId("download-svg")).toBeDisabled();
 
   await input.fill("x".repeat(4097));
@@ -58,12 +58,12 @@ test("disposing the page with pending debounce work initializes cleanly", async 
 
 test("profile controls work by keyboard", async ({ page }) => {
   await enterPayload(page, "keyboard profile");
-  const content = page.getByRole("radio", { name: /Content/ });
+  const content = page.getByRole("radio", { name: /Standard/ });
   await content.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("radio", { name: /Landing/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Primary CTA/ })).toBeChecked();
   await expect.poll(() => diagnostic(page, "Version")).toContain("V12 max");
-  const landing = page.getByRole("radio", { name: /Landing/ });
+  const landing = page.getByRole("radio", { name: /Primary CTA/ });
   await expect(landing).toBeFocused();
   const focusRing = await landing
     .locator("xpath=..")
@@ -73,14 +73,14 @@ test("profile controls work by keyboard", async ({ page }) => {
 
 test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await enterPayload(page, "real-size preview");
-  await selectProfile(page, "Inline");
+  await selectProfile(page, "Small");
 
   const preview = page
     .getByTestId("qr-preview")
     .locator('svg:visible:not([data-role="bundled-logo"])');
-  await expect(page.getByRole("radio", { name: /Inline/ })).toBeChecked();
-  await expect(page.getByRole("radio", { name: /Inline/ })).toHaveAccessibleName(
-    /100 px SVG · 300 px PNG · up to V6/,
+  await expect(page.getByRole("radio", { name: /Small/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Small/ })).toHaveAccessibleName(
+    /100 px SVG · 300 px PNG · V5–V6/,
   );
   await expect(preview).toHaveAttribute("width", "100");
   await expect(preview).toHaveAttribute("height", "100");
@@ -95,8 +95,10 @@ test("shows the opaque preview at its real SVG size", async ({ page }) => {
   await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
-test("Adaptive preview keeps rounded modules visible at its declared size", async ({ page }) => {
-  await selectProfile(page, "Adaptive");
+test("Poster / Package preview keeps rounded modules visible at its declared size", async ({
+  page,
+}) => {
+  await selectProfile(page, "Poster / Package");
   await enterPayload(page, "adaptive preview visibility");
 
   const preview = page
@@ -233,96 +235,34 @@ test("logo mode is enabled by default and can be turned off", async ({ page }) =
   await expect.poll(() => diagnostic(page, "ECC")).toBe("M");
 });
 
-test("fixed profiles recommend Adaptive when centered branding is unavailable", async ({
-  page,
-}) => {
-  await selectProfile(page, "Print");
+test("fixed profiles reject centered branding above Version 6", async ({ page }) => {
+  await selectProfile(page, "Business card");
   await page.getByLabel("Text to encode").fill("a".repeat(59));
 
-  await expect(page.getByRole("alert")).toContainText(
-    "Try Adaptive for long payloads and version-aware logo placement.",
-  );
+  await expect(page.getByRole("alert")).toContainText("Logo mode is approved only at QR Version 6");
   await expect(page.getByTestId("download-svg")).toBeDisabled();
   await expect(page.getByTestId("download-png")).toBeDisabled();
 });
 
-test("Adaptive preserves and exports the long ONE URL at Version 10", async ({ page }) => {
-  const payload =
-    "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-  await selectProfile(page, "Adaptive");
+test("Poster / Package preserves fixed dimensions at Version 12", async ({ page }) => {
+  const payload = "a".repeat(287);
+  await selectProfile(page, "Poster / Package");
+  await page.getByText("ONE lettermark", { exact: true }).click();
   await enterPayload(page, payload);
 
-  await expect(page.getByRole("radio", { name: /Adaptive/ })).toBeChecked();
-  await expect(page.getByRole("radio", { name: /Adaptive/ })).toHaveAccessibleName(
-    /Automatic dimensions · up to V40/,
+  await expect(page.getByRole("radio", { name: /Poster \/ Package/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Poster \/ Package/ })).toHaveAccessibleName(
+    /236 px SVG · 708 px PNG · V5–V12/,
   );
   await expect(page.getByLabel("Text to encode")).toHaveValue(payload);
-  await expect.poll(() => diagnostic(page, "Version")).toBe("V10 / V40 max");
-  await expect.poll(() => diagnostic(page, "ECC")).toBe("H");
-  await expect
-    .poll(() => diagnostic(page, "PNG geometry"))
-    .toBe("6 px/module · 390 px symbol · 0 px padding");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("260 px SVG · 390 px PNG");
-  await expect
-    .poll(() => diagnostic(page, "Logo"))
-    .toBe("ONE lettermark · 105 data · 0 remainder modules obscured");
-  await expect
-    .poll(() => diagnostic(page, "Logo bounds"))
-    .toBe(
-      "source (22, 20.0625) 13 × 4.875 modules · knockout (21, 19) 15 × 7 modules · 0 module protected clearance",
-    );
-  const renderedLogo = page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]').first();
-  await expect(renderedLogo).toHaveAttribute("x", "26");
-  await expect(renderedLogo).toHaveAttribute("y", "24.0625");
-  await expect(renderedLogo).toHaveAttribute("width", "13");
-  await expect(renderedLogo).toHaveAttribute("height", "4.8750");
-  await expect(page.getByTestId("download-svg")).toBeEnabled();
-  await expect(page.getByTestId("download-png")).toBeEnabled();
-});
-
-test("Adaptive grows through Version 11 and gates unreviewed higher-version branding", async ({
-  page,
-}) => {
-  await selectProfile(page, "Adaptive");
-  const versionElevenUrl = `https://example.test/${"a".repeat(105)}`;
-  await enterPayload(page, versionElevenUrl);
-
-  await expect.poll(() => diagnostic(page, "Version")).toBe("V11 / V40 max");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("276 px SVG · 414 px PNG");
-  await expect(page.getByTestId("download-svg")).toBeEnabled();
-  await expect(page.getByTestId("download-png")).toBeEnabled();
-
-  const versionTwelveUrl = `https://example.test/${"a".repeat(120)}`;
-  await page.getByLabel("Text to encode").fill(versionTwelveUrl);
-  await expect(page.getByRole("alert")).toContainText(
-    "Adaptive logo placement is approved only through QR Version 11; disable the logo to keep this exact payload.",
-  );
-  await expect(page.getByTestId("download-svg")).toBeDisabled();
-
-  await page.getByText("ONE lettermark", { exact: true }).click();
-  await expect(page.getByLabel("Text to encode")).toHaveValue(versionTwelveUrl);
-  await expect(page.getByTestId("download-svg")).toBeEnabled();
-  await expect(page.getByTestId("download-png")).toBeEnabled();
-});
-
-test("Adaptive reaches the exact unbranded Version 40 boundary", async ({ page }) => {
-  await selectProfile(page, "Adaptive");
-  await page.getByText("ONE lettermark", { exact: true }).click();
-  await enterPayload(page, "a".repeat(2_331));
-
-  await expect.poll(() => diagnostic(page, "Version")).toBe("V40 / V40 max");
+  await expect.poll(() => diagnostic(page, "Version")).toBe("V12 / V12 max");
   await expect.poll(() => diagnostic(page, "ECC")).toBe("M");
-  await expect.poll(() => diagnostic(page, "Output")).toBe("740 px SVG · 1110 px PNG");
   await expect
     .poll(() => diagnostic(page, "PNG geometry"))
-    .toBe("6 px/module · 1110 px symbol · 0 px padding");
-
-  await page.getByLabel("Text to encode").fill("a".repeat(2_332));
-  await expect(page.getByRole("alert")).toContainText(
-    "The payload does not fit this profile's maximum QR version 40.",
-  );
-  await expect(page.getByTestId("download-svg")).toBeDisabled();
-  await expect(page.getByTestId("download-png")).toBeDisabled();
+    .toBe("8 px/module · 584 px symbol · 62 px padding");
+  await expect.poll(() => diagnostic(page, "Output")).toBe("236 px SVG · 708 px PNG");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
 test("always uses rounded ONE modules without an appearance control", async ({ page }) => {
@@ -364,20 +304,21 @@ test("guides long-link profile, logo, and PNG choices accurately", async ({ page
   ]);
   await expect(capacityTable.getByRole("row")).toHaveText([
     "Output variantWithout logoWith logo",
-    "Inline106 characters / bytes58 characters / bytes",
-    "Content152 characters / bytes58 characters / bytes",
-    "Landing287 characters / bytes58 characters / bytes",
-    "Print331 characters / bytes58 characters / bytes",
-    "Adaptive2,331 characters / bytes137 characters / bytes",
+    "Small106 characters / bytes58 characters / bytes",
+    "Standard152 characters / bytes58 characters / bytes",
+    "Primary CTA287 characters / bytes58 characters / bytes",
+    "Hero / Campaign287 characters / bytes0 characters / bytes",
+    "Business card287 characters / bytes58 characters / bytes",
+    "Flyer / Brochure287 characters / bytes58 characters / bytes",
+    "Poster / Package287 characters / bytes58 characters / bytes",
   ]);
 
   await expect(guide).toContainText("A shorter URL usually produces a smaller, less dense QR code");
   await expect(guide).toContainText("For a long link, try no logo");
   await expect(guide).toContainText("standard ECC M and avoids covering QR modules");
-  await expect(guide).toContainText("version-aware logo placement through Version 11");
-  await expect(guide).toContainText("If the link needs Version 12 or higher, disable the logo");
-  await expect(guide).toContainText("Fixed-size profiles download PNGs at 3×");
-  await expect(guide).toContainText("their width is 1.5×");
+  await expect(guide).toContainText(
+    "Every fixed output keeps the approved centered logo at Version 6",
+  );
   await expect(guide).toContainText("Scan before you use it");
   await expect(guide).toContainText(
     "Always scan the final QR code before publishing or printing it",
@@ -386,7 +327,9 @@ test("guides long-link profile, logo, and PNG choices accurately", async ({ page
   await expect(guide).toContainText("ASCII links that use QR Byte mode");
   await expect(guide).toContainText("scheme, host, path, query, and fragment");
   await expect(guide).toContainText("Non-ASCII characters can use multiple UTF-8 bytes");
-  await expect(guide).toContainText("Fixed variants approve logo placement only at Version 6");
+  await expect(guide).toContainText(
+    "Every fixed variant approves the centered logo only at Version 6",
+  );
   await expect(guide).toContainText("The difference is not a fixed character subtraction");
   await expect(guide).toContainText("ECC H's nominal percentage is not an occlusion budget");
   await expect(guide).toContainText("The preview result for your exact text is authoritative");
@@ -394,18 +337,17 @@ test("guides long-link profile, logo, and PNG choices accurately", async ({ page
   await expect(
     guide.getByRole("heading", { name: "Which output variant should I choose?" }),
   ).toBeVisible();
-  await expect(guide.getByRole("heading", { name: "Inline", exact: true })).toBeVisible();
-  await expect(guide.getByRole("heading", { name: "Content", exact: true })).toBeVisible();
-  await expect(guide.getByRole("heading", { name: "Landing", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Small", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Standard", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Primary CTA", exact: true })).toBeVisible();
+  await expect(guide.getByRole("heading", { name: "Hero / Campaign", exact: true })).toBeVisible();
   await expect(guide.getByRole("heading", { name: "Print", exact: true })).toBeVisible();
-  await expect(guide.getByRole("heading", { name: "Adaptive", exact: true })).toBeVisible();
-  await expect(guide).toContainText("Inline uses a fixed 100 px SVG and 300 px PNG");
-  await expect(guide).toContainText("Content uses a fixed 120 px SVG and 360 px PNG");
-  await expect(guide).toContainText("Landing uses a fixed 150 px SVG and 450 px PNG");
-  await expect(guide).toContainText("Print uses a fixed 160 px SVG and 480 px PNG");
-  await expect(guide).toContainText("selects the smallest QR version that fits your exact text");
-  await expect(guide).toContainText("four-module quiet zone");
-  await expect(guide).toContainText("the logo is exactly centered at Version 6");
-  await expect(guide).toContainText("Versions 7–11 move it six modules above center");
-  await expect(guide).toContainText("Version 12 or higher rejects the logo");
+  await expect(guide).toContainText("Small uses a fixed 100 px SVG and 300 px PNG");
+  await expect(guide).toContainText("Standard uses a fixed 120 px SVG and 360 px PNG");
+  await expect(guide).toContainText("Primary CTA uses a fixed 160 px SVG and 480 px PNG");
+  await expect(guide).toContainText("Hero / Campaign uses a fixed 200 px SVG and 600 px PNG");
+  await expect(guide).toContainText("Business card is 25 mm converted to 148 px");
+  await expect(guide).toContainText("Flyer / Brochure is 30 mm converted to 177 px");
+  await expect(guide).toContainText("Poster / Package is 40 mm converted to 236 px");
+  await expect(guide).toContainText("A Version v symbol has a logical width of 4v + 25 modules");
 });

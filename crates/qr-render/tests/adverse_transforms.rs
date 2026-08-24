@@ -10,7 +10,7 @@ use fixture_tool::{
 };
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{LogoStyle, ProfileId, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
+use qr_render::{LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES, render_png};
 
 #[test]
 fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(), Box<dyn Error>> {
@@ -44,20 +44,20 @@ fn adverse_manifest_records_every_required_deterministic_transform() -> Result<(
             .collect::<Vec<_>>()
     );
     assert_eq!(suite.envelope_ids("centered-logo")?.len(), 6);
-    assert_eq!(suite.envelope_ids("adaptive-v10-long-url")?.len(), 5);
-    assert_eq!(suite.envelope_ids("adaptive-v11-long-url")?.len(), 5);
     Ok(())
 }
 
 #[test]
 fn adverse_transforms_are_reproducible_and_preserve_canvas_dimensions() -> Result<(), Box<dyn Error>>
 {
-    let encoded = encode(EncodeRequest::first_fit(
+    let profile = SUPPORTED_PROFILES[1];
+    let encoded = encode(EncodeRequest::with_version_range(
         "https://example.test/adverse",
         ErrorCorrection::Medium,
-        SUPPORTED_PROFILES[3].maximum_version(),
+        profile.minimum_version(),
+        profile.maximum_version(),
     ))?;
-    let options = RenderOptions::safe(SUPPORTED_PROFILES[1])?;
+    let options = RenderOptions::safe(profile)?;
     let source = render_png(&RenderModel::new(&encoded, options)?)?;
     let suite = adverse::TransformSuite::load()?;
 
@@ -129,57 +129,9 @@ fn adverse_transform_envelope_independently_decodes_and_records_evidence()
         eci_assignment: None,
     };
 
-    let adaptive_payload = "https://www.one-line.com/en/news/notice-mandatory-advance-cargo-declaration-acd-reference-number-imports-kenya";
-    let adaptive_profile = SUPPORTED_PROFILES
-        .into_iter()
-        .find(|profile| profile.id() == ProfileId::Adaptive)
-        .ok_or("Adaptive profile is missing")?;
-    let version_ten = Version::new(10)?;
-    let adaptive_encoded = encode(EncodeRequest::with_version_range(
-        adaptive_payload,
-        ErrorCorrection::High,
-        version_ten,
-        version_ten,
-    ))?;
-    let adaptive_source = render_png(&RenderModel::new(
-        &adaptive_encoded,
-        RenderOptions::safe(adaptive_profile)?.with_logo(LogoStyle::Bundled)?,
-    )?)?;
-    let adaptive_expected = DecodeExpectation {
-        payload: adaptive_payload.as_bytes().to_vec(),
-        version: QrVersion::new(10)?,
-        ecc: FixtureEcc::H,
-        eci_assignment: None,
-    };
-
-    let adaptive_v11_payload = format!("https://example.test/{}", "a".repeat(105));
-    let version_eleven = Version::new(11)?;
-    let adaptive_v11_encoded = encode(EncodeRequest::with_version_range(
-        adaptive_v11_payload.as_str(),
-        ErrorCorrection::High,
-        version_eleven,
-        version_eleven,
-    ))?;
-    let adaptive_v11_source = render_png(&RenderModel::new(
-        &adaptive_v11_encoded,
-        RenderOptions::safe(adaptive_profile)?.with_logo(LogoStyle::Bundled)?,
-    )?)?;
-    let adaptive_v11_expected = DecodeExpectation {
-        payload: adaptive_v11_payload.as_bytes().to_vec(),
-        version: QrVersion::new(11)?,
-        ecc: FixtureEcc::H,
-        eci_assignment: None,
-    };
-
     let configurations = [
         ("print-rounded-one", safe_source, safe_expected),
         ("centered-logo", logo_source, logo_expected),
-        ("adaptive-v10-long-url", adaptive_source, adaptive_expected),
-        (
-            "adaptive-v11-long-url",
-            adaptive_v11_source,
-            adaptive_v11_expected,
-        ),
     ];
     let suite = adverse::TransformSuite::load()?;
     let output = tempfile::tempdir()?;
