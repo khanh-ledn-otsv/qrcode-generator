@@ -37,7 +37,7 @@ assert_scope "full" "Cargo.lock"
 assert_scope "full" "unknown-file"
 assert_scope "full" "crates/qr-web/src/main.rs" "tests/support/test_check_coverage_report.py"
 
-scope="$(CI=true "${repository_root}/scripts/verify-changed.sh" --scope-only)"
+scope="$(env -u CI_VERIFY_BASE_SHA CI=true "${repository_root}/scripts/verify-changed.sh" --scope-only)"
 if [[ "${scope}" != "full" ]]; then
   echo "A CI run without a base commit must select the full gate; found '${scope}'." >&2
   exit 1
