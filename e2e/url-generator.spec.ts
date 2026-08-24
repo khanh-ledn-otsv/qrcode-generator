@@ -100,7 +100,6 @@ test("groups digital and print variants while preserving logo controls and speci
   await page.getByLabel("Output variant").selectOption("poster-package");
   await expect(page.getByLabel("Output variant")).toHaveValue("poster-package");
 
-  await page.getByTestId("qr-specification").locator("summary").click();
   await expect(page.getByTestId("qr-specification")).toContainText("Logo request");
   await expect(page.getByTestId("release-guidance")).toContainText("URL is never changed");
   await expect(page.getByTestId("download-png")).toBeEnabled();

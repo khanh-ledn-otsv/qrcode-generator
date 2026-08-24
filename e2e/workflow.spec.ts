@@ -37,7 +37,6 @@ test("profile controls are keyboard accessible and preserve declared geometry", 
   await expect(preview).toHaveAttribute("height", "100");
   await expect(page.getByTestId("download-png")).toBeEnabled();
 
-  await page.getByTestId("qr-specification").locator("summary").click();
   await expect.poll(() => diagnostic(page, "Output")).toBe("100 px SVG / 300 px PNG");
   await expect.poll(() => diagnostic(page, "Version")).toContain("V6 max");
 });
@@ -69,19 +68,17 @@ test("long branded URLs use the existing no-logo fallback and keep the exact URL
   await selectProfile(page, "Poster / Package");
   const url = `https://e.test/${"a".repeat(130)}`;
   await enterPayload(page, url);
-  await page.getByTestId("qr-specification").locator("summary").click();
-
   await expect(page.getByLabel("Encoded URL")).toHaveValue(url);
   await expect.poll(() => diagnostic(page, "Logo request")).toContain("disabled");
   await expect(page.getByTestId("download-svg")).toBeEnabled();
 });
 
-test("specification keeps release guidance available progressively", async ({ page }) => {
+test("specification is expanded by default and remains collapsible", async ({ page }) => {
   const details = page.getByTestId("qr-specification");
-  await expect(details).not.toHaveAttribute("open", "");
-  await details.locator("summary").click();
   await expect(details).toHaveAttribute("open", "");
   await expect(page.getByTestId("release-guidance")).toContainText("Choose SVG");
   await expect(page.getByTestId("release-guidance")).toContainText("final camera");
   await expect(page.getByTestId("release-guidance")).toContainText("URL is never changed");
+  await details.locator("summary").click();
+  await expect(details).not.toHaveAttribute("open", "");
 });
