@@ -103,6 +103,9 @@ test("keeps the guideline on a separate page and preserves generator controls", 
     "page",
   );
   await expect(page.getByTestId("usage-guide")).toBeVisible();
+  await expect(
+    page.locator('section[aria-labelledby="usage-principal-heading"] img[loading="eager"]'),
+  ).toHaveCount(3);
   await expect(page.getByTestId("qr-specification")).toHaveCount(0);
   await page.getByRole("link", { name: "Generator" }).click();
   await expect(page).toHaveURL(/\/$/);

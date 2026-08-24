@@ -4,5 +4,15 @@
     "correctness": "error",
     "suspicious": "error",
     "perf": "warn"
+  },
+  "plugins": ["react", "jsx-a11y"],
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/unsupported-syntax": "error"
+  },
+  "settings": {
+    "react": {
+      "version": "19.2.8"
+    }
   }
 }

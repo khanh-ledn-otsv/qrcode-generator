@@ -3,5 +3,8 @@
   "printWidth": 100,
   "semi": true,
   "singleQuote": false,
+  "sortTailwindcss": {
+    "stylesheet": "./src/styles/global.css"
+  },
   "trailingComma": "all"
 }

@@ -1,7 +1,5 @@
 ---
-import GeneratorPreview from "../components/GeneratorPreview.astro";
-import GeneratorSettings from "../components/GeneratorSettings.astro";
-import QrSpecification from "../components/QrSpecification.astro";
+import QrGenerator from "../components/QrGenerator";
 import SiteLayout from "../layouts/SiteLayout.astro";
 ---
 
@@ -11,13 +9,5 @@ import SiteLayout from "../layouts/SiteLayout.astro";
   heading="Create a safe QR code"
   title="QR Code Generator"
 >
-  <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(20rem,2fr)]">
-    <GeneratorSettings />
-    <GeneratorPreview />
-  </div>
-  <QrSpecification />
+  <QrGenerator client:load />
 </SiteLayout>
-
-<script>
-  import "../scripts/app.ts";
-</script>

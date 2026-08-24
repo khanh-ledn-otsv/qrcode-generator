@@ -453,8 +453,11 @@ state rather than pending indefinitely.
 
 Astro imports the Rust `qr-web` WASM adapter directly. Preview generation,
 encoding, and deterministic SVG/PNG rendering remain in Rust. Astro owns the
-separate static generator and guideline pages; focused TypeScript modules own
-form state, preview-worker lifecycle, and browser download actions. The
+static site shell and guideline page. The dynamic generator is one hydrated
+React 19 island that owns form state, preview-worker lifecycle, diagnostics, and
+browser download actions. React modules are compiled by Oxc's Rust-native React
+Compiler integration rather than Babel. Pure TypeScript modules retain URL
+composition and worker protocol boundaries. The
 `qr-web -> qr-render -> qr-core` dependency direction is unchanged.
 
 ## 5. Recommended dependencies
@@ -466,6 +469,13 @@ Keep versions exact in the workspace manifest and update dependencies deliberate
 - `wasm-bindgen` in `qr-web` for the worker-facing generation adapter.
 - Browser Worker, Blob, URL, debounce, revision, and download behavior stays
   in Astro/TypeScript and uses no Rust browser bindings.
+- Astro's React integration and React 19 provide the dynamic generator island.
+  `@vitejs/plugin-react` enables its experimental native `compiler` path, with
+  the compatible `oxc-transform-react` package performing React compilation,
+  TypeScript removal, and JSX transformation in Rust. React components must
+  also pass Oxlint's React correctness category, explicit
+  `react/unsupported-syntax` compiler compatibility rule, and JSX accessibility
+  rules, plus Oxfmt's TSX/Tailwind formatting.
 - `thiserror` for typed errors if its WASM size is acceptable; otherwise implement `Display` manually.
 - `png` 0.18.x in `qr-render`, with only required features.
 - Use the browser timer API for the lifecycle-scoped Astro debounce.
