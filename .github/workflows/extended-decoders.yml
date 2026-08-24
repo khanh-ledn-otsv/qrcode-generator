@@ -40,7 +40,21 @@ env:
 
 jobs:
   extended-decoders:
+    name: Extended decoders (${{ matrix.campaign }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - campaign: core
+            command: cargo test -p qr-core --test independent_decode -- --ignored --nocapture
+            log: core.log
+          - campaign: artifacts
+            command: pnpm run release:evidence
+            log: artifacts.log
+          - campaign: quirc
+            command: pnpm run test:quirc
+            log: quirc.log
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -100,18 +114,16 @@ jobs:
           QR_DECODER_SETUP_MODE: all
           QR_PLAYWRIGHT_INSTALL_MODE: skip
         run: ./scripts/setup.sh
-      - name: Run extended decoder campaigns without retries
+      - name: Run ${{ matrix.campaign }} decoder campaign without retries
         run: |
           mkdir -p target/decoder-logs
           set -o pipefail
-          cargo test -p qr-core --test independent_decode -- --ignored --nocapture 2>&1 | tee target/decoder-logs/core.log
-          pnpm run release:evidence 2>&1 | tee target/decoder-logs/artifacts.log
-          pnpm run test:quirc 2>&1 | tee target/decoder-logs/quirc.log
+          ${{ matrix.command }} 2>&1 | tee "target/decoder-logs/${{ matrix.log }}"
       - name: Upload decoder failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: decoder-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          name: decoder-failure-${{ matrix.campaign }}-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           path: |
             target/decoder-logs
