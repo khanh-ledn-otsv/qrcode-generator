@@ -11,6 +11,13 @@ for workflow in correctness.yml extended-decoders.yml; do
     echo "${workflow} must use the resolvable setup-uv v9.0.0 commit pin." >&2
     exit 1
   fi
+
+  checkout_count="$(grep -c 'uses: actions/checkout@' "${workflow_path}")"
+  credential_isolation_count="$(grep -c 'persist-credentials: false' "${workflow_path}")"
+  if [[ "${credential_isolation_count}" -ne "${checkout_count}" ]]; then
+    echo "${workflow} must disable persisted credentials for every checkout." >&2
+    exit 1
+  fi
 done
 
 echo "Workflow action pins passed."

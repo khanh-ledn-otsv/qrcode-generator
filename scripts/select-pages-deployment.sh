@@ -15,7 +15,7 @@ for changed_path in "$@"; do
       deploy="true"
       break
       ;;
-    .cargo/* | Cargo.lock | Cargo.toml | assets/* | crates/* | rust-toolchain.toml)
+    .cargo/* | .nvmrc | Cargo.lock | Cargo.toml | assets/* | astro.config.mjs | crates/* | package.json | pnpm-lock.yaml | public/* | rust-toolchain.toml | scripts/build-web-wasm.sh | src/* | tsconfig.json)
       deploy="true"
       break
       ;;

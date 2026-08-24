@@ -66,8 +66,16 @@ The hosted Pages step reuses the WASM package produced by `web`/`full`
 verification and runs `pnpm run build:astro` only to apply the Pages base path.
 Focused `core`/`render` verification does not build the application, so those
 deployment paths run `pnpm run build:wasm` once before the Astro-only build.
+The Pages deployment selector includes every production artifact input: Astro
+sources and public files, Rust/WASM sources and assets, build configuration,
+dependency manifests and lockfiles, and the pinned Node/Rust toolchains. Test,
+workflow, and prose-only changes do not deploy unless manually dispatched.
 Manual `workflow_dispatch` runs bypass the Pages path filter, select the full
 routine verification scope, and always publish the verified Pages artifact.
+
+Read-only checkouts do not persist credentials, and every job has an explicit
+timeout. Extended decoder triggers include the Rust/WASM artifact path and its
+build script.
 
 ## Specialized gates
 
