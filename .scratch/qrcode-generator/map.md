@@ -138,6 +138,23 @@
   generation in a separate WASM instance. Revisioned JSON metadata and a
   transferable PNG buffer preserve exact payloads and artifact bytes while
   keeping large preview work off the browser main thread.
+- [Ticket 40](issues/40-add-black-foreground-and-logo-theme.md): Add black as
+  the second approved QR foreground theme. The logo paint must match the QR
+  foreground, so black QR output uses a black ONE logo and magenta QR output
+  keeps the magenta ONE logo.
+- [Ticket 41](issues/41-replace-output-variants-with-approved-size-table.md):
+  Replace the selectable output variants, including Adaptive, with fixed Digital
+  and Print sizes; print variants use a 150 dpi millimeter to pixel conversion,
+  while final version ranges must be validated rather than copied directly from
+  the researched screenshot.
+- [Ticket 42](issues/42-allow-profile-version-selection-with-typed-failures.md):
+  Let each approved variant select the needed QR version within an evidence-backed
+  version policy, using module pitch and decoder results to confirm or adjust the
+  researched ranges while preserving exact payloads and typed failures.
+- [Ticket 43](issues/43-place-logo-upward-or-fallback-to-no-logo.md): Keep the
+  ONE logo horizontally centered, search upward only when placement needs to
+  move, and fall back to no-logo output before showing the normal typed capacity
+  or profile error.
 
 ## Notes
 
