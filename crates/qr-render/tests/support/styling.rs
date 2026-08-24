@@ -341,7 +341,7 @@ pub fn approved_combination_records() -> Result<Vec<ApprovedCombinationRecord>, 
             let (outcome, version, logo_placement) = match prepare_decode_case(tuple, case) {
                 Ok(prepared) => (
                     CombinationOutcome::Renderable {
-                        safety: tuple.expected_safety(),
+                        safety: prepared.options.safety(),
                     },
                     Some(prepared.encoded.version().number()),
                     prepared.logo_placement,
@@ -456,6 +456,7 @@ fn prepare_decode_case(
     }
     let model = RenderModel::new(&encoded, options)?;
     let logo_placement = model.logo_placement();
+    let options = model.options();
     Ok(PreparedDecodeCase {
         label: format!("{}-{}", tuple.label().replace('/', "-"), case.label),
         case_label,

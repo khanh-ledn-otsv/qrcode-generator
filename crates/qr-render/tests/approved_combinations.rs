@@ -161,7 +161,11 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
         if record.outcome.is_renderable() {
             assert_eq!(
                 record.outcome.safety(),
-                Some(record.tuple.expected_safety()),
+                Some(if record.logo_placement.is_some() {
+                    record.tuple.expected_safety()
+                } else {
+                    qr_render::OutputSafety::Safe
+                }),
                 "{}",
                 record.label()
             );
@@ -176,14 +180,12 @@ fn generated_matrix_records_every_tuple_payload_and_expected_outcome() {
             record.label()
         );
         if record.outcome.is_renderable() && record.tuple.logo == LogoStyle::Bundled {
-            let version = record.version.expect("branded rows record a version");
-            assert!(version == 6, "{} branded version", record.label());
-            let placement = record
-                .logo_placement
-                .expect("renderable branded rows record geometry");
+            let Some(placement) = record.logo_placement else {
+                continue;
+            };
             assert_eq!(placement.obscured_data_modules(), 105);
             assert_eq!(placement.obscured_remainder_modules(), 0);
-            if version == 6 {
+            if record.version == Some(6) {
                 assert_eq!(placement.protected_clearance(), 6);
             }
         } else {

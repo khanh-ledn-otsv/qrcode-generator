@@ -235,13 +235,13 @@ test("logo mode is enabled by default and can be turned off", async ({ page }) =
   await expect.poll(() => diagnostic(page, "ECC")).toBe("M");
 });
 
-test("fixed profiles reject centered branding above Version 6", async ({ page }) => {
+test("fixed profiles use upward branding above Version 6", async ({ page }) => {
   await selectProfile(page, "Business card");
   await page.getByLabel("Text to encode").fill("a".repeat(59));
 
-  await expect(page.getByRole("alert")).toContainText("Logo mode is approved only at QR Version 6");
-  await expect(page.getByTestId("download-svg")).toBeDisabled();
-  await expect(page.getByTestId("download-png")).toBeDisabled();
+  await expect(page.getByText("ONE requested", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("download-png")).toBeEnabled();
 });
 
 test("Poster / Package preserves fixed dimensions at Version 12", async ({ page }) => {

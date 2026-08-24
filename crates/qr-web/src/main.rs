@@ -476,6 +476,7 @@ fn App() -> impl IntoView {
                                 <Diagnostic label="Background" value=move || diagnostic_value(state, |_| "Opaque white".to_owned()) />
                                 <Diagnostic label="Modules" value=move || diagnostic_value(state, |_| "Rounded ONE".to_owned()) />
                                 <Diagnostic label="Logo" value=move || diagnostic_value(state, |details| logo_label(details.logo_style(), details.logo_placement())) />
+                                <Diagnostic label="Logo request" value=move || diagnostic_value(state, |details| logo_request_label(details.requested_logo_style(), details.logo_fallback_reason())) />
                                 <Diagnostic label="Logo bounds" value=move || diagnostic_value(state, |details| logo_bounds_label(details.logo_placement())) />
                                 <Diagnostic label="Contrast" value=move || diagnostic_value(state, |details| contrast_label(details.contrast_ratio())) />
                                 <Diagnostic label="Safety" value=move || diagnostic_value(state, |details| safety_label(details.safety()).to_owned()) />
@@ -709,6 +710,14 @@ fn logo_label(style: LogoStyle, placement: Option<qr_web::workflow::LogoDiagnost
             placement.obscured_remainder_modules()
         ),
         (LogoStyle::Bundled, None) => "Unavailable".to_owned(),
+    }
+}
+
+fn logo_request_label(style: LogoStyle, fallback_reason: Option<&'static str>) -> String {
+    match (style, fallback_reason) {
+        (LogoStyle::Bundled, Some(reason)) => format!("ONE requested; disabled: {reason}"),
+        (LogoStyle::Bundled, None) => "ONE requested".to_owned(),
+        (LogoStyle::None, _) => "No logo requested".to_owned(),
     }
 }
 

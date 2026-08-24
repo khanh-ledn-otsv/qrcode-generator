@@ -485,10 +485,12 @@ impl RenderCell {
 pub struct RenderModel<'encoded> {
     encoded: &'encoded EncodedQr,
     options: RenderOptions,
+    requested_logo_style: LogoStyle,
     symbol: SymbolGeometry,
     svg_placement: SvgPlacement,
     png_placement: PngPlacement,
     logo_placement: Option<LogoPlacement>,
+    logo_fallback_reason: Option<&'static str>,
     cells: Vec<RenderCell>,
 }
 
@@ -497,12 +499,21 @@ impl<'encoded> RenderModel<'encoded> {
         if options.logo_style() == LogoStyle::Bundled && encoded.ecc() != ErrorCorrection::High {
             return Err(RenderError::LogoRequiresHighEcc);
         }
-        let logo_placement = match options.logo_style() {
-            LogoStyle::None => None,
-            LogoStyle::Bundled => Some(calculate_logo_placement(
-                encoded.modules(),
-                options.profile().id(),
-            )?),
+        let requested_logo_style = options.logo_style();
+        let (logo_placement, logo_fallback_reason) = match requested_logo_style {
+            LogoStyle::None => (None, None),
+            LogoStyle::Bundled => {
+                match calculate_logo_placement(encoded.modules(), options.profile().id()) {
+                    Ok(placement) => (Some(placement), None),
+                    Err(RenderError::UnsafeLogoGeometry) => (None, Some("unsafe logo geometry")),
+                    Err(error) => return Err(error),
+                }
+            }
+        };
+        let options = if logo_fallback_reason.is_some() {
+            options.with_logo(LogoStyle::None)?
+        } else {
+            options
         };
         let cells = classify_cells(encoded.modules(), logo_placement)?;
         let svg_dimensions = options
@@ -536,6 +547,7 @@ impl<'encoded> RenderModel<'encoded> {
         Ok(Self {
             encoded,
             options,
+            requested_logo_style,
             symbol,
             svg_placement: SvgPlacement {
                 output_dimensions: svg_dimensions,
@@ -552,6 +564,7 @@ impl<'encoded> RenderModel<'encoded> {
                 rgba_buffer_len,
             },
             logo_placement,
+            logo_fallback_reason,
             cells,
         })
     }
@@ -582,6 +595,11 @@ impl<'encoded> RenderModel<'encoded> {
     }
 
     #[must_use]
+    pub const fn requested_logo_style(&self) -> LogoStyle {
+        self.requested_logo_style
+    }
+
+    #[must_use]
     pub const fn symbol(&self) -> SymbolGeometry {
         self.symbol
     }
@@ -599,6 +617,11 @@ impl<'encoded> RenderModel<'encoded> {
     #[must_use]
     pub const fn logo_placement(&self) -> Option<LogoPlacement> {
         self.logo_placement
+    }
+
+    #[must_use]
+    pub const fn logo_fallback_reason(&self) -> Option<&'static str> {
+        self.logo_fallback_reason
     }
 
     /// Visible dark module glyphs in deterministic row-major order.

@@ -30,7 +30,11 @@ fn representative_profile_and_logo_artifacts_stay_within_recorded_resource_basel
 -> Result<(), Box<dyn Error>> {
     let baselines = resource_baselines()?;
     let cases = styling::representative_decode_cases()?;
-    assert!(cases.len() < styling::approved_style_tuples().len());
+    assert_eq!(
+        cases.len(),
+        styling::approved_style_tuples().len(),
+        "unsafe branding combinations fall back to no-logo output"
+    );
 
     for case in cases {
         let model = RenderModel::new(&case.encoded, case.options)?;

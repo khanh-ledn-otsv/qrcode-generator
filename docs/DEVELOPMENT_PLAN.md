@@ -183,9 +183,10 @@ is excluded.
   symbol. Every integer width from 14 through
   18 exceeded the checked 40%-of-matrix knockout bound. A 13-module source is therefore the
   largest admitted centered ONE treatment.
-- Inline, Content, Landing, and Print retain that exact Version 6-only policy.
-  Versions 7–13 on those fixed profiles intentionally reject branding because
-  exact centering intersects protected central alignment geometry.
+- Inline, Content, Landing, and Print retain the exact Version 6-centered
+  placement when it is safe. Versions 7–11 search from the exact center upward
+  and use the first function-safe placement; unsafe branding falls back to the
+  same exact-payload no-logo output.
 - Adaptive admits Versions 6–11 with dimensions derived from the selected
   version. Version 10 uses a 260 px SVG / 390 px PNG canvas.
   Version 10 has a 57-module matrix, a 65-module logical extent including the
@@ -207,10 +208,12 @@ is excluded.
   placement through independent native-PNG/rasterized-SVG decoding. The
   generated selected-geometry table is
   [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
-- Versions 1–5 remain below the branded minimum. Versions 12–40 return a typed
-  unsafe-logo-geometry rejection until separately approved decode evidence is
-  committed; users can disable the logo without changing the payload. Logo
-  output stays classified as a caution on every valid profile/version row.
+- Versions 1–5 remain below the branded minimum and Versions 12–40 remain
+  outside the approved geometry range. These rows render the same exact-payload
+  no-logo output with a diagnostic explaining that branding was disabled. If
+  the no-logo encoding itself cannot fit, the normal typed capacity/profile
+  error is returned. Branded output stays classified as a caution; fallback
+  output is classified as safe.
 - The knockout must not intersect any function module: finder, separator, timing, alignment, format, version, or fixed-dark module. A conflict is `Invalid`, not merely a warning.
 - Overlapped data and remainder modules are counted and reported. Logo mode remains a caution even when valid.
 - The renderer compile-time embeds the sanitized project-owned ONE lettermark at

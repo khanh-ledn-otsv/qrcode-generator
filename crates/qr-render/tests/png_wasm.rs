@@ -11,7 +11,7 @@ mod png_fixture;
 
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{LogoStyle, RenderError, RenderModel, RenderOptions, SUPPORTED_PROFILES};
+use qr_render::{LogoStyle, RenderModel, RenderOptions, SUPPORTED_PROFILES};
 
 #[wasm_bindgen_test]
 fn png_bytes_match_the_native_artifact_fixture() {
@@ -39,7 +39,7 @@ fn unbranded_inline_version_six_svg_and_png_match_the_native_fixture() {
 }
 
 #[wasm_bindgen_test]
-fn branded_version_seven_is_rejected_on_wasm() {
+fn branded_version_seven_uses_adaptive_logo_on_wasm() {
     let version_seven = Version::new(7).unwrap();
     let encoded = encode(EncodeRequest::with_version_range(
         &"a".repeat(59),
@@ -53,8 +53,6 @@ fn branded_version_seven_is_rejected_on_wasm() {
         .with_logo(LogoStyle::Bundled)
         .unwrap();
 
-    assert_eq!(
-        RenderModel::new(&encoded, options).unwrap_err(),
-        RenderError::UnsafeLogoGeometry
-    );
+    let model = RenderModel::new(&encoded, options).unwrap();
+    assert!(model.logo_placement().is_some());
 }

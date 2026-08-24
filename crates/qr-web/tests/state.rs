@@ -1,7 +1,7 @@
 use qr_core::encoding::EciAssignment;
 use qr_core::tables::{DataMode, ErrorCorrection};
 use qr_core::{EncodeRequest, EncodingMode, encode};
-use qr_render::{ContrastRatio, ForegroundTheme, OutputSafety, ProfileId, Rgba};
+use qr_render::{ContrastRatio, ForegroundTheme, LogoStyle, OutputSafety, ProfileId, Rgba};
 use qr_web::workflow::{
     ArtifactKind, WorkflowFailure, WorkflowState, evaluate_preview, link_capacity_guide,
 };
@@ -351,7 +351,6 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
         assert!(matches!(
             evaluate_preview(&one_over),
             Err(WorkflowFailure::OverCapacity { .. })
-                | Err(WorkflowFailure::UnsafeLogoGeometry { .. })
         ));
 
         if row.with_logo_ascii_bytes() == 0 {
@@ -369,12 +368,20 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
         let one_over = branded
             .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes() + 1))
             .expect("one-over branded boundary produces a request");
-        let one_over = evaluate_preview(&one_over);
-        assert!(matches!(
-            one_over,
-            Err(WorkflowFailure::OverCapacity { .. })
-                | Err(WorkflowFailure::UnsafeLogoGeometry { .. })
-        ));
+        match evaluate_preview(&one_over) {
+            Ok(preview) => {
+                if preview.diagnostics().logo_style() == LogoStyle::None {
+                    assert_eq!(
+                        preview.diagnostics().logo_fallback_reason(),
+                        Some("unsafe logo geometry")
+                    );
+                } else {
+                    assert_eq!(preview.diagnostics().logo_style(), LogoStyle::Bundled);
+                }
+            }
+            Err(WorkflowFailure::OverCapacity { .. }) => {}
+            Err(failure) => panic!("unexpected one-over branding failure: {failure:?}"),
+        }
     }
 }
 
@@ -385,7 +392,7 @@ fn synthetic_ascii_url(length: usize) -> String {
 }
 
 #[test]
-fn fixed_variant_rejects_logo_geometry_above_version_six() {
+fn fixed_variant_falls_back_from_unsafe_logo_geometry() {
     let payload = format!("https://example.test/{}", "a".repeat(120));
     let mut state = WorkflowState::new(ProfileId::PosterPackage);
     state
@@ -396,14 +403,15 @@ fn fixed_variant_rejects_logo_geometry_above_version_six() {
         .expect("revision is available");
 
     assert_eq!(branded.ecc(), ErrorCorrection::High);
-    let result = evaluate_preview(&branded);
-    assert_eq!(result, Err(WorkflowFailure::UnsafeLogoGeometry {}));
-    assert!(state.complete_preview(branded.revision(), result));
+    let preview = evaluate_preview(&branded).expect("unsafe branding falls back");
     assert_eq!(
-        state.validation_message().as_deref(),
-        Some(
-            "Logo mode is approved only at QR Version 6 for these fixed output variants. Disable the logo to keep this exact payload."
-        ),
+        preview.diagnostics().requested_logo_style(),
+        LogoStyle::Bundled
+    );
+    assert_eq!(preview.diagnostics().logo_style(), LogoStyle::None);
+    assert_eq!(
+        preview.diagnostics().logo_fallback_reason(),
+        Some("unsafe logo geometry")
     );
 
     let unbranded = state
@@ -614,7 +622,7 @@ fn inline_logo_mode_admits_the_branded_minimum_and_enables_exports() {
 }
 
 #[test]
-fn logo_mode_rejects_a_naturally_larger_version_without_reviewed_centered_geometry() {
+fn logo_mode_uses_reviewed_upward_geometry_for_a_naturally_larger_version() {
     let mut state = WorkflowState::new(ProfileId::BusinessCard);
     state
         .set_logo_enabled(true)
@@ -626,13 +634,13 @@ fn logo_mode_rejects_a_naturally_larger_version_without_reviewed_centered_geomet
     assert_eq!(request.ecc(), ErrorCorrection::High);
     assert_eq!(request.minimum_version().number(), 6);
     assert!(state.complete_preview(request.revision(), evaluate_preview(&request)));
-    assert_eq!(
-        state.validation_message().as_deref(),
-        Some(
-            "Logo mode is approved only at QR Version 6 for these fixed output variants. Disable the logo to keep this exact payload."
-        ),
-    );
-    assert!(!state.exports_enabled());
+    let diagnostics = state
+        .preview()
+        .expect("adaptive logo preview is valid")
+        .diagnostics();
+    assert_eq!(diagnostics.selected_version().number(), 7);
+    assert!(diagnostics.logo_placement().is_some());
+    assert!(state.exports_enabled());
 }
 
 #[test]

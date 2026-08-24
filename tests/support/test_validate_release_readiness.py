@@ -88,24 +88,12 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             covered_version,
         ) = scenario
         logo = logo_state_index == 1
-        supports_centered_logo = profile_index in branding["fixed_profile_indices"] and (
+        supports_logo = profile_index in branding["fixed_profile_indices"] and (
             policy["profile_min_versions"][profile_index]
             <= branding["minimum_version"]
             <= policy["profile_max_versions"][profile_index]
         )
-        decoded = not logo or (
-            supports_centered_logo
-            and (
-                (
-                    case_kind == "required-payload"
-                    and (payload_class != "dense-url" or profile_index == 0)
-                )
-                or (
-                    case_kind == "version-coverage"
-                    and covered_version == branding["minimum_version"]
-                )
-            )
-        )
+        decoded = True
         outcome = "decoded" if decoded else "expected-invalid"
         artifact = {
             "outcome": outcome,
@@ -115,6 +103,7 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
         row_version = covered_version
         if case_kind == "required-payload" and decoded and logo:
             row_version = branding["minimum_version"]
+        has_reviewed_geometry = isinstance(row_version, int) and 6 <= row_version <= 11
         row = {
             "id": f"row-{index}",
             "case_kind": case_kind,
@@ -124,11 +113,11 @@ def approved_matrix_rows() -> list[dict[str, Any]]:
             "foreground_index": foreground_index,
             "payload_class": payload_class,
             "version": row_version,
-            "safety": "caution" if decoded else None,
+            "safety": "caution" if logo and supports_logo and has_reviewed_geometry else "safe",
             "logo_geometry": None,
             "artifacts": {"png": dict(artifact), "svg": dict(artifact)},
         }
-        if logo and decoded:
+        if logo and decoded and supports_logo and has_reviewed_geometry:
             row["logo_geometry"] = _expected_logo_geometry(row, branding)
         rows.append(row)
     return rows

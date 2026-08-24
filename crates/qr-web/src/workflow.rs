@@ -250,7 +250,9 @@ pub struct Diagnostics {
     print_guidance: &'static str,
     safety: OutputSafety,
     contrast_ratio: ContrastRatio,
+    requested_logo_style: LogoStyle,
     logo_style: LogoStyle,
+    logo_fallback_reason: Option<&'static str>,
     logo_placement: Option<LogoDiagnostics>,
 }
 
@@ -466,6 +468,16 @@ impl Diagnostics {
     #[must_use]
     pub const fn logo_style(self) -> LogoStyle {
         self.logo_style
+    }
+
+    #[must_use]
+    pub const fn requested_logo_style(self) -> LogoStyle {
+        self.requested_logo_style
+    }
+
+    #[must_use]
+    pub const fn logo_fallback_reason(self) -> Option<&'static str> {
+        self.logo_fallback_reason
     }
 
     #[must_use]
@@ -872,7 +884,7 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
         png,
         diagnostics: Diagnostics {
             profile_id: profile.id(),
-            foreground_theme: options.foreground_theme(),
+            foreground_theme: model.options().foreground_theme(),
             mode: encoded.mode(),
             eci_assignment: encoded.eci_assignment(),
             ecc: encoded.ecc(),
@@ -893,9 +905,11 @@ pub fn evaluate_preview(request: &PreviewRequest) -> Result<Preview, WorkflowFai
             rendered_symbol_side_pixels: png_placement.rendered_symbol_dimensions().width().get(),
             outer_padding_per_side: outer_padding.left.get(),
             print_guidance: profile_presentation(profile.id()).guidance(),
-            safety: options.safety(),
-            contrast_ratio: options.contrast_ratio(),
-            logo_style: options.logo_style(),
+            safety: model.options().safety(),
+            contrast_ratio: model.options().contrast_ratio(),
+            requested_logo_style: model.requested_logo_style(),
+            logo_style: model.options().logo_style(),
+            logo_fallback_reason: model.logo_fallback_reason(),
             logo_placement: model.logo_placement().map(LogoDiagnostics::from_placement),
         },
     })

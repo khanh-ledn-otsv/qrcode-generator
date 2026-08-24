@@ -181,15 +181,33 @@ pub(crate) fn calculate_logo_placement(
     matrix: &ModuleMatrix,
     _profile_id: ProfileId,
 ) -> Result<LogoPlacement, RenderError> {
-    if matrix.version() != BRANDED_LOGO_VERSION {
+    if !(6..=11).contains(&matrix.version().number()) {
         return Err(RenderError::UnsafeLogoGeometry);
     }
-    centered_logo_placement(matrix, SOURCE_WIDTH_TEN_THOUSANDTHS)
+    let matrix_width = u32::from(matrix.size());
+    let center_offset = if matrix.version() == BRANDED_LOGO_VERSION {
+        0
+    } else {
+        6
+    };
+    for upward_modules in center_offset..matrix_width {
+        let upward_offset = upward_modules
+            .checked_mul(TEN_THOUSANDTHS_PER_MODULE)
+            .ok_or(RenderError::DimensionOverflow)?;
+        let Ok(placement) =
+            centered_logo_placement(matrix, SOURCE_WIDTH_TEN_THOUSANDTHS, upward_offset)
+        else {
+            continue;
+        };
+        return Ok(placement);
+    }
+    Err(RenderError::UnsafeLogoGeometry)
 }
 
 fn centered_logo_placement(
     matrix: &ModuleMatrix,
     source_width: u32,
+    upward_offset: u32,
 ) -> Result<LogoPlacement, RenderError> {
     let matrix_width = u32::from(matrix.size());
     let source_height = source_width
@@ -205,6 +223,7 @@ fn centered_logo_placement(
         .checked_mul(TEN_THOUSANDTHS_PER_MODULE)
         .and_then(|width| width.checked_sub(source_height))
         .map(|difference| difference / 2)
+        .and_then(|top| top.checked_sub(upward_offset))
         .ok_or(RenderError::UnsafeLogoGeometry)?;
     placement_for_source(matrix, centered_left, centered_top, source_width)
 }

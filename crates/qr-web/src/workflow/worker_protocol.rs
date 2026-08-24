@@ -231,7 +231,9 @@ struct WireDiagnostics {
     foreground_theme: u8,
     safety: u8,
     contrast_hundredths: u16,
+    requested_logo_style: u8,
     logo_style: u8,
+    logo_fallback: bool,
     logo_placement: Option<WireLogoDiagnostics>,
 }
 
@@ -316,7 +318,9 @@ impl WireDiagnostics {
             foreground_theme: foreground_theme_number(value.foreground_theme),
             safety: matches!(value.safety, OutputSafety::Caution).into(),
             contrast_hundredths: value.contrast_ratio.hundredths(),
+            requested_logo_style: matches!(value.requested_logo_style, LogoStyle::Bundled).into(),
             logo_style: matches!(value.logo_style, LogoStyle::Bundled).into(),
+            logo_fallback: value.logo_fallback_reason.is_some(),
             logo_placement: value.logo_placement.map(Into::into),
         }
     }
@@ -362,11 +366,17 @@ impl WireDiagnostics {
                 OutputSafety::Caution
             },
             contrast_ratio: ContrastRatio::from_hundredths(self.contrast_hundredths),
+            requested_logo_style: if self.requested_logo_style == 0 {
+                LogoStyle::None
+            } else {
+                LogoStyle::Bundled
+            },
             logo_style: if self.logo_style == 0 {
                 LogoStyle::None
             } else {
                 LogoStyle::Bundled
             },
+            logo_fallback_reason: self.logo_fallback.then_some("unsafe logo geometry"),
             logo_placement: self.logo_placement.map(Into::into),
         })
     }
@@ -379,8 +389,10 @@ impl WireDiagnostics {
         let maximum =
             Version::new(self.maximum_version).map_err(|_| ProtocolError::InvalidMessage)?;
         let valid_mode = matches!((self.mode, self.single_mode), (0, Some(0..=3)) | (1, None));
-        let valid_logo = matches!(self.logo_style, 0..=1)
-            && (self.logo_style == 1) == self.logo_placement.is_some();
+        let valid_logo = matches!(self.requested_logo_style, 0..=1)
+            && matches!(self.logo_style, 0..=1)
+            && (self.logo_style == 1) == self.logo_placement.is_some()
+            && self.logo_fallback == (self.requested_logo_style == 1 && self.logo_style == 0);
         let profile = profile_from_number(self.profile).ok_or(ProtocolError::InvalidMessage)?;
         let compiled_profile =
             super::supported_profile(profile).ok_or(ProtocolError::InvalidMessage)?;

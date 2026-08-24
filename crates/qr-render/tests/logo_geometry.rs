@@ -4,9 +4,7 @@ mod high_versions;
 use qr_core::matrix::ModuleKind;
 use qr_core::tables::ErrorCorrection;
 use qr_core::{EncodeRequest, Version, encode};
-use qr_render::{
-    LogoStyle, OutputSafety, RenderError, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES,
-};
+use qr_render::{LogoStyle, OutputSafety, RenderModel, RenderOptions, Rgba, SUPPORTED_PROFILES};
 
 #[test]
 fn version_six_uses_the_exact_decode_backed_centered_logo_placement() {
@@ -18,7 +16,7 @@ fn version_six_uses_the_exact_decode_backed_centered_logo_placement() {
         version_six,
     ))
     .unwrap();
-    let options = RenderOptions::safe(SUPPORTED_PROFILES[1])
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[2])
         .unwrap()
         .with_logo(LogoStyle::Bundled)
         .unwrap();
@@ -48,7 +46,54 @@ fn version_six_uses_the_exact_decode_backed_centered_logo_placement() {
 }
 
 #[test]
-fn every_enabled_fixed_logo_placement_is_function_safe() {
+fn version_ten_moves_the_logo_upward_and_unsafe_branding_falls_back() {
+    let version_ten = Version::new(10).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
+        "logo",
+        ErrorCorrection::High,
+        version_ten,
+        version_ten,
+    ))
+    .unwrap();
+    let options = RenderOptions::safe(SUPPORTED_PROFILES[2])
+        .unwrap()
+        .with_logo(LogoStyle::Bundled)
+        .unwrap();
+    let model = RenderModel::new(&encoded, options).unwrap();
+
+    let placement = model.logo_placement().expect("version 10 logo placement");
+    let source = placement.source_bounds();
+    let knockout = placement.knockout_bounds();
+    assert_eq!(source.left_ten_thousandths(), 220_000);
+    assert_eq!(source.top_ten_thousandths(), 200_625);
+    assert_eq!(
+        (
+            knockout.left().get(),
+            knockout.top().get(),
+            knockout.width().get(),
+            knockout.height().get(),
+        ),
+        (21, 19, 15, 7),
+    );
+    assert_eq!(placement.protected_clearance(), 0);
+
+    let version_twelve = Version::new(12).unwrap();
+    let encoded = encode(EncodeRequest::with_version_range(
+        "logo",
+        ErrorCorrection::High,
+        version_twelve,
+        version_twelve,
+    ))
+    .unwrap();
+    let model = RenderModel::new(&encoded, options).unwrap();
+    assert!(model.logo_placement().is_none());
+    assert_eq!(model.requested_logo_style(), LogoStyle::Bundled);
+    assert_eq!(model.options().logo_style(), LogoStyle::None);
+    assert_eq!(model.logo_fallback_reason(), Some("unsafe logo geometry"));
+}
+
+#[test]
+fn every_supported_logo_placement_is_function_safe_or_falls_back() {
     for profile in SUPPORTED_PROFILES {
         let versions: Vec<u8> =
             (profile.minimum_version().number()..=profile.maximum_version().number()).collect();
@@ -67,15 +112,17 @@ fn every_enabled_fixed_logo_placement_is_function_safe() {
                 .with_logo(LogoStyle::Bundled)
                 .unwrap();
             let model = RenderModel::new(&encoded, options);
-            let enabled = version_number == 6;
-            if !enabled {
-                assert_eq!(model.unwrap_err(), RenderError::UnsafeLogoGeometry);
+            let model = model.unwrap_or_else(|error| {
+                panic!("version {version_number} should render with fallback: {error}")
+            });
+            if !(6..=11).contains(&version_number) {
+                assert!(model.logo_placement().is_none());
+                assert_eq!(model.logo_fallback_reason(), Some("unsafe logo geometry"));
                 continue;
             }
-            let model = model.unwrap_or_else(|error| {
-                panic!("version {version_number} should have centered logo geometry: {error}")
-            });
-            let placement = model.logo_placement().expect("logo placement");
+            let placement = model
+                .logo_placement()
+                .unwrap_or_else(|| panic!("version {version_number} unexpectedly fell back"));
             let knockout = placement.knockout_bounds();
             let source = placement.source_bounds();
             let matrix_width = u32::from(encoded.version().symbol_size());
@@ -85,11 +132,12 @@ fn every_enabled_fixed_logo_placement_is_function_safe() {
                 matrix_width * 10_000,
                 "version {version_number} logo is not horizontally centered",
             );
-            assert_eq!(
-                source.top_ten_thousandths() * 2 + source.height_ten_thousandths(),
-                matrix_width * 10_000,
-                "version {version_number} logo is not vertically centered",
-            );
+            let expected_top = if version_number == 6 {
+                (matrix_width * 10_000 - source.height_ten_thousandths()) / 2
+            } else {
+                (matrix_width * 10_000 - source.height_ten_thousandths()) / 2 - 60_000
+            };
+            assert_eq!(source.top_ten_thousandths(), expected_top);
 
             assert!(knockout.width().get() * 5 <= matrix_width * 2);
             assert!(knockout.height().get() * 5 <= matrix_width * 2);

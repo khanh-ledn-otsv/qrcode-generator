@@ -233,8 +233,11 @@ def _validate_approved_matrix(path: Path) -> tuple[int, int, int]:
                     raise ResultEvidenceError(f"{row['id']} has invalid artifact hashes")
             if row.get("logo_state_index") == 1:
                 branded += 1
-                if row.get("logo_geometry") != _expected_logo_geometry(row, branding):
-                    raise ResultEvidenceError(f"{row['id']} has unapproved branded geometry")
+                if row.get("safety") == "caution":
+                    if row.get("logo_geometry") != _expected_logo_geometry(row, branding):
+                        raise ResultEvidenceError(f"{row['id']} has unapproved branded geometry")
+                elif row.get("logo_geometry") is not None:
+                    raise ResultEvidenceError(f"{row['id']} has geometry after logo fallback")
         elif outcome == "expected-invalid":
             invalid += 1
             if row.get("safety") is not None or row.get("logo_geometry") is not None:

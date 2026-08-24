@@ -19,7 +19,7 @@
   "branded_geometry_policy": {
     "fixed_profile_indices": [0, 1, 2, 3, 4, 5, 6],
     "minimum_version": 6,
-    "maximum_version": 6,
+    "maximum_version": 11,
     "geometry_rows": [
       {
         "profile_indices": [0, 1, 2, 3, 4, 5, 6],
@@ -29,6 +29,51 @@
         "protected_clearance_modules": 6,
         "obscured_data_modules": 105,
         "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [0, 1, 2, 3, 4, 5, 6],
+        "version": 7,
+        "source_ten_thousandths": [160000, 140625, 130000, 48750],
+        "knockout_modules": [15, 13, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [0, 1, 2, 3, 4, 5, 6],
+        "version": 8,
+        "source_ten_thousandths": [180000, 160625, 130000, 48750],
+        "knockout_modules": [17, 15, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [0, 1, 2, 3, 4, 5, 6],
+        "version": 9,
+        "source_ten_thousandths": [200000, 180625, 130000, 48750],
+        "knockout_modules": [19, 17, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [0, 1, 2, 3, 4, 5, 6],
+        "version": 10,
+        "source_ten_thousandths": [220000, 200625, 130000, 48750],
+        "knockout_modules": [21, 19, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
+      },
+      {
+        "profile_indices": [0, 1, 2, 3, 4, 5, 6],
+        "version": 11,
+        "source_ten_thousandths": [240000, 220625, 130000, 48750],
+        "knockout_modules": [23, 21, 15, 7],
+        "protected_clearance_modules": 0,
+        "obscured_data_modules": 105,
+        "obscured_remainder_modules": 0
       }
     ]
   },
@@ -36,7 +81,7 @@
     "required_payload": 168,
     "version_coverage": 172,
     "total": 340,
-    "decoded": 244,
-    "expected_invalid": 96
+    "decoded": 340,
+    "expected_invalid": 0
   }
 }

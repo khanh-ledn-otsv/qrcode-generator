@@ -67,7 +67,7 @@ fn logo_mode_selects_the_branded_minimum_and_keeps_exports_available_on_wasm() {
 }
 
 #[wasm_bindgen_test]
-fn fixed_logo_rejects_a_naturally_larger_version_on_wasm() {
+fn fixed_logo_uses_adaptive_geometry_for_a_naturally_larger_version_on_wasm() {
     let payload = "a".repeat(59);
     let mut state = WorkflowState::new(ProfileId::PosterPackage);
     state
@@ -77,10 +77,13 @@ fn fixed_logo_rejects_a_naturally_larger_version_on_wasm() {
         .set_payload(payload.to_owned())
         .expect("revision is available");
     assert_eq!(request.payload(), payload);
-    assert_eq!(
-        evaluate_preview(&request),
-        Err(WorkflowFailure::UnsafeLogoGeometry {})
-    );
+    let preview = evaluate_preview(&request).expect("adaptive logo geometry renders");
+    let placement = preview
+        .diagnostics()
+        .logo_placement()
+        .expect("version 7 has adaptive logo geometry");
+    assert_eq!(placement.source_left_ten_thousandths(), 160_000);
+    assert_eq!(placement.source_top_ten_thousandths(), 140_625);
 }
 
 #[wasm_bindgen_test]
