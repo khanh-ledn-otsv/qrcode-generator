@@ -1,0 +1,54 @@
+---
+import { Image } from "astro:assets";
+
+import "../styles/global.css";
+
+interface Props {
+  activePage: "generator" | "guideline";
+  description: string;
+  heading: string;
+  title: string;
+}
+
+const { activePage, description, heading, title } = Astro.props;
+const base = import.meta.env.BASE_URL.endsWith("/")
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const guidelineHref = `${base}guideline/`;
+const logoUrl = `${base}images/one-logotype-white.png`;
+const activeClasses = "border-b-2 border-brand text-brand";
+const inactiveClasses = "text-text-muted";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#f8fafc" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="h-16 bg-brand px-4 sm:px-6">
+      <div class="mx-auto flex h-full max-w-5xl items-center justify-center">
+        <Image class="h-10 w-auto object-contain" src={logoUrl} width={312} height={180} alt="ONE" loading="eager" />
+      </div>
+    </header>
+    <main class="bg-page px-4 py-8 sm:px-6 sm:py-12">
+      <div class="mx-auto max-w-5xl">
+        <header>
+          <h1 class="text-2xl font-bold text-text sm:text-3xl">{heading}</h1>
+          <p class="mt-1 text-sm text-text-muted">Standard QR code follows ISO/IEC 18004:2024</p>
+        </header>
+        <nav class="mt-8 flex border-b border-border" aria-label="QR generator sections">
+          <a class:list={["px-3 py-2 text-sm font-semibold", activePage === "generator" ? activeClasses : inactiveClasses]} href={base} aria-current={activePage === "generator" ? "page" : undefined}>Generator</a>
+          <a class:list={["px-3 py-2 text-sm font-semibold", activePage === "guideline" ? activeClasses : inactiveClasses]} href={guidelineHref} aria-current={activePage === "guideline" ? "page" : undefined}>Guideline</a>
+        </nav>
+        <div class="mt-8">
+          <slot />
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

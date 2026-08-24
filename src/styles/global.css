@@ -53,7 +53,7 @@
   max-width: 100%;
 }
 
-#usage-panel section {
+[data-testid="usage-guide"] section {
   margin-bottom: 3rem;
 }
 

@@ -7,10 +7,6 @@ import { SAFE_PAYLOAD, selectProfile, sha256 } from "./helpers";
 test("repeated wasm generation preserves deterministic availability", async ({ page }) => {
   await page.goto("/");
   await selectProfile(page, "Poster / Package");
-  const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
-  if (await logo.isChecked()) {
-    await logo.click();
-  }
 
   const input = page.getByLabel("Base URL");
   await input.fill(`https://e.test/${"A1a".repeat(40)}`);
@@ -89,26 +85,19 @@ test("a malformed worker result fails safely and a later edit replaces the worke
 
 test("actual wasm artifacts are deterministic for approved request shapes", async ({ page }) => {
   await page.goto("/");
-  const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
-  if (await logo.isChecked()) {
-    await logo.click();
-  }
 
   const cases = [
     {
       profile: "Standard",
       payload: "https://example.test/caf%C3%A9/%E4%B8%96%E7%95%8C",
-      logo: false,
     },
     {
       profile: "Poster / Package",
       payload: "https://example.test/HELLOworld1234567890",
-      logo: false,
     },
     {
       profile: "Small",
       payload: SAFE_PAYLOAD,
-      logo: true,
     },
   ];
 
@@ -116,9 +105,6 @@ test("actual wasm artifacts are deterministic for approved request shapes", asyn
   /* oxlint-disable no-await-in-loop */
   for (const artifact of cases) {
     await selectProfile(page, artifact.profile);
-    if ((await logo.isChecked()) !== artifact.logo) {
-      await logo.click();
-    }
     await page.getByLabel("Base URL").fill(artifact.payload);
     await expect(page.getByTestId("download-svg")).toBeEnabled();
     const [svgDownload] = await Promise.all([

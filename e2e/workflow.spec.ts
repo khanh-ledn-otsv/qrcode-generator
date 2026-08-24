@@ -25,6 +25,12 @@ test("profile controls are keyboard accessible and preserve declared geometry", 
 }) => {
   await enterPayload(page, "https://e.test/geometry");
   const select = page.getByLabel("Output variant");
+  await expect(select.locator("option")).toHaveText([
+    "Small",
+    "Standard",
+    "Primary CTA",
+    "Hero / Campaign",
+  ]);
   await select.focus();
   await select.selectOption("small");
   await expect(select).toBeFocused();
@@ -39,16 +45,23 @@ test("profile controls are keyboard accessible and preserve declared geometry", 
 
   await expect.poll(() => diagnostic(page, "Output")).toBe("100 px SVG / 300 px PNG");
   await expect.poll(() => diagnostic(page, "Version")).toContain("V6 max");
+
+  await page.getByRole("radio", { name: "Print" }).check();
+  await expect(select.locator("option")).toHaveText([
+    "Business card",
+    "Flyer / Brochure",
+    "Poster / Package",
+  ]);
+  await expect(select).toHaveValue("business-card");
 });
 
-test("approved colors and QR logo control update output without changing the URL", async ({
+test("approved colors preserve the automatic QR logo without changing the URL", async ({
   page,
 }) => {
   const url = "https://e.test/brand";
   await enterPayload(page, url);
   const encoded = page.getByLabel("Encoded URL");
-  const logo = page.getByRole("checkbox", { name: "ONE logo in QR" });
-  await expect(logo).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "ONE logo in QR" })).toHaveCount(0);
   await expect(page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]')).toHaveCount(1);
 
   await page.getByRole("radio", { name: "Black" }).check();
@@ -56,10 +69,9 @@ test("approved colors and QR logo control update output without changing the URL
     "fill",
     "#000000",
   );
-  await logo.uncheck();
-  await expect(page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]')).toHaveCount(0);
+  await expect(page.getByTestId("qr-preview").locator('[data-role="bundled-logo"]')).toHaveCount(1);
   await expect(encoded).toHaveValue(url);
-  await expect(page.getByText(/typical ASCII maximum: 152/)).toBeVisible();
+  await expect(page.getByText(/typical ASCII maximum: 84/)).toBeVisible();
 });
 
 test("long branded URLs use the existing no-logo fallback and keep the exact URL", async ({

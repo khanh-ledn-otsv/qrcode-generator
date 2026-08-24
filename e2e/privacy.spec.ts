@@ -35,7 +35,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
 
   await enterPayload(page, SAFE_PAYLOAD);
   await expect(page.getByRole("checkbox", { name: /Rounded ONE modules/ })).toHaveCount(0);
-  await expect(page.getByRole("checkbox", { name: /ONE logo in QR/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /ONE logo in QR/ })).toHaveCount(0);
   await selectProfile(page, "Business card");
   await expect(page.getByLabel("Output variant")).toHaveValue("business-card");
   await expect(page.getByRole("group", { name: "Background treatment" })).toHaveCount(0);
@@ -59,10 +59,9 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
     );
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
 
-  await page.getByRole("checkbox", { name: /ONE logo in QR/ }).click();
   await selectProfile(page, "Poster / Package");
   await enterPayload(page, `https://e.test/${"a".repeat(272)}`);
-  await expect(page.getByRole("checkbox", { name: /ONE logo in QR/ })).not.toBeChecked();
+  await expect(page.getByText("ONE requested; disabled:")).toBeVisible();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [pngDownload] = await Promise.all([
     page.waitForEvent("download"),

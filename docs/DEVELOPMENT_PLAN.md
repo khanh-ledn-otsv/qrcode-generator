@@ -118,7 +118,7 @@ non-ASCII characters may occupy multiple UTF-8 bytes plus ECI overhead,
 QR-alphanumeric-only input can sometimes fit more, and the exact preview result
 remains authoritative.
 
-The bundled logo is enabled by default and is the only release-1 choice that changes ECC: logo mode uses ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. Disabling the logo restores ECC M, the Version 1 minimum, and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
+The release-1 browser workflow always requests the bundled logo and offers no user control to disable it. Logo mode uses ECC H and an approved Version 6 minimum before version fitting, then recalculates the selected version and all capacity diagnostics. The selected version is the greater of the payload's first fit and the requested minimum, and an inverted minimum/maximum range is a typed error. When the approved logo geometry is unsafe, the renderer automatically falls back to the same exact-payload no-logo output using ECC M and ordinary first fitting. The public `qr-core` encoder continues to accept all four ECC levels so conformance tests and future explicitly designed workflows are not constrained by the release-1 UI policy.
 
 ### 2.5 PNG renderer
 
@@ -162,8 +162,8 @@ the decode-backed adaptive placements.
 Tickets 32 and 40:** release 1 uses approved ONE magenta and black foreground
 themes, an opaque-white background, rounded ONE modules with standard square
 finders, the 4.5:1 contrast threshold, and the bundled ONE lettermark described
-below. The logo is enabled by default and can be disabled; transparent output
-is excluded.
+below. The browser always requests the logo and falls back automatically when
+branding is unsafe; transparent output is excluded.
 
 ### 2.7 Logo safety
 
@@ -227,8 +227,9 @@ is excluded.
   accepted in release 1.
 - Replacing or editing the lettermark requires recorded license/provenance, sanitization, and the complete structural, deterministic, geometry, and independent-decode logo suite.
 - Logo mode requires an opaque white background and knockout.
-- The bundled logo is enabled by default. Users may turn it off to select ECC M,
-  the Version 1 minimum, and no occlusion.
+- The browser always requests the bundled logo. Unsafe or out-of-range branding
+  automatically falls back to ECC M, the Version 1 minimum, and no occlusion;
+  users cannot select that fallback directly.
 - Every profile uses the same placement search: exact centering at Version 6,
   then the reviewed deterministic nearby search for Versions 7–11. No profile
   is restricted to centered-only placement. The selected-version dimensions
@@ -345,8 +346,10 @@ Convert the repository to a Cargo workspace:
 │           ├── wasm_api.rs   # minimal worker-facing WASM adapter
 │           └── lib.rs
 ├── src/
-│   ├── pages/index.astro
-│   └── scripts/              # browser state, worker, downloads, presentation
+│   ├── components/           # focused generator and guideline presentation modules
+│   ├── layouts/              # shared static page shell and navigation
+│   ├── pages/                # separate generator and guideline routes
+│   └── scripts/              # form state, preview controller, worker, downloads
 ├── tests/fixtures/            # provenance manifest + redistributable fixtures
 ├── fuzz/
 └── astro.config.mjs           # Astro application and Pages base path
@@ -449,8 +452,9 @@ and failed dispatches leave the workflow in a payload-free internal-error
 state rather than pending indefinitely.
 
 Astro imports the Rust `qr-web` WASM adapter directly. Preview generation,
-encoding, and deterministic SVG/PNG rendering remain in Rust, while Astro owns
-form state, tab navigation, and browser download actions. The
+encoding, and deterministic SVG/PNG rendering remain in Rust. Astro owns the
+separate static generator and guideline pages; focused TypeScript modules own
+form state, preview-worker lifecycle, and browser download actions. The
 `qr-web -> qr-render -> qr-core` dependency direction is unchanged.
 
 ## 5. Recommended dependencies

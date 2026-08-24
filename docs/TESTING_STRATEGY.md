@@ -466,7 +466,7 @@ TypeScript. Unit-test the private generation module for:
 
 - every profile's exact-fit and one-over capacity behavior;
 - profile choices recalculate version, limits, sizes, and logo availability;
-- logo toggling changes ECC to H and the minimum to Version 6 before version selection, then restores ECC M and the Version 1 minimum when disabled;
+- a logo-enabled generation request changes ECC to H and the minimum to Version 6 before version selection, while a lower-level no-logo request uses ECC M and the Version 1 minimum;
 - diagnostics explain when the branded minimum, rather than payload capacity, enlarged the symbol;
 - deterministic SVG/PNG artifacts and raw diagnostics;
 - typed invalid-input and capacity failures.
@@ -503,7 +503,7 @@ Test through the user-visible UI:
 - character count versus UTF-8 byte count;
 - all profile selections and displayed diagnostics;
 - version/ECC changes, including logo-triggered H;
-- the default logo workflow selects at least Version 6, explains a branding-raised version, keeps valid exports enabled, and can be turned off;
+- the automatic logo workflow selects at least Version 6, explains a branding-raised version, keeps valid exports enabled, exposes no user override, and falls back to no-logo output only when branding is unsafe;
 - invalid capacity and unsafe-style states;
 - the fixed opaque-white background and unconditional Rounded ONE modules with
   standard square finders;
