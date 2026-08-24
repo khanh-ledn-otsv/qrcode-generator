@@ -113,7 +113,7 @@ jobs:
           cache-bin: false
           shared-key: linux-rust-1.98.0
       - name: Cache pinned wasm-bindgen tools
-        if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
+        if: steps.verification.outputs.scope == 'render' || steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: actions/cache@v6
         with:
           path: |
@@ -121,6 +121,12 @@ jobs:
             ~/.cargo/bin/wasm-bindgen-test-runner
             ~/.cargo/bin/wasm2es6js
           key: wasm-bindgen-${{ runner.os }}-${{ runner.arch }}-${{ env.WASM_BINDGEN_CLI_VERSION }}
+      - name: Install pinned wasm-bindgen tools for focused render verification
+        if: steps.verification.outputs.scope == 'render'
+        run: |
+          if [[ "$(wasm-bindgen-test-runner --version 2>/dev/null || true)" != "wasm-bindgen-test-runner ${WASM_BINDGEN_CLI_VERSION}" ]]; then
+            cargo install --locked --force wasm-bindgen-cli --version "${WASM_BINDGEN_CLI_VERSION}"
+          fi
       - name: Cache verified decoder build inputs
         if: steps.verification.outputs.scope == 'web' || steps.verification.outputs.scope == 'full'
         uses: actions/cache@v6
