@@ -648,7 +648,7 @@ fn invalid_and_internal_results_have_associated_messages_and_disable_exports() {
     assert!(state.complete_preview(empty.revision(), evaluate_preview(&empty)));
     assert_eq!(
         state.validation_message().as_deref(),
-        Some("Enter text to generate a QR code."),
+        Some("Enter a URL to generate a QR code."),
     );
     assert!(!state.exports_enabled());
 

@@ -1433,6 +1433,7 @@ dependencies = [
  "qr-render",
  "serde",
  "serde_json",
+ "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",

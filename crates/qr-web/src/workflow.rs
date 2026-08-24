@@ -564,6 +564,8 @@ impl Preview {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WorkflowFailure {
     EmptyPayload,
+    InvalidUrl,
+    MissingParameterName,
     InputLimitExceeded {
         byte_length: usize,
         maximum: usize,
@@ -584,7 +586,13 @@ impl WorkflowFailure {
     #[must_use]
     pub fn message(&self) -> String {
         match self {
-            Self::EmptyPayload => "Enter text to generate a QR code.".to_owned(),
+            Self::EmptyPayload => "Enter a URL to generate a QR code.".to_owned(),
+            Self::InvalidUrl => {
+                "Enter a valid URL beginning with http:// or https://.".to_owned()
+            }
+            Self::MissingParameterName => {
+                "Enter a name for each custom parameter that has a value.".to_owned()
+            }
             Self::InputLimitExceeded {
                 byte_length,
                 maximum,
@@ -817,6 +825,14 @@ impl WorkflowState {
 
     pub fn reject_internal_failure(&mut self) {
         _ = self.set_internal_failure();
+    }
+
+    pub fn reject_url_failure(&mut self, failure: WorkflowFailure) {
+        debug_assert!(matches!(
+            failure,
+            WorkflowFailure::InvalidUrl | WorkflowFailure::MissingParameterName
+        ));
+        self.preview_state = PreviewState::Invalid(failure);
     }
 
     fn begin_preview(&mut self) -> Result<PreviewRequest, WorkflowFailure> {

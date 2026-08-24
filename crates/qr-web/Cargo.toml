@@ -16,6 +16,7 @@ qr-core.workspace = true
 qr-render.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
+url.workspace = true
 wasm-bindgen.workspace = true
 web-sys = { workspace = true, features = ["Blob", "BlobPropertyBag", "ClipboardEvent", "DataTransfer", "DedicatedWorkerGlobalScope", "Document", "DragEvent", "Element", "ErrorEvent", "Event", "HtmlAnchorElement", "HtmlElement", "HtmlTextAreaElement", "InputEvent", "MessageEvent", "Node", "PageTransitionEvent", "Response", "Url", "Window", "Worker"] }
 

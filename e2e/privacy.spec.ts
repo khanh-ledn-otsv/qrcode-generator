@@ -25,7 +25,7 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
       const request = new URL(requestUrl);
       expect(request.origin).toBe(localOrigin);
       expect(request.pathname).toMatch(
-        /^(?:\/$|\/favicon\.ico$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$|\/qr-preview-worker(?:_loader|_bg)?\.(?:js|wasm)$)/,
+        /^(?:\/$|\/favicon\.ico$|\/one-logotype-white\.png$|\/input-[a-f0-9]+\.css$|\/qr-web-[a-f0-9]+(?:_bg)?\.(?:js|wasm)$|\/qr-preview-worker(?:_loader|_bg)?\.(?:js|wasm)$)/,
       );
       return request.pathname;
     }),
@@ -33,9 +33,9 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
 
   await enterPayload(page, SAFE_PAYLOAD);
   await expect(page.getByRole("checkbox", { name: /Rounded ONE modules/ })).toHaveCount(0);
-  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: /ONE logo in QR/ })).toBeChecked();
   await selectProfile(page, "Business card");
-  await expect(page.getByRole("radio", { name: /Business card/ })).toBeChecked();
+  await expect(page.getByLabel("Output variant")).toHaveValue("business-card");
   await expect(page.getByRole("group", { name: "Background treatment" })).toHaveCount(0);
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [svgDownload] = await Promise.all([
@@ -57,10 +57,10 @@ test("payload, logo, configuration, and downloads make no runtime request", asyn
     );
   expect(metadata.join("\n")).not.toContain(SAFE_PAYLOAD);
 
-  await page.getByText("ONE lettermark", { exact: true }).click();
+  await page.getByRole("checkbox", { name: /ONE logo in QR/ }).click();
   await selectProfile(page, "Poster / Package");
-  await enterPayload(page, "a".repeat(287));
-  await expect(page.getByRole("checkbox", { name: /ONE lettermark/ })).not.toBeChecked();
+  await enterPayload(page, `https://e.test/${"a".repeat(272)}`);
+  await expect(page.getByRole("checkbox", { name: /ONE logo in QR/ })).not.toBeChecked();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   const [pngDownload] = await Promise.all([
     page.waitForEvent("download"),

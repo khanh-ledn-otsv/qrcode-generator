@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { expect, test } from "@playwright/test";
 
-import { SAFE_PAYLOAD, diagnostic, selectProfile, sha256 } from "./helpers";
+import { SAFE_PAYLOAD, selectProfile, sha256 } from "./helpers";
 
 test("large preview work leaves the main thread responsive and latest revision wins", async ({
   page,
@@ -20,10 +20,10 @@ test("large preview work leaves the main thread responsive and latest revision w
           if (event.data?.startedRevision !== undefined) {
             window.workerWorkStarted = true;
             if (window.workerResponsiveActionAt === undefined) {
-              const input = document.querySelector<HTMLTextAreaElement>("#qr-payload");
+              const input = document.querySelector<HTMLInputElement>("#base-url");
               if (input) {
-                input.value = "123456789";
-                window.workerResponsiveInput = input.value === "123456789";
+                input.value = "https://e.test/responsive";
+                window.workerResponsiveInput = input.value === "https://e.test/responsive";
                 input.focus();
               }
               window.workerResponsiveActionAt = Date.now();
@@ -85,25 +85,28 @@ test("large preview work leaves the main thread responsive and latest revision w
   });
   await page.goto("/");
   await selectProfile(page, "Poster / Package");
-  const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
+  const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
   if (await logo.isChecked()) {
-    await page.getByText("ONE lettermark", { exact: true }).click();
+    await logo.click();
   }
 
-  const input = page.getByLabel("Text to encode");
-  await input.fill("A1a".repeat(700));
+  const input = page.getByLabel("Base URL");
+  await input.fill(`https://e.test/${"A1a".repeat(700)}`);
   await expect.poll(() => page.evaluate(() => window.workerDispatches ?? 0)).toBeGreaterThan(0);
   await expect.poll(() => page.evaluate(() => window.workerWorkStarted ?? false)).toBe(true);
 
   await expect.poll(() => page.evaluate(() => window.workerResponsiveFocus)).toBe(true);
   expect(await page.evaluate(() => window.workerResponsiveInput)).toBe(true);
   await input.fill("");
-  await input.fill("123456789");
+  await input.fill("https://e.test/123456789?latest=1");
   await expect
     .poll(() => page.evaluate(() => window.workerAnimationFrames ?? 0))
     .toBeGreaterThan(0);
-  await expect.poll(() => diagnostic(page, "Mode")).toBe("Numeric");
-  await expect(page.getByTestId("qr-preview")).toHaveAttribute("aria-label", /Numeric mode/);
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
+  await expect(page.getByTestId("qr-preview")).toHaveAttribute(
+    "aria-label",
+    /Generated QR code preview/,
+  );
   await expect
     .poll(() => page.evaluate(() => window.workerDelayedResponses ?? 0))
     .toBeGreaterThan(0);
@@ -120,9 +123,12 @@ test("large preview work leaves the main thread responsive and latest revision w
         (window.workerAnimationFrameAt ?? Infinity) < (window.workerFirstResponseDeliveredAt ?? 0),
     ),
   ).toBe(true);
-  await expect(page.getByTestId("qr-preview")).toHaveAttribute("aria-label", /Numeric mode/);
-  await input.fill("HELLOworld1234567890");
-  await expect.poll(() => diagnostic(page, "Mode")).toBe("Mixed");
+  await expect(page.getByTestId("qr-preview")).toHaveAttribute(
+    "aria-label",
+    /Generated QR code preview/,
+  );
+  await input.fill("https://e.test/HELLOworld1234567890");
+  await expect(page.getByTestId("download-svg")).toBeEnabled();
   await expect(page.getByTestId("download-png")).toBeEnabled();
   expect(await page.evaluate(() => window.workerConstructions)).toBe(1);
 });
@@ -139,11 +145,11 @@ self.onmessage = (event) => {
     });
   });
   await page.goto("/");
-  await page.getByLabel("Text to encode").fill("worker failure");
+  await page.getByLabel("Base URL").fill("https://e.test/worker-failure");
 
   await expect(page.getByRole("alert")).toContainText("QR generation failed unexpectedly");
   await expect(page.getByTestId("download-svg")).toBeDisabled();
-  await expect(page.getByText("Updating preview…")).toHaveCount(0);
+  await expect(page.getByText("Updating preview...")).toHaveCount(0);
 });
 
 test("a stale malformed response cannot reject newer pending work", async ({ page }) => {
@@ -165,13 +171,13 @@ self.onmessage = (event) => {
     });
   });
   await page.goto("/");
-  const input = page.getByLabel("Text to encode");
-  await input.fill("older request");
+  const input = page.getByLabel("Base URL");
+  await input.fill("https://e.test/older-request");
   await page.waitForTimeout(350);
-  await input.fill("newer request");
+  await input.fill("https://e.test/newer-request");
 
   await page.waitForTimeout(750);
-  await expect(page.getByText("Updating preview…")).toBeVisible();
+  await expect(page.getByText("Updating preview...")).toBeVisible();
   await expect(page.getByRole("alert")).toHaveText("");
   await expect(page.getByTestId("download-svg")).toBeDisabled();
 });
@@ -212,12 +218,12 @@ self.onmessage = (event) => {
     }
   });
   await page.goto("/");
-  await page.getByText("ONE lettermark", { exact: true }).click();
-  const input = page.getByLabel("Text to encode");
-  await input.fill("malformed worker");
+  await page.getByRole("checkbox", { name: /ONE logo in QR/ }).click();
+  const input = page.getByLabel("Base URL");
+  await input.fill("https://e.test/malformed-worker");
   await expect(page.getByRole("alert")).toContainText("QR generation failed unexpectedly");
 
-  await input.fill("replacement worker");
+  await input.fill("https://e.test/replacement-worker");
   await expect
     .poll(() => page.evaluate(() => window.workerConstructions ?? 0))
     .toBeGreaterThanOrEqual(2);
@@ -228,20 +234,20 @@ self.onmessage = (event) => {
 
 test("actual worker artifacts are deterministic for approved request shapes", async ({ page }) => {
   await page.goto("/");
-  const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
+  const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
   if (await logo.isChecked()) {
-    await page.getByText("ONE lettermark", { exact: true }).click();
+    await logo.click();
   }
 
   const cases = [
     {
       profile: "Standard",
-      payload: "café 世界",
+      payload: "https://example.test/caf%C3%A9/%E4%B8%96%E7%95%8C",
       logo: false,
     },
     {
       profile: "Poster / Package",
-      payload: "HELLOworld1234567890",
+      payload: "https://example.test/HELLOworld1234567890",
       logo: false,
     },
     {
@@ -256,9 +262,9 @@ test("actual worker artifacts are deterministic for approved request shapes", as
   for (const artifact of cases) {
     await selectProfile(page, artifact.profile);
     if ((await logo.isChecked()) !== artifact.logo) {
-      await page.getByText("ONE lettermark", { exact: true }).click();
+      await logo.click();
     }
-    await page.getByLabel("Text to encode").fill(artifact.payload);
+    await page.getByLabel("Base URL").fill(artifact.payload);
     await expect(page.getByTestId("download-svg")).toBeEnabled();
     const [svgDownload] = await Promise.all([
       page.waitForEvent("download"),
@@ -299,15 +305,15 @@ test("repeated generations reuse one worker and page disposal terminates it", as
   });
   await page.goto("/");
   await selectProfile(page, "Poster / Package");
-  const logo = page.getByRole("checkbox", { name: /ONE lettermark/ });
+  const logo = page.getByRole("checkbox", { name: /ONE logo in QR/ });
   if (await logo.isChecked()) {
-    await page.getByText("ONE lettermark", { exact: true }).click();
+    await logo.click();
   }
-  const input = page.getByLabel("Text to encode");
+  const input = page.getByLabel("Base URL");
   // Sequential completion is the behavior under test: each transferred buffer must be released.
   /* oxlint-disable no-await-in-loop */
   for (let index = 1; index <= 12; index += 1) {
-    const payload = `generation-${index}-${"x".repeat(index * 20)}`;
+    const payload = `https://e.test/generation-${index}-${"x".repeat(index * 20)}`;
     await input.fill(payload);
     await expect(page.getByTestId("download-png")).toBeEnabled();
   }

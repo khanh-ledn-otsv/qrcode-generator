@@ -494,6 +494,7 @@ impl WireFailure {
     fn from_failure(value: WorkflowFailure) -> Self {
         match value {
             WorkflowFailure::EmptyPayload => Self::EmptyPayload,
+            WorkflowFailure::InvalidUrl | WorkflowFailure::MissingParameterName => Self::Internal,
             WorkflowFailure::InputLimitExceeded {
                 byte_length,
                 maximum,

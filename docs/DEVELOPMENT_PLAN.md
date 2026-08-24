@@ -294,7 +294,15 @@ These are implementation interpretations until merged back into the product spec
 3. **Function-module protection:** Branding and logo knockout never modify function modules. The spec's general “protect function patterns” goal takes precedence over language that only makes finder overlap explicitly invalid.
 4. **Mask evaluation:** Apply each mask only to data/remainder modules, write the corresponding format bits, then score the complete final matrix. Choose the lowest score and lower mask ID on a tie.
 5. **Remainder bits:** Capacity tables and placement must explicitly include the standard remainder-bit count per version. Every non-function matrix cell must be assigned once, including remainder bits.
-6. **Input safety:** Plain text is allowed; URL syntax is not required. The UI may identify likely URLs, but it must not rewrite them. Empty input and over-limit input are invalid. Control characters receive a caution unless product policy later forbids them.
+6. **Input safety and web URL scope:** `qr-core` continues to accept exact
+  arbitrary text under section 2.2. The release web generator accepts only an
+  absolute `http://` or `https://` URL with a host. It preserves the entered
+  base URL bytes and derives the encoded URL locally by appending enabled,
+  non-empty UTM and custom query parameters before any fragment. Existing
+  decoded query keys win and are never replaced; additions use deterministic
+  form-query percent encoding and stable UI order. Empty or invalid base URLs,
+  custom values without names, and over-limit derived URLs are invalid. No URL
+  or parameter value is persisted, logged, normalized, or transmitted.
 7. **External network calls:** Production HTML must not request Google Fonts or other remote UI assets. Bundle approved assets or use the system font stack.
 8. **Print guidance:** The 148 px, 177 px, and 236 px values are 150 dpi artifact conversions, not physical-size guarantees. Export remains SVG-first and the UI tells owners to test the final material, device, and surface.
 9. **Variant-choice guidance:** The practical guide distinguishes the four
@@ -423,8 +431,8 @@ User errors return to Leptos as validation state. Internal invariant errors disa
 ### 4.3 Preview worker boundary
 
 The browser UI owns one lifecycle-scoped dedicated Web Worker for preview
-generation. The main thread preserves form state, the 250 ms debounce, and the
-authoritative revision check; after the debounce it sends the exact payload,
+generation. The main thread preserves form state, derives the exact encoded URL,
+the 250 ms debounce, and the authoritative revision check; after the debounce it sends that exact payload,
 profile, logo choice, and revision to the worker. The worker's separate WASM
 instance runs the existing `evaluate_preview` path, including encoding,
 render-model construction, and deterministic SVG/PNG generation. QR behavior
@@ -544,10 +552,12 @@ Add a small native CLI example for diagnostics, not as a shipped product.
 
 ### M3 — Functional Leptos workflow (1–2 weeks, risk: low)
 
-- Payload input with character and byte counts.
-- Five profile cards and derived version/capacity state; diagnostics show the fixed safe ECC M or logo-triggered ECC H.
+- HTTP(S) base URL, optional UTM/custom parameters, derived encoded URL, and
+  separate base/encoded character and byte counts.
+- Digital and Print profile groups with derived version/capacity state;
+  diagnostics show the fixed safe ECC M or logo-triggered ECC H.
 - Debounced preview and accessible validation announcements.
-- Diagnostics panel with exact geometry and warnings.
+- Expandable QR specification with exact geometry and warnings.
 - SVG and PNG Blob downloads with fixed safe filenames.
 - Export disabled on invalid state; errors do not expose payloads to logs or DOM metadata.
 

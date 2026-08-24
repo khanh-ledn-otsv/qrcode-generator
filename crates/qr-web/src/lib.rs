@@ -4,6 +4,7 @@
 
 pub mod debounce;
 pub mod preview_worker;
+pub mod url_payload;
 pub mod workflow;
 pub use workflow::worker_protocol;
 
