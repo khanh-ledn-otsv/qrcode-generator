@@ -124,32 +124,32 @@ pub const fn link_capacity_guide() -> [LinkCapacityGuideRow; 7] {
         LinkCapacityGuideRow {
             profile_id: ProfileId::Standard,
             without_logo_ascii_bytes: 152,
-            with_logo_ascii_bytes: 58,
+            with_logo_ascii_bytes: 84,
         },
         LinkCapacityGuideRow {
             profile_id: ProfileId::PrimaryCta,
             without_logo_ascii_bytes: 287,
-            with_logo_ascii_bytes: 58,
+            with_logo_ascii_bytes: 137,
         },
         LinkCapacityGuideRow {
             profile_id: ProfileId::HeroCampaign,
             without_logo_ascii_bytes: 287,
-            with_logo_ascii_bytes: 0,
+            with_logo_ascii_bytes: 137,
         },
         LinkCapacityGuideRow {
             profile_id: ProfileId::BusinessCard,
             without_logo_ascii_bytes: 287,
-            with_logo_ascii_bytes: 58,
+            with_logo_ascii_bytes: 137,
         },
         LinkCapacityGuideRow {
             profile_id: ProfileId::FlyerBrochure,
             without_logo_ascii_bytes: 287,
-            with_logo_ascii_bytes: 58,
+            with_logo_ascii_bytes: 137,
         },
         LinkCapacityGuideRow {
             profile_id: ProfileId::PosterPackage,
             without_logo_ascii_bytes: 287,
-            with_logo_ascii_bytes: 58,
+            with_logo_ascii_bytes: 137,
         },
     ]
 }

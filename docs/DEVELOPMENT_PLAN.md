@@ -109,9 +109,12 @@ their actual device, material, and surface.
 The in-product practical guide records the exact maximum for typical ASCII
 links that select whole-payload Byte mode. Total length includes scheme, host,
 path, query, and fragment. Every retained fixed profile has an explicit limit;
-Hero / Campaign has no bundled-logo capacity because its range begins at Version
-8, while the centered logo is approved only at Version 6. The guide explains
-that non-ASCII characters may occupy multiple UTF-8 bytes plus ECI overhead,
+every profile whose range reaches Version 6 or higher retains bundled-logo
+capacity, because the same upward-search placement (exact center at Version 6,
+shifted six modules upward through Version 11) applies uniformly to every
+profile rather than only to a distinct "Adaptive" variant. Only a profile's
+Version 12+ rows fall back to no-logo output. The guide explains that
+non-ASCII characters may occupy multiple UTF-8 bytes plus ECI overhead,
 QR-alphanumeric-only input can sometimes fit more, and the exact preview result
 remains authoritative.
 
@@ -196,10 +199,10 @@ is excluded.
   to `(left 22, top 20.0625)`, with a function-safe `(21, 19, 15, 7)` knockout.
   Version 11 uses 276/414 dimensions and the same source size shifted six
   modules upward at `(24, 22.0625)`, with knockout `(23, 21, 15, 7)`.
-- Adaptive placement preserves the reviewed Version 6 center and the fixed
-  six-module upward source offset for Versions 7–11. The source remains exactly
-  13 modules wide; retaining the 15×7 knockout does not trigger a nearer
-  placement or a smaller logo.
+- Every profile shares one placement algorithm: the reviewed Version 6 exact
+  center, then the fixed six-module upward source offset for Versions 7–11.
+  The source remains exactly 13 modules wide; retaining the 15×7 knockout does
+  not trigger a nearer placement or a smaller logo.
   The retained executable evidence in
   [`../crates/qr-render/tests/logo_geometry.rs`](../crates/qr-render/tests/logo_geometry.rs)
   and [`../crates/qr-render/tests/logo_decode.rs`](../crates/qr-render/tests/logo_decode.rs)
@@ -226,9 +229,10 @@ is excluded.
 - Logo mode requires an opaque white background and knockout.
 - The bundled logo is enabled by default. Users may turn it off to select ECC M,
   the Version 1 minimum, and no occlusion.
-- Exact centering remains mandatory for the four fixed profiles. Adaptive alone
-  may use the reviewed deterministic nearby search. The selected-version
-  dimensions and generated evidence are recorded in
+- Every profile uses the same placement search: exact centering at Version 6,
+  then the reviewed deterministic nearby search for Versions 7–11. No profile
+  is restricted to centered-only placement. The selected-version dimensions
+  and generated evidence are recorded in
   [`generated/logo-placement-policy.md`](generated/logo-placement-policy.md).
 - If geometry is unsafe for the selected version, logo mode is disabled with a
   reason. The encoder applies the approved Version 6 branded minimum but never

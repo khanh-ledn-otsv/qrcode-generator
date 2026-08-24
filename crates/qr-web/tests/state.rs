@@ -327,12 +327,12 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
         )),
         [
             (ProfileId::Small, 106, 58),
-            (ProfileId::Standard, 152, 58),
-            (ProfileId::PrimaryCta, 287, 58),
-            (ProfileId::HeroCampaign, 287, 0),
-            (ProfileId::BusinessCard, 287, 58),
-            (ProfileId::FlyerBrochure, 287, 58),
-            (ProfileId::PosterPackage, 287, 58),
+            (ProfileId::Standard, 152, 84),
+            (ProfileId::PrimaryCta, 287, 137),
+            (ProfileId::HeroCampaign, 287, 137),
+            (ProfileId::BusinessCard, 287, 137),
+            (ProfileId::FlyerBrochure, 287, 137),
+            (ProfileId::PosterPackage, 287, 137),
         ]
     );
 
@@ -353,10 +353,6 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
             Err(WorkflowFailure::OverCapacity { .. })
         ));
 
-        if row.with_logo_ascii_bytes() == 0 {
-            continue;
-        }
-
         let mut branded = WorkflowState::new(row.profile_id());
         branded
             .set_logo_enabled(true)
@@ -364,20 +360,19 @@ fn link_capacity_guide_matches_exact_ascii_byte_workflow_boundaries() {
         let exact = branded
             .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes()))
             .expect("exact branded boundary produces a request");
-        assert!(evaluate_preview(&exact).is_ok());
+        let exact_preview =
+            evaluate_preview(&exact).expect("exact branded boundary still fits and scans");
+        assert_eq!(exact_preview.diagnostics().logo_style(), LogoStyle::Bundled);
         let one_over = branded
             .set_payload(synthetic_ascii_url(row.with_logo_ascii_bytes() + 1))
             .expect("one-over branded boundary produces a request");
         match evaluate_preview(&one_over) {
             Ok(preview) => {
-                if preview.diagnostics().logo_style() == LogoStyle::None {
-                    assert_eq!(
-                        preview.diagnostics().logo_fallback_reason(),
-                        Some("unsafe logo geometry")
-                    );
-                } else {
-                    assert_eq!(preview.diagnostics().logo_style(), LogoStyle::Bundled);
-                }
+                assert_eq!(preview.diagnostics().logo_style(), LogoStyle::None);
+                assert_eq!(
+                    preview.diagnostics().logo_fallback_reason(),
+                    Some("unsafe logo geometry")
+                );
             }
             Err(WorkflowFailure::OverCapacity { .. }) => {}
             Err(failure) => panic!("unexpected one-over branding failure: {failure:?}"),

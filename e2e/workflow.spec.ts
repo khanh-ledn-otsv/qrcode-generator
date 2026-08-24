@@ -305,12 +305,12 @@ test("guides long-link profile, logo, and PNG choices accurately", async ({ page
   await expect(capacityTable.getByRole("row")).toHaveText([
     "Output variantWithout logoWith logo",
     "Small106 characters / bytes58 characters / bytes",
-    "Standard152 characters / bytes58 characters / bytes",
-    "Primary CTA287 characters / bytes58 characters / bytes",
-    "Hero / Campaign287 characters / bytes0 characters / bytes",
-    "Business card287 characters / bytes58 characters / bytes",
-    "Flyer / Brochure287 characters / bytes58 characters / bytes",
-    "Poster / Package287 characters / bytes58 characters / bytes",
+    "Standard152 characters / bytes84 characters / bytes",
+    "Primary CTA287 characters / bytes137 characters / bytes",
+    "Hero / Campaign287 characters / bytes137 characters / bytes",
+    "Business card287 characters / bytes137 characters / bytes",
+    "Flyer / Brochure287 characters / bytes137 characters / bytes",
+    "Poster / Package287 characters / bytes137 characters / bytes",
   ]);
 
   await expect(guide).toContainText("A shorter URL usually produces a smaller, less dense QR code");
